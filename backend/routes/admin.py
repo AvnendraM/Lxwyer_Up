@@ -270,3 +270,16 @@ async def update_lawyer_state(lawyer_id: str, state_data: StateUpdate, admin: di
             raise e
         raise HTTPException(status_code=500, detail=f'Failed to update state: {str(e)}')
 
+@router.get("/users", response_model=dict)
+async def get_users(admin: dict = Depends(get_admin)):
+    """Get all registered users (clients)"""
+    users = await db.users.find({'user_type': 'client'}).sort('created_at', -1).to_list(1000)
+    
+    # Clean up data for frontend
+    for user in users:
+        if '_id' in user:
+            user['_id'] = str(user['_id'])
+        if 'password' in user:
+            del user['password']
+            
+    return {'users': users}

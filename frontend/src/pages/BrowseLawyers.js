@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { dummyLawyers, specializationsList, statesList } from '../data/lawyersData';
 import axios from 'axios';
 
-const API = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 const SimpleNavbar = ({ navigate }) => {
   return (
@@ -63,19 +63,18 @@ const BrowseLawyers = () => {
         const realLawyers = res.data.map(l => ({
           ...l,
           name: l.full_name || l.name,
-          // Normalize fields if needed
           experience: l.experience_years || l.experience,
-          // Real lawyers from DB have is_verified, ensure it's present
+          _isReal: true, // Tag as real DB lawyer
         }));
 
-        // Merge: Dummy + Real
-        // We use a Map to prevent duplicates based on ID (though IDs should be different: dummy_... vs UUID)
-        const allLawyers = [...realLawyers, ...dummyLawyers.map(l => ({ ...l, is_verified: l.verified }))];
+        // Merge: Real lawyers first, then dummy
+        const allLawyers = [...realLawyers, ...dummyLawyers.map(l => ({ ...l, is_verified: l.verified, _isReal: false }))];
 
-        // Sort: Verified lawyers first
+        // Sort: Real lawyers first, then verified first within each group
         allLawyers.sort((a, b) => {
-          if (a.is_verified === b.is_verified) return 0;
-          return a.is_verified ? -1 : 1;
+          if (a._isReal !== b._isReal) return a._isReal ? -1 : 1;
+          if (a.is_verified !== b.is_verified) return a.is_verified ? -1 : 1;
+          return 0;
         });
 
         setLawyers(allLawyers);
@@ -142,7 +141,7 @@ const BrowseLawyers = () => {
 
       return true;
     });
-  }, [searchQuery, filters]);
+  }, [lawyers, searchQuery, filters]);
 
   // Pagination
   const totalPages = Math.ceil(filteredLawyers.length / itemsPerPage);

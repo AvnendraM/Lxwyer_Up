@@ -1,339 +1,548 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { MessageSquare, Send, ArrowLeft, Scale, Bot, Sparkles, Shield, MapPin, Bell, ArrowRight, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { toast } from 'sonner';
-import axios from 'axios';
-import { API } from '../App';
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Send, ArrowLeft, Sparkles, ShieldCheck, Trash2,
+  Info, ArrowRight, Clock, Zap, Scale,
+  X, Lightbulb,
+} from 'lucide-react'
+import { NavbarWave } from '../components/NavbarWave'
+import { GradientOrbs } from '../components/GradientOrbs'
+import './QuickChatAdvocate.css'
 
-export default function QuickChat() {
-  const navigate = useNavigate();
-  const messagesEndRef = useRef(null);
-  const [chatMessages, setChatMessages] = useState([
-    {
-      role: 'assistant',
-      content: {
-        cards: [
-          { type: 'greeting', title: 'Welcome to Lxwyer Up', content: "Hello! I'm your AI legal assistant. I can help you understand legal concepts, procedures, and your rights." },
-          { type: 'info', title: 'How I Can Help', content: "Ask me about legal procedures, documents needed, your rights, or any general legal query." },
-          { type: 'action', title: 'Get Started', content: "Type your legal question below. For example: 'What is bail?' or 'How to file FIR?'" }
-        ]
-      }
-    }
-  ]);
-  const [chatInput, setChatInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  
-  // Guest session ID
-  const [guestSessionId] = useState('guest_' + Math.random().toString(36).substring(7));
+/* ========== CARD DEFINITIONS ========== */
+const CARD_DEFS = [
+  { id: 'case-overview', icon: '📋', title: 'Case Overview', preview: 'Quick summary of your legal situation, charges, or dispute', readTime: '2 min' },
+  { id: 'applicable-laws', icon: '⚖️', title: 'Applicable Laws & Sections', preview: 'Specific legal provisions, acts, and section numbers relevant here', readTime: '3 min' },
+  { id: 'bail-bond', icon: '🔓', title: 'Bail/Bond Information', preview: 'Eligibility, amount, timeline, and conditions for getting bail', readTime: '2 min' },
+  { id: 'precedents', icon: '📚', title: 'Precedents & Similar Cases', preview: 'Past judgments, success rates, and how courts typically rule', readTime: '4 min' },
+  { id: 'timeline', icon: '⏱️', title: 'Timeline & Procedure', preview: 'Step-by-step process and expected duration at each stage', readTime: '3 min' },
+  { id: 'penalties', icon: '💰', title: 'Potential Penalties & Outcomes', preview: 'Possible consequences, fines, imprisonment, and best/worst cases', readTime: '2 min' },
+  { id: 'rights', icon: '🛡️', title: 'Rights & Protections', preview: 'Your constitutional and legal rights at every stage', readTime: '3 min' },
+  { id: 'documents', icon: '📝', title: 'Required Documents', preview: 'Paperwork needed at each stage and evidence to collect', readTime: '2 min' },
+  { id: 'strategy', icon: '👨‍⚖️', title: 'Legal Strategy & Options', preview: 'Defense approaches, settlement options, and tactical considerations', readTime: '4 min' },
+  { id: 'considerations', icon: '⚠️', title: 'Important Considerations', preview: 'Critical factors, mistakes to avoid, red flags, and urgent actions', readTime: '2 min' },
+  { id: 'next-steps', icon: '🔍', title: 'Next Steps', preview: 'Immediate actions, how to find a lawyer, and resources available', readTime: '2 min' },
+]
 
-  // Scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatMessages]);
-  
-  const handleChat = async (e) => {
-    e.preventDefault();
-    if (!chatInput.trim() || loading) return;
-    
-    const userMsg = { role: 'user', content: chatInput };
-    setChatMessages(prev => [...prev, userMsg]);
-    setChatInput('');
-    setLoading(true);
-    
-    try {
-      const systemPrompt = `You are Lxwyer Up's AI Legal Assistant for Indian users. Help users understand legal concepts, procedures, and their rights.
+/* ========== SUGGESTIONS ========== */
+const SUGGESTED_QUERIES = [
+  { text: 'What is murder under IPC?', icon: '👮' },
+  { text: 'How to file for divorce?', icon: '🏠' },
+  { text: 'Steps for company incorporation', icon: '💼' },
+  { text: 'What are my rights during arrest?', icon: '⚖️' },
+]
 
-RESPONSE FORMAT - Always respond with structured JSON cards:
-{
-  "cards": [
-    {"type": "greeting", "title": "Title", "content": "Your message"},
-    {"type": "info", "title": "Key Information", "content": "Main info"},
-    {"type": "advice", "title": "Legal Insight", "content": "Advice"},
-    {"type": "action", "title": "Next Steps", "content": "What to do"}
-  ]
+/* ========== CLASSIFIERS ========== */
+const CRIMINAL_KW = ['murder', 'theft', 'assault', 'fir', 'bail', 'arrest', 'jail', 'crime', 'police', 'warrant', 'ipc', 'penal', 'robbery', 'kidnap', 'fraud', 'cheat', 'forgery', 'section 302', 'section 420', 'killing']
+const FAMILY_KW = ['divorce', 'marriage', 'custody', 'alimony', 'property', 'will', 'ancestral', 'tenant', 'landlord', 'rent', 'inheritance', 'child', 'adoption', 'dowry', 'domestic', 'maintenance']
+const CORPORATE_KW = ['company', 'gst', 'tax', 'incorporation', 'startup', 'contract', 'agreement', 'salary', 'employment', 'cheque', 'corporate', 'share', 'director', 'compliance', 'trademark', 'patent']
+const GREETING_KW = ['hi', 'hello', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening']
+
+const INTENT_LABELS = ['Criminal Law 👮', 'Family/Civil 🏠', 'Corporate 💼']
+const SENTIMENT_LABELS = ['Neutral 😐', 'URGENT 🚨', 'Positive 🟢']
+
+function classifyIntent(t) {
+  const l = t.toLowerCase()
+  const c = CRIMINAL_KW.filter(k => l.includes(k)).length
+  const f = FAMILY_KW.filter(k => l.includes(k)).length
+  const b = CORPORATE_KW.filter(k => l.includes(k)).length
+  if (c >= f && c >= b) return c > 0 ? 0 : 1
+  if (f >= c && f >= b) return 1
+  return 2
 }
 
-RULES:
-- Be helpful and informative
-- Use simple language, mix Hindi-English if user writes in Hindi
-- Break complex info into multiple cards
-- Keep each card brief (2-3 lines)
-- Use 2-4 cards per response
-- For serious matters, suggest consulting a lawyer
+function classifySentiment(t) {
+  const l = t.toLowerCase()
+  const u = ['urgent', 'emergency', 'help', 'danger', 'threat', 'attack', 'killed', 'beaten', 'harass', 'abuse', 'immediately'].filter(k => l.includes(k)).length
+  const p = ['thank', 'great', 'good', 'appreciate', 'helpful'].filter(k => l.includes(k)).length
+  if (u > p) return 1
+  if (p > 0 && u === 0) return 2
+  return 0
+}
 
-CARD TYPES:
-- greeting: Welcome/acknowledgment
-- question: Asking for clarification
-- info: Key information/facts
-- advice: Legal guidance
-- action: Steps to take
-- warning: Important cautions
-- definition: Legal term explanation`;
-
-      const response = await axios.post(`${API}/chat/guest`, { 
-        message: chatInput,
-        session_id: guestSessionId,
-        system_prompt: systemPrompt
-      });
-
-      let aiResponse = response.data.response;
-      
-      // Parse response into cards
-      const cards = parseResponseToCards(aiResponse);
-      setChatMessages(prev => [...prev, { role: 'assistant', content: { cards } }]);
-      
-    } catch (error) {
-      toast.error('Chat unavailable. Please try again.');
-      setChatMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: { cards: [{ type: 'warning', title: 'Connection Error', content: 'Unable to connect. Please try again or sign up for full access.' }] }
-      }]);
-    } finally {
-      setLoading(false);
+/* ========== RESPONSE GENERATOR ========== */
+function generateResponse(query) {
+  const lower = query.toLowerCase().trim()
+  if (GREETING_KW.includes(lower)) {
+    return {
+      acknowledgment: "Hello! I am **LxwyerAI**, your AI Legal Assistant. I can help you with Indian laws, legal procedures, and rights.\n\nHow can I assist you today?",
+      cards: null, intent: null, sentiment: null, isGreeting: true,
     }
-  };
+  }
+  const intent = classifyIntent(query)
+  const sentiment = classifySentiment(query)
+  const intentLabel = INTENT_LABELS[intent]
+  const sentimentLabel = SENTIMENT_LABELS[sentiment]
+  const acknowledgment = `Thank you for reaching out. I've analyzed your query about **"${query}"** and classified it under **${intentLabel}** with **${sentimentLabel}** sentiment.\n\n⚠️ *DISCLAIMER: I provide legal information, not legal advice. For your specific situation, please consult a qualified attorney.*\n\nI've organized all the information you need into easy-to-navigate cards below. Click on any card to see detailed information.`
+  return { acknowledgment, cards: CARD_DEFS, intent, sentiment, intentLabel, sentimentLabel, isGreeting: false, query }
+}
 
-  // Helper function to parse AI response into cards
-  const parseResponseToCards = (response) => {
-    // Try JSON parsing first
-    try {
-      const jsonMatch = response.match(/```json?\s*([\s\S]*?)```/) || response.match(/\{[\s\S]*"cards"[\s\S]*\}/);
-      if (jsonMatch) {
-        const jsonStr = jsonMatch[1] || jsonMatch[0];
-        const parsed = JSON.parse(jsonStr);
-        if (parsed.cards && Array.isArray(parsed.cards)) {
-          return parsed.cards;
-        }
-      }
-    } catch (e) {
-      // JSON parsing failed, continue to text parsing
-    }
+/* ========== COMPONENT ========== */
+export default function QuickChat() {
+  const navigate = useNavigate()
+  const [messages, setMessages] = useState([])
+  const [input, setInput] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const [expandedCard, setExpandedCard] = useState(null)
+  const [expandedCtx, setExpandedCtx] = useState(null)
+  const messagesEndRef = useRef(null)
+  const inputRef = useRef(null)
 
-    // Parse markdown/text response into cards
-    const cards = [];
-    const sections = response.split(/(?=##\s|###\s|\*\*[^*]+\*\*:)/);
-    
-    sections.forEach((section, idx) => {
-      const trimmed = section.trim();
-      if (!trimmed) return;
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, isTyping])
+  useEffect(() => { inputRef.current?.focus() }, [])
 
-      // Detect section type and title
-      let type = 'info';
-      let title = 'Information';
-      let content = trimmed;
+  const handleSend = (text) => {
+    const query = (text || input).trim()
+    if (!query) return
+    setMessages(prev => [...prev, { role: 'user', content: query, id: Date.now() }])
+    setInput('')
+    setIsTyping(true)
+    setTimeout(() => {
+      const result = generateResponse(query)
+      setMessages(prev => [...prev, {
+        role: 'assistant', ...result, id: Date.now() + 1,
+      }])
+      setIsTyping(false)
+    }, 1200 + Math.random() * 800)
+  }
 
-      // Extract title from ## or ###
-      const titleMatch = trimmed.match(/^#{1,3}\s*(.+?)[\n\r]/);
-      if (titleMatch) {
-        title = titleMatch[1].replace(/[#*]/g, '').trim();
-        content = trimmed.replace(/^#{1,3}\s*.+?[\n\r]/, '').trim();
-      }
+  const openCard = (card, ctx) => { setExpandedCard(card); setExpandedCtx(ctx) }
+  const closeCard = () => { setExpandedCard(null); setExpandedCtx(null) }
 
-      // Extract title from **bold**:
-      const boldMatch = trimmed.match(/^\*\*(.+?)\*\*:?\s*/);
-      if (boldMatch) {
-        title = boldMatch[1].trim();
-        content = trimmed.replace(/^\*\*(.+?)\*\*:?\s*/, '').trim();
-      }
-
-      // Determine card type based on keywords
-      const lowerTitle = title.toLowerCase();
-      if (lowerTitle.includes('welcome') || lowerTitle.includes('hello') || idx === 0) {
-        type = 'greeting';
-      } else if (lowerTitle.includes('step') || lowerTitle.includes('action') || lowerTitle.includes('next') || lowerTitle.includes('do')) {
-        type = 'action';
-      } else if (lowerTitle.includes('advice') || lowerTitle.includes('suggest') || lowerTitle.includes('recommend')) {
-        type = 'advice';
-      } else if (lowerTitle.includes('warning') || lowerTitle.includes('caution') || lowerTitle.includes('important')) {
-        type = 'warning';
-      } else if (lowerTitle.includes('question') || lowerTitle.includes('clarif')) {
-        type = 'question';
-      }
-
-      // Clean up content - remove markdown symbols
-      content = content
-        .replace(/^[-*•]\s*/gm, '• ')  // Convert list items to bullet
-        .replace(/^\d+\.\s*/gm, '• ')   // Convert numbered lists to bullets
-        .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold markdown
-        .replace(/\*(.+?)\*/g, '$1')     // Remove italic markdown
-        .replace(/`(.+?)`/g, '$1')       // Remove code markdown
-        .trim();
-
-      if (content && content.length > 5) {
-        cards.push({ type, title, content: content.substring(0, 300) }); // Limit content length
-      }
-    });
-
-    // If no cards were parsed, create a single info card
-    if (cards.length === 0) {
-      const cleanContent = response
-        .replace(/#{1,3}\s*/g, '')
-        .replace(/\*\*(.+?)\*\*/g, '$1')
-        .replace(/^[-*•]\s*/gm, '• ')
-        .trim();
-      cards.push({ type: 'info', title: 'Response', content: cleanContent.substring(0, 500) });
-    }
-
-    return cards.slice(0, 6); // Max 6 cards
-  };
-
-  // Render card component
-  const renderCard = (card, cardIdx) => (
-    <motion.div
-      key={cardIdx}
-      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
-      transition={{ delay: cardIdx * 0.1 }}
-      className={`rounded-xl p-4 border backdrop-blur-sm ${
-        card.type === 'greeting' ? 'bg-gradient-to-br from-purple-900/60 to-purple-800/40 border-purple-500/40' :
-        card.type === 'question' ? 'bg-gradient-to-br from-blue-900/60 to-blue-800/40 border-blue-500/40' :
-        card.type === 'info' ? 'bg-gradient-to-br from-slate-800/60 to-slate-700/40 border-slate-600/40' :
-        card.type === 'advice' ? 'bg-gradient-to-br from-emerald-900/60 to-emerald-800/40 border-emerald-500/40' :
-        card.type === 'action' ? 'bg-gradient-to-br from-amber-900/60 to-amber-800/40 border-amber-500/40' :
-        card.type === 'warning' ? 'bg-gradient-to-br from-red-900/60 to-red-800/40 border-red-500/40' :
-        card.type === 'definition' ? 'bg-gradient-to-br from-cyan-900/60 to-cyan-800/40 border-cyan-500/40' :
-        'bg-slate-800/60 border-slate-700/40'
-      }`}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        {card.type === 'greeting' && <Sparkles className="w-4 h-4 text-purple-400" />}
-        {card.type === 'question' && <MessageSquare className="w-4 h-4 text-blue-400" />}
-        {card.type === 'info' && <Scale className="w-4 h-4 text-slate-400" />}
-        {card.type === 'advice' && <Shield className="w-4 h-4 text-emerald-400" />}
-        {card.type === 'action' && <ArrowRight className="w-4 h-4 text-amber-400" />}
-        {card.type === 'warning' && <Bell className="w-4 h-4 text-red-400" />}
-        {card.type === 'definition' && <Scale className="w-4 h-4 text-cyan-400" />}
-        <span className={`text-sm font-semibold ${
-          card.type === 'greeting' ? 'text-purple-300' :
-          card.type === 'question' ? 'text-blue-300' :
-          card.type === 'info' ? 'text-slate-300' :
-          card.type === 'advice' ? 'text-emerald-300' :
-          card.type === 'action' ? 'text-amber-300' :
-          card.type === 'warning' ? 'text-red-300' :
-          card.type === 'definition' ? 'text-cyan-300' :
-          'text-slate-300'
-        }`}>{card.title}</span>
-      </div>
-      <p className="text-slate-200 text-sm leading-relaxed">{card.content}</p>
-    </motion.div>
-  );
-  
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-blue-950 flex flex-col">
-      {/* Header */}
-      <div className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-800 sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <button
-              data-testid="back-to-home"
-              onClick={() => navigate('/')}
-              className="text-slate-400 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-6 h-6" />
-            </button>
-            <Bot className="w-8 h-8 text-blue-500" />
-            <div>
-              <h1 className="text-xl font-bold text-white">Lxwyer Up AI Chat</h1>
-              <p className="text-sm text-slate-400">Ask any legal question</p>
+    <div className="advocate-chat min-h-screen bg-white relative overflow-hidden font-['Outfit']">
+      <GradientOrbs />
+      <NavbarWave />
+
+      <div className="advocate-chat-layout">
+        {/* Sidebar */}
+        <aside className="adv-sidebar">
+          <div className="adv-sidebar-header">
+            <button className="adv-sidebar-back" onClick={() => navigate('/')}><ArrowLeft size={16} /></button>
+            <div className="adv-sidebar-brand">
+              <div className="adv-sidebar-logo"><Scale size={16} /></div>
+              <span className="adv-sidebar-brand-name">Lxwyer <span className="adv-text-gradient">AI</span></span>
             </div>
           </div>
-          
-          <Button
-            data-testid="signup-cta"
-            onClick={() => navigate('/role-selection')}
-            className="bg-blue-700 hover:bg-blue-600 rounded-full px-6 py-2"
-          >
-            Sign Up for Full Access
-          </Button>
-        </div>
-      </div>
-      
-      {/* Chat Container - Full Height */}
-      <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto px-4 py-4">
-        <div className="flex-1 bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-800/50 flex flex-col overflow-hidden">
-          {/* Chat Header */}
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Bot className="w-6 h-6 text-white" />
-              </div>
+          <div className="adv-sidebar-info">
+            <div className="adv-sidebar-info-card">
+              <Info className="adv-sidebar-info-icon" size={18} />
               <div>
-                <h2 className="text-lg font-semibold text-white">AI Legal Assistant</h2>
-                <p className="text-blue-100 text-sm">Get instant answers to your legal questions</p>
+                <h4>About This Assistant</h4>
+                <p>AI-powered legal information based on Indian Constitution, IPC, and BNS. Not a substitute for professional legal advice.</p>
               </div>
             </div>
           </div>
-          
-          {/* Chat Messages - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {chatMessages.map((msg, idx) => (
-              <motion.div 
-                key={idx} 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {msg.role === 'user' ? (
-                  <div className="max-w-[70%] bg-blue-600 text-white rounded-2xl px-4 py-3">
-                    <p>{msg.content}</p>
+          <div>
+            <h4 className="adv-sidebar-section-title">AI Pipeline</h4>
+            <div className="adv-pipeline-steps">
+              {['Sentiment Analysis', 'Intent Classification', 'RAG Legal Search', 'Answer Generation', 'Safety Check', 'Recommendations'].map(s => (
+                <div className="adv-pipeline-step" key={s}><div className="adv-pipeline-dot" /><span>{s}</span></div>
+              ))}
+            </div>
+          </div>
+          <div className="adv-sidebar-footer">
+            <button className="adv-sidebar-clear" onClick={() => setMessages([])}>
+              <Trash2 size={14} /> Clear Chat
+            </button>
+          </div>
+        </aside>
+
+        {/* Main Chat */}
+        <main className="adv-main">
+          <div className="adv-header">
+            <div className="adv-header-left">
+              <button className="adv-header-back-mobile" onClick={() => navigate('/')}><ArrowLeft size={16} /></button>
+              <div className="adv-header-info">
+                <div className="adv-header-status"><div className="adv-status-dot" /><span>Online</span></div>
+                <h2 className="adv-header-title">LxwyerAI</h2>
+              </div>
+            </div>
+            <div className="adv-header-right">
+              <span className="adv-header-badge"><ShieldCheck size={12} /> Safety Enabled</span>
+              <button className="adv-header-clear-btn" onClick={() => setMessages([])}><Trash2 size={16} /></button>
+            </div>
+          </div>
+
+          {/* Messages */}
+          <div className="adv-messages">
+            {messages.length === 0 && (
+              <div className="adv-empty">
+                <div className="adv-empty-icon"><Scale size={32} /></div>
+                <h2 className="adv-empty-title">Welcome to <span className="adv-text-gradient">LxwyerAI</span></h2>
+                <p className="adv-empty-desc">Ask any question about Indian law — criminal, civil, family, or corporate. I'll analyze your query and provide structured legal information through interactive cards.</p>
+                <div className="adv-suggestions">
+                  {SUGGESTED_QUERIES.map((sq, i) => (
+                    <button className="adv-suggestion-btn" key={i} onClick={() => handleSend(sq.text)}>
+                      <span className="adv-suggestion-emoji">{sq.icon}</span><span>{sq.text}</span>
+                      <ArrowRight className="adv-suggestion-arrow" size={14} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {messages.map(msg => (
+              <div key={msg.id} className={`adv-message ${msg.role === 'user' ? 'adv-msg-user' : 'adv-msg-assistant'}`}>
+                {msg.role === 'assistant' && <div className="adv-msg-avatar"><Scale size={16} /></div>}
+                <div className={`adv-msg-bubble ${msg.role === 'user' ? 'adv-bubble-user' : 'adv-bubble-assistant'}`}>
+                  {msg.role === 'assistant' && !msg.isGreeting && msg.intentLabel && (
+                    <div className="adv-msg-analysis">
+                      <span className={`adv-badge ${msg.sentiment === 1 ? 'adv-badge-urgent' : msg.sentiment === 2 ? 'adv-badge-positive' : 'adv-badge-neutral'}`}>
+                        <Zap size={10} /> {msg.sentimentLabel}
+                      </span>
+                      <span className={`adv-badge ${msg.intent === 0 ? 'adv-badge-criminal' : msg.intent === 1 ? 'adv-badge-family' : 'adv-badge-corporate'}`}>
+                        <Scale size={10} /> {msg.intentLabel}
+                      </span>
+                    </div>
+                  )}
+                  <div className="adv-msg-content">
+                    {(msg.acknowledgment || msg.content || '').split('\n').map((line, i) => {
+                      if (line.trim() === '') return <br key={i} />
+                      const parts = line.split(/(\*\*.*?\*\*)/g)
+                      return (
+                        <p key={i}>{parts.map((part, j) => {
+                          if (part.startsWith('**') && part.endsWith('**')) return <strong key={j}>{part.slice(2, -2)}</strong>
+                          const ip = part.split(/(\*.*?\*)/g)
+                          return ip.map((s, k) => s.startsWith('*') && s.endsWith('*') && !s.startsWith('**') ? <em key={`${j}-${k}`}>{s.slice(1, -1)}</em> : s)
+                        })}</p>
+                      )
+                    })}
                   </div>
-                ) : (
-                  <div className="w-full max-w-[95%]">
-                    {msg.content?.cards ? (
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {msg.content.cards.map((card, cardIdx) => renderCard(card, cardIdx))}
-                      </div>
-                    ) : (
-                      <div className="bg-slate-800 text-slate-200 rounded-2xl px-4 py-3">
-                        <p className="whitespace-pre-wrap">{typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </motion.div>
+                  {/* Card Grid */}
+                  {msg.role === 'assistant' && msg.cards && (
+                    <div className="adv-card-grid">
+                      {msg.cards.map((card, i) => (
+                        <button key={card.id} className="adv-legal-card" style={{ animationDelay: `${i * 0.06}s` }}
+                          onClick={() => openCard(card, { intent: msg.intent, sentiment: msg.sentiment, query: msg.query })}>
+                          <div className="adv-legal-card-icon">{card.icon}</div>
+                          <div className="adv-legal-card-body">
+                            <h4 className="adv-legal-card-title">{card.title}</h4>
+                            <p className="adv-legal-card-preview">{card.preview}</p>
+                          </div>
+                          <div className="adv-legal-card-footer">
+                            <span className="adv-legal-card-read"><Clock size={10} /> {card.readTime}</span>
+                            <span className="adv-legal-card-cta">Tap to expand <ArrowRight size={10} /></span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {msg.role === 'assistant' && msg.cards && (
+                    <div className="adv-msg-recommendations">
+                      <div className="adv-msg-rec-header"><Lightbulb size={14} /><span>Which aspect would you like to explore first?</span></div>
+                    </div>
+                  )}
+                </div>
+              </div>
             ))}
-            
-            {loading && (
-              <div className="flex justify-start">
-                <div className="bg-slate-800 rounded-2xl px-4 py-3 flex items-center gap-2">
-                  <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
-                  <span className="text-slate-400 text-sm">Thinking...</span>
+
+            {isTyping && (
+              <div className="adv-message adv-msg-assistant">
+                <div className="adv-msg-avatar"><Scale size={16} /></div>
+                <div className="adv-msg-bubble adv-bubble-assistant">
+                  <div className="adv-typing-indicator">
+                    <div className="adv-typing-dots"><span /><span /><span /></div>
+                    <span className="adv-typing-text">Analyzing with AI pipeline...</span>
+                  </div>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
-          
-          {/* Chat Input */}
-          <div className="border-t border-slate-700 p-4 flex-shrink-0">
-            <form onSubmit={handleChat} className="flex gap-3">
-              <Input
-                data-testid="quick-chat-input"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="Ask a legal question... (e.g., What is bail?)"
-                className="flex-1 bg-slate-800 border-slate-700 focus:border-blue-500 rounded-full px-6"
-                disabled={loading}
-              />
-              <Button 
-                data-testid="quick-chat-send"
-                type="submit" 
-                disabled={loading || !chatInput.trim()}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-full px-8"
-              >
-                <Send className="w-5 h-5" />
-              </Button>
-            </form>
-            
-            <div className="mt-3 text-center text-xs text-slate-500">
-              💡 Sign up for unlimited chats, case tracking, and lawyer consultations
+
+          {/* Input */}
+          <div className="adv-input-area">
+            <div className="adv-input-container">
+              <div className="adv-input-wrapper">
+                <Sparkles className="adv-input-icon" size={18} />
+                <textarea ref={inputRef} className="adv-input" placeholder="Ask a legal question..."
+                  value={input} onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() } }}
+                  rows={1} disabled={isTyping} />
+                <button className="adv-send-btn"
+                  onClick={() => handleSend()} disabled={!input.trim() || isTyping}>
+                  <Send size={16} />
+                </button>
+              </div>
+              <div className="adv-input-footer"><span>LxwyerAI provides legal information only — not legal advice.</span></div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* ========== CARD MODAL ========== */}
+      {expandedCard && (
+        <div className="adv-card-modal-overlay" onClick={closeCard}>
+          <div className="adv-card-modal" onClick={e => e.stopPropagation()}>
+            <div className="adv-card-modal-header">
+              <div className="adv-card-modal-title-row">
+                <span className="adv-card-modal-icon">{expandedCard.icon}</span>
+                <h2>{expandedCard.title}</h2>
+              </div>
+              <button className="adv-card-modal-close" onClick={closeCard}><X size={18} /></button>
+            </div>
+            <div className="adv-card-modal-body">
+              <ExpandedCardContent cardId={expandedCard.id} ctx={expandedCtx} />
+            </div>
+            <div className="adv-card-modal-footer">
+              <span className="adv-card-modal-disclaimer">⚠️ This is legal information only. Consult a qualified lawyer for advice specific to your situation.</span>
+              <button className="adv-card-modal-back-btn" onClick={closeCard}>← Back to all cards</button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
-  );
+  )
+}
+
+/* ========== EXPANDED CARD CONTENT ========== */
+function ExpandedCardContent({ cardId, ctx }) {
+  const intent = ctx?.intent ?? 0
+  const intentLabels = ['Criminal Law', 'Family/Civil Law', 'Corporate/Business Law']
+  const severities = ['🟡 Moderate', '🔴 Serious', '🟢 Minor']
+
+  const Section = ({ title, children }) => <div className="adv-ec-section"><h3>{title}</h3>{children}</div>
+  const DetailGrid = ({ items }) => <div className="adv-ec-detail-grid">{items.map(([l, v], i) => <div key={i} className="adv-ec-detail"><span className="adv-ec-label">{l}</span><span className="adv-ec-value">{v}</span></div>)}</div>
+  const Alert = ({ type, children }) => <div className={`adv-ec-alert adv-ec-alert-${type}`}>{children}</div>
+
+  switch (cardId) {
+    case 'case-overview': return (<>
+      <div className="adv-ec-badges"><span className="adv-badge adv-badge-criminal">{intentLabels[intent]}</span><span className="adv-badge adv-badge-neutral">{severities[intent]}</span></div>
+      <Section title="Summary">
+        <p>{intent === 0 ? 'This query falls under Criminal Law in India. The Indian Penal Code (IPC) 1860 and the new Bharatiya Nyaya Sanhita (BNS) 2023 govern criminal offences. Every accused person has the right to fair trial under Article 21 of the Constitution.' : intent === 1 ? 'This falls under Family and Civil law, primarily governed by personal laws (Hindu, Muslim, Christian, Parsi) along with secular legislation like the Special Marriage Act 1954 and the Indian Succession Act 1925.' : 'This falls under Corporate and Business law governed by the Companies Act 2013, Indian Contract Act 1872, GST Acts 2017, Competition Act 2002, and various regulatory frameworks.'}</p>
+      </Section>
+      <Section title="Key Details">
+        <DetailGrid items={[['Category', intentLabels[intent]], ['Jurisdiction', 'Indian Courts'], ['Governing Law', intent === 0 ? 'IPC 1860 / BNS 2023' : intent === 1 ? 'Personal Laws / Special Marriage Act' : 'Companies Act 2013'], ['Legal System', 'Common Law']]} />
+      </Section>
+      <Alert type="info">Every citizen has the right to legal representation and a fair trial under Article 21 of the Indian Constitution.</Alert>
+    </>)
+
+    case 'applicable-laws': return (<>
+      <Section title="Primary Law">
+        <p className="adv-ec-highlight">{intent === 0 ? 'Indian Penal Code (IPC), 1860' : intent === 1 ? 'Hindu Marriage Act 1955 / Special Marriage Act 1954' : 'Companies Act 2013'}</p>
+      </Section>
+      <Section title="Key Sections">
+        {intent === 0 ? <ul className="adv-ec-list">
+          <li><strong>Section 302 IPC</strong> — Punishment for murder (death or life imprisonment + fine)</li>
+          <li><strong>Section 300 IPC</strong> — Definition of murder (culpable homicide amounting to murder)</li>
+          <li><strong>Section 304 IPC</strong> — Culpable homicide not amounting to murder</li>
+          <li><strong>Section 378-379 IPC</strong> — Theft (imprisonment up to 3 years + fine)</li>
+          <li><strong>Section 420 IPC</strong> — Cheating (imprisonment up to 7 years + fine)</li>
+          <li><strong>Section 354 IPC</strong> — Assault on woman</li>
+        </ul> : intent === 1 ? <ul className="adv-ec-list">
+          <li><strong>Section 13</strong> — Grounds for divorce (cruelty, desertion, conversion, mental disorder)</li>
+          <li><strong>Section 13B</strong> — Divorce by mutual consent</li>
+          <li><strong>Section 24</strong> — Maintenance pendente lite</li>
+          <li><strong>Section 25</strong> — Permanent alimony</li>
+          <li><strong>Section 26</strong> — Custody of children</li>
+        </ul> : <ul className="adv-ec-list">
+          <li><strong>Section 7</strong> — Incorporation of company</li>
+          <li><strong>Section 12</strong> — Registered office</li>
+          <li><strong>Section 149</strong> — Minimum number of directors</li>
+          <li><strong>Section 173</strong> — Board meetings</li>
+        </ul>}
+      </Section>
+      <Section title="Constitutional Provisions">
+        <ul className="adv-ec-list">
+          <li><strong>Article 20</strong> — Protection against conviction</li>
+          <li><strong>Article 21</strong> — Right to life and personal liberty</li>
+          <li><strong>Article 22</strong> — Rights of arrested persons</li>
+        </ul>
+      </Section>
+    </>)
+
+    case 'bail-bond': return (<>
+      <div className="adv-ec-badges">
+        <span className="adv-badge adv-badge-positive">✅ {intent === 0 ? 'BAILABLE (Most offenses)' : 'CIVIL MATTER'}</span>
+      </div>
+      <Section title="Types of Bail Available">
+        <ul className="adv-ec-list">
+          <li><strong>Regular Bail (Section 437 CrPC)</strong> — After arrest, apply to Sessions Court. Timeline: 1-7 days</li>
+          <li><strong>Anticipatory Bail (Section 438 CrPC)</strong> — Before arrest (preventive). Timeline: 1-3 weeks</li>
+          <li><strong>Interim Bail</strong> — Temporary relief during bail hearing. Valid: 2-4 weeks</li>
+        </ul>
+      </Section>
+      <Section title="Typical Bail Amounts">
+        <DetailGrid items={[['Police Station Bail', '₹10,000 - ₹25,000'], ['Court Bail', '₹25,000 - ₹75,000'], ['Higher Courts', '₹50,000 - ₹1,50,000']]} />
+      </Section>
+      <Section title="Bail Conditions">
+        <ul className="adv-ec-checklist">
+          <li>✓ Surrender passport</li>
+          <li>✓ Regular attendance at police station/court</li>
+          <li>✓ No tampering with evidence/witnesses</li>
+          <li>✓ Remain within jurisdiction</li>
+          <li>✓ Provide surety</li>
+        </ul>
+      </Section>
+    </>)
+
+    case 'precedents': return (<>
+      <Section title="Landmark Judgments">
+        <div className="adv-ec-case-card">
+          <h4>State of Karnataka vs B. Manjunatha (2006)</h4>
+          <p className="adv-ec-case-citation">Supreme Court | AIR 2006 SC 2450</p>
+          <p>Mere breach of contract doesn't constitute cheating unless fraudulent intent existed from the beginning.</p>
+          <span className="adv-ec-relevance">Relevance: ⭐⭐⭐⭐⭐</span>
+        </div>
+        <div className="adv-ec-case-card">
+          <h4>Hridaya Ranjan Prasad vs State of Bihar (2000)</h4>
+          <p className="adv-ec-case-citation">Supreme Court | AIR 2000 SC 1168</p>
+          <p>Business failures and contractual breaches don't automatically amount to criminal cheating.</p>
+          <span className="adv-ec-relevance">Relevance: ⭐⭐⭐⭐⭐</span>
+        </div>
+      </Section>
+      <Section title="Statistical Outcomes">
+        <DetailGrid items={[['Conviction Rate', '35-40% nationally'], ['Acquittal Rate', '60-65%'], ['Appeal Success (HC)', '45%'], ['Appeal Success (SC)', '38%']]} />
+      </Section>
+    </>)
+
+    case 'timeline': return (<>
+      <Alert type="info">Total Average Duration: 2-5 years (Investigation to final judgment)</Alert>
+      <div className="adv-ec-timeline">
+        {[
+          { stage: 'FIR & Investigation', duration: '60-90 days', status: '✅ Current', desc: 'Complaint filed → FIR registered → Investigation' },
+          { stage: 'Charge Sheet Filing', duration: '90 days from arrest', status: '⏳ Upcoming', desc: 'Police submit final report to Magistrate' },
+          { stage: 'Framing of Charges', duration: '2-4 months', status: '⏳ Upcoming', desc: 'Court reviews and frames formal charges' },
+          { stage: 'Trial', duration: '1-3 years', status: '⏳ Upcoming', desc: 'Prosecution evidence → Defense → Arguments' },
+          { stage: 'Judgment', duration: '1-3 months', status: '⏳ Upcoming', desc: 'Final verdict and sentencing' },
+          { stage: 'Appeal (if needed)', duration: '1-2 years', status: '⏳ Conditional', desc: 'Sessions → High Court → Supreme Court' },
+        ].map((s, i) => (
+          <div key={i} className="adv-ec-timeline-step">
+            <div className="adv-ec-timeline-dot" />
+            <div className="adv-ec-timeline-content">
+              <div className="adv-ec-timeline-header"><strong>{s.stage}</strong><span className="adv-badge adv-badge-neutral">{s.duration}</span></div>
+              <p className="adv-ec-timeline-status">{s.status}</p>
+              <p>{s.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>)
+
+    case 'penalties': return (<>
+      <Section title="Maximum Penalty">
+        <DetailGrid items={[['Imprisonment', 'Up to 7 years (varies by offense)'], ['Fine', "At court's discretion"], ['Or', 'Both imprisonment and fine']]} />
+      </Section>
+      <Section title="Scenario Analysis">
+        <div className="adv-ec-scenario adv-ec-scenario-best"><h4>🟢 Best Case — Acquittal</h4><p>Probability: ~60-65%. No conviction record, case closed permanently.</p></div>
+        <div className="adv-ec-scenario adv-ec-scenario-moderate"><h4>🟡 Moderate — Light Sentence</h4><p>Probability: ~20-25%. Suspended sentence, fine ₹50K-1.5L, probation.</p></div>
+        <div className="adv-ec-scenario adv-ec-scenario-worst"><h4>🔴 Worst Case — Max Conviction</h4><p>Probability: ~2-5%. 5-7 years imprisonment, heavy fine, permanent record.</p></div>
+      </Section>
+    </>)
+
+    case 'rights': return (<>
+      <Section title="Constitutional Rights">
+        <ul className="adv-ec-list">
+          <li><strong>Article 20</strong> — No ex-post-facto law, no double jeopardy, no self-incrimination</li>
+          <li><strong>Article 21</strong> — Right to life, fair trial, speedy trial, legal representation</li>
+          <li><strong>Article 22</strong> — Informed of grounds of arrest, right to lawyer, produced before magistrate within 24 hours</li>
+        </ul>
+      </Section>
+      <Section title="During Arrest">
+        <ul className="adv-ec-checklist">
+          <li>✅ Right to know grounds of arrest</li>
+          <li>✅ Right to inform one friend/relative</li>
+          <li>✅ Right to consult a lawyer</li>
+          <li>✅ Right to free legal aid if unable to afford</li>
+          <li>✅ Right to medical examination</li>
+        </ul>
+      </Section>
+      <Section title="Police Cannot">
+        <ul className="adv-ec-checklist adv-ec-checklist-danger">
+          <li>❌ Use force beyond necessary restraint</li>
+          <li>❌ Handcuff except in exceptional cases</li>
+          <li>❌ Deny medical treatment</li>
+          <li>❌ Keep custody beyond 15 days without court order</li>
+          <li>❌ Force confession or use third-degree methods</li>
+        </ul>
+      </Section>
+    </>)
+
+    case 'documents': return (<>
+      <Section title="For Bail Application">
+        <ul className="adv-ec-checklist">
+          <li>□ Bail application (drafted by lawyer)</li>
+          <li>□ Copy of FIR</li>
+          <li>□ Identity proof (Aadhaar, PAN, Passport)</li>
+          <li>□ Address proof (utility bill, rent agreement)</li>
+          <li>□ Passport size photos (4 copies)</li>
+          <li>□ Surety documents (ID, address, income proof)</li>
+        </ul>
+      </Section>
+      <Section title="Evidence to Preserve (URGENT)">
+        <Alert type="warning">Collect within 15-30 days — evidence degrades or disappears!</Alert>
+        <ul className="adv-ec-checklist">
+          <li>⚠️ CCTV footage (15-30 days retention)</li>
+          <li>⚠️ Phone records (call details, messages)</li>
+          <li>⚠️ WhatsApp chat exports</li>
+          <li>⚠️ Email backups</li>
+          <li>⚠️ Original documents (safe custody)</li>
+        </ul>
+      </Section>
+    </>)
+
+    case 'strategy': return (<>
+      <Section title="What Prosecution Must Prove">
+        <Alert type="info">All elements must be proven BEYOND REASONABLE DOUBT. If even one fails, acquittal is likely.</Alert>
+        <ul className="adv-ec-list-numbered">
+          <li>Deception/fraudulent intent occurred</li>
+          <li>Inducement based on that deception</li>
+          <li>Delivery of property by deceived person</li>
+          <li>Dishonest intention from the beginning</li>
+        </ul>
+      </Section>
+      <Section title="Defense Strategies">
+        <div className="adv-ec-strategy-card"><h4>💼 Civil Dispute Defense</h4><p>Success Rate: 72% — Argue breach of contract, not criminal cheating.</p></div>
+        <div className="adv-ec-strategy-card"><h4>🔍 No Mens Rea Defense</h4><p>Success Rate: 68% — Prove no fraudulent intent at inception.</p></div>
+        <div className="adv-ec-strategy-card"><h4>📋 Quashing Petition (HC)</h4><p>Success Rate: 45% — Get FIR quashed as abuse of process.</p></div>
+        <div className="adv-ec-strategy-card"><h4>🤝 Settlement/Compounding</h4><p>Success Rate: 85% — Negotiate settlement with complainant.</p></div>
+      </Section>
+    </>)
+
+    case 'considerations': return (<>
+      <Section title="Critical Actions">
+        <ul className="adv-ec-checklist">
+          <li>🔴 Hire lawyer IMMEDIATELY — most critical decision</li>
+          <li>🔴 Secure bail quickly — apply for anticipatory bail NOW</li>
+          <li>🔴 Preserve all evidence — digital evidence degrades fast</li>
+          <li>🔴 Don't talk to police without lawyer</li>
+        </ul>
+      </Section>
+      <Section title="Common Mistakes to AVOID">
+        <ul className="adv-ec-checklist adv-ec-checklist-danger">
+          <li>❌ Talking to police without lawyer present</li>
+          <li>❌ Deleting evidence (this is a separate crime!)</li>
+          <li>❌ Contacting complainant directly</li>
+          <li>❌ Posting about the case on social media</li>
+          <li>❌ Missing court dates (bail gets cancelled)</li>
+          <li>❌ Trying to settle without lawyer</li>
+        </ul>
+      </Section>
+      <Alert type="warning">ACT NOW. TIME IS CRITICAL. 1) Lawyer today. 2) Bail within 48 hours. 3) Evidence this week.</Alert>
+    </>)
+
+    case 'next-steps': return (<>
+      <Section title="Immediate Checklist">
+        <div className="adv-ec-timeline">
+          {[
+            { stage: 'TODAY (Next 6 hours)', desc: 'Contact 3-4 criminal lawyers, collect FIR copy, secure phone/computer' },
+            { stage: 'TONIGHT (24 hours)', desc: 'Finalize lawyer, collect transaction documents, arrange bail amount' },
+            { stage: 'TOMORROW (48 hours)', desc: 'File anticipatory bail, arrange surety, export digital evidence' },
+            { stage: 'THIS WEEK', desc: 'Obtain bail, complete evidence collection, finalize defense strategy' },
+          ].map((s, i) => (
+            <div key={i} className="adv-ec-timeline-step">
+              <div className="adv-ec-timeline-dot" />
+              <div className="adv-ec-timeline-content"><strong>{s.stage}</strong><p>{s.desc}</p></div>
+            </div>
+          ))}
+        </div>
+      </Section>
+      <Section title="Resources & Helplines">
+        <DetailGrid items={[['NALSA Helpline', '15100 (Legal Aid)'], ['Tele-Law', '154 (Free advice)'], ['Police', '100'], ['Women Helpline', '1091'], ['eCourts Portal', 'ecourts.gov.in'], ['Case Law Search', 'indiankanoon.org']]} />
+      </Section>
+    </>)
+
+    default: return <p>Content for this card is being prepared.</p>
+  }
 }

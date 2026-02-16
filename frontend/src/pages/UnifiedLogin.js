@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
+import { WaveLayout } from '../components/WaveLayout';
 
 const SimpleNavbar = ({ navigate }) => {
   return (
@@ -152,7 +153,7 @@ const UnifiedLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
+    <WaveLayout hideNavbar={true} className="bg-gradient-to-br from-orange-50 via-white to-green-50">
       <SimpleNavbar navigate={navigate} />
 
       <div className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
@@ -359,7 +360,7 @@ const UnifiedLogin = () => {
           )}
         </div>
       </div>
-    </div >
+    </WaveLayout>
   );
 };
 

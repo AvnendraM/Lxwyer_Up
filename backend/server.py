@@ -97,8 +97,8 @@ app.mount("/uploads", StaticFiles(directory=ROOT_DIR / "uploads"), name="uploads
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_credentials=False,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

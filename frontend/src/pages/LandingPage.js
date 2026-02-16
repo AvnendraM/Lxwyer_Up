@@ -12,13 +12,13 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      
+
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4 relative overflow-hidden bg-gradient-to-br from-orange-50 via-white to-green-50">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Content */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8 }}
@@ -34,7 +34,7 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link to="/user-get-started">
-                  <Button 
+                  <Button
                     data-testid="get-started-btn"
                     className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8 py-4 text-lg font-medium shadow-lg"
                   >
@@ -42,7 +42,7 @@ export default function LandingPage() {
                   </Button>
                 </Link>
                 <Link to="/how-it-works">
-                  <Button 
+                  <Button
                     data-testid="learn-more-btn"
                     variant="outline"
                     className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-full px-8 py-4 text-lg"
@@ -51,9 +51,9 @@ export default function LandingPage() {
                   </Button>
                 </Link>
               </div>
-              
+
               {/* Swipe Up Arrow */}
-              <motion.div 
+              <motion.div
                 className="mt-12 flex flex-col items-center"
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 2, repeat: Infinity }}
@@ -64,7 +64,7 @@ export default function LandingPage() {
             </motion.div>
 
             {/* Right Image */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
@@ -88,7 +88,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Services We Offer */}
       <section data-testid="services-section" className="py-20 px-4 bg-gradient-to-br from-green-50 via-white to-orange-50">
         <div className="max-w-7xl mx-auto">
@@ -96,11 +96,11 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">Services We Offer</h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">Comprehensive legal solutions tailored for the Indian legal system</p>
           </div>
-          
+
           {/* Main Services Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
             {/* AI Legal Assistant */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -125,7 +125,7 @@ export default function LandingPage() {
                 Get instant answers to your legal questions in Hindi and English. Our AI understands Indian laws and provides guidance 24/7.
               </p>
               <Link to="/user-login">
-                <Button 
+                <Button
                   data-testid="try-ai-chat-btn"
                   className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 py-2 w-full"
                 >
@@ -133,9 +133,9 @@ export default function LandingPage() {
                 </Button>
               </Link>
             </motion.div>
-            
+
             {/* Lawyer Consultation */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -160,7 +160,7 @@ export default function LandingPage() {
                 Connect with verified Indian lawyers specializing in your legal matter. Book consultations at your convenience.
               </p>
               <Link to="/book-consultation">
-                <Button 
+                <Button
                   data-testid="book-consultation-btn"
                   className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 py-2 w-full"
                 >
@@ -168,9 +168,9 @@ export default function LandingPage() {
                 </Button>
               </Link>
             </motion.div>
-            
+
             {/* Document Services */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -193,7 +193,7 @@ export default function LandingPage() {
               <p className="text-gray-600 mb-6">
                 Professional drafting of legal documents, contracts, and agreements as per Indian law requirements.
               </p>
-              <Button 
+              <Button
                 className="bg-orange-600 hover:bg-orange-700 text-white rounded-full px-6 py-2 w-full"
               >
                 Get Documents
@@ -258,7 +258,7 @@ export default function LandingPage() {
           )}
         </div>
       </section>
-      
+
       {/* Why Choose Us Section */}
       <section className="py-20 px-4 bg-white">
         <div className="max-w-7xl mx-auto">
@@ -266,9 +266,9 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-gray-900">Why Choose Lxwyer Up?</h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">Experience the future of legal services in India</p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -280,8 +280,8 @@ export default function LandingPage() {
               <h3 className="text-xl font-bold text-gray-900 mb-3">Indian Legal Expertise</h3>
               <p className="text-gray-600">Deep understanding of Indian laws, procedures, and court systems</p>
             </motion.div>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -293,8 +293,8 @@ export default function LandingPage() {
               <h3 className="text-xl font-bold text-gray-900 mb-3">Verified Lawyers</h3>
               <p className="text-gray-600">All lawyers are verified with Bar Council credentials and client reviews</p>
             </motion.div>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -309,7 +309,7 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      
+
       {/* CTA Section */}
       <section className="py-20 px-4 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800">
         <div className="max-w-4xl mx-auto text-center">
@@ -324,7 +324,7 @@ export default function LandingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/user-login">
-                <Button 
+                <Button
                   data-testid="cta-client-btn"
                   className="bg-white text-blue-700 hover:bg-gray-100 rounded-full px-8 py-3 font-semibold shadow-lg"
                 >
@@ -332,7 +332,7 @@ export default function LandingPage() {
                 </Button>
               </Link>
               <Link to="/lawyer-login">
-                <Button 
+                <Button
                   data-testid="cta-lawyer-btn"
                   variant="outline"
                   className="border-white text-white hover:bg-white hover:text-blue-700 rounded-full px-8 py-3 font-semibold"
@@ -344,7 +344,7 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
-      
+
       <Footer />
     </div>
   );

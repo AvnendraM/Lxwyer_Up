@@ -9,21 +9,20 @@ from services.auth import hash_password
 router = APIRouter(prefix="/lawyers", tags=["Lawyers"])
 
 
-@router.get("", response_model=List[User])
+@router.get("")
 async def get_lawyers():
-    """Get all lawyers"""
+    """Get all approved lawyers for the browse page"""
     lawyers = await db.users.find(
-        {'user_type': 'lawyer'}, 
-        {'_id': 0, 'password': 0}
+        {'user_type': 'lawyer', 'is_approved': True},
+        {'password': 0}
     ).to_list(100)
     
     for lawyer in lawyers:
         if isinstance(lawyer.get('created_at'), str):
             dt_str = lawyer['created_at'].replace('Z', '+00:00') if lawyer['created_at'].endswith('Z') else lawyer['created_at']
             lawyer['created_at'] = datetime.fromisoformat(dt_str)
-        # Ensure ID is string
-        lawyer['id'] = str(lawyer['_id'])
-        del lawyer['_id']
+        # Convert _id to id string
+        lawyer['id'] = str(lawyer.pop('_id'))
     
     return lawyers
 

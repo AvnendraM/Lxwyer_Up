@@ -25,12 +25,16 @@ class LawFirmApplicationCreate(BaseModel):
     address: Optional[str] = None
     city: str
     state: str
+    court: Optional[str] = None
     pincode: Optional[str] = None
     practice_areas: list
     total_lawyers: int
     total_staff: int = 0
     description: str
     achievements: Optional[str] = None
+    subscription_plan: Optional[str] = None
+    billing_cycle: Optional[str] = None
+    subscription_amount: Optional[float] = None
 
 
 @router.get("")
@@ -70,12 +74,16 @@ async def submit_lawfirm_application(application: LawFirmApplicationCreate):
         'address': application.address,
         'city': application.city,
         'state': application.state,
+        'court': application.court,
         'pincode': application.pincode,
         'practice_areas': application.practice_areas,
         'total_lawyers': application.total_lawyers,
         'total_staff': application.total_staff,
         'description': application.description,
         'achievements': application.achievements,
+        'subscription_plan': application.subscription_plan,
+        'billing_cycle': application.billing_cycle,
+        'subscription_amount': application.subscription_amount,
         'status': 'pending',
         'created_at': datetime.utcnow()
     }

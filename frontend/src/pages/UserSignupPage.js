@@ -1,11 +1,13 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Scale, Mail, Lock, ArrowRight, User, Phone, ArrowLeft, Home } from 'lucide-react';
+import { Scale, Mail, Lock, ArrowRight, User, Phone, ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
 import { motion } from 'framer-motion';
-import { CorporateInput, CorporateButton } from '../components/CorporateComponents';
+import { WaveLayout } from '../components/WaveLayout';
+import { Button } from '../components/ui/button';
 
 export default function UserSignupPage() {
   const [loading, setLoading] = useState(false);
@@ -16,24 +18,24 @@ export default function UserSignupPage() {
     phone: ''
   });
   const navigate = useNavigate();
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       const payload = {
         ...formData,
         user_type: 'client'
       };
       const response = await axios.post(`${API}/auth/signup`, payload);
-      
+
       toast.success('Account created successfully!');
-      
+
       // Auto login
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      
+
       navigate('/user-dashboard');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Signup failed');
@@ -41,130 +43,154 @@ export default function UserSignupPage() {
       setLoading(false);
     }
   };
-  
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-black flex flex-col">
-      {/* Navigation Bar */}
-      <nav className="p-4 flex items-center justify-between">
+    <WaveLayout hideNavbar={true}>
+      <div className="min-h-screen flex items-center justify-center px-4 py-20 relative z-10">
+
+        {/* Back Button */}
         <button
-          onClick={() => navigate(-1)}
-          className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
+          onClick={() => navigate('/role-selection')}
+          className="absolute top-8 left-8 flex items-center space-x-2 text-slate-500 hover:text-blue-600 transition-colors font-medium bg-white/50 px-4 py-2 rounded-full backdrop-blur-md border border-white/60 hover:shadow-sm"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </button>
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
-        >
-          <Home className="w-5 h-5" />
-          <span>Home</span>
-        </button>
-      </nav>
 
-      <div className="fixed inset-0 opacity-10 pointer-events-none">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `radial-gradient(circle at 2px 2px, rgb(59, 130, 246) 1px, transparent 0)`,
-          backgroundSize: '40px 40px'
-        }} />
-      </div>
-      
-      <div className="flex-1 flex items-center justify-center px-4">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 w-full max-w-md"
+          className="w-full max-w-md relative"
         >
-          <Link to="/" className="flex items-center justify-center space-x-3 mb-8 group">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all">
-              <Scale className="w-7 h-7 text-white" />
-            </div>
-            <span className="text-2xl font-bold text-white">Lxwyer Up</span>
-          </Link>
-          
-          <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl p-8 shadow-2xl">
+          {/* Card Container with Glassmorphism */}
+          <div
+            className="rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden"
+            style={{
+              background: 'rgba(255, 255, 255, 0.75)',
+              backdropFilter: 'blur(30px)',
+              border: '1px solid rgba(255, 255, 255, 0.8)',
+              boxShadow: '0 20px 60px -10px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.6)'
+            }}
+          >
+            {/* Header */}
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">Create Account</h2>
-              <p className="text-slate-400">Get started with legal assistance</p>
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-400 text-white mb-6 shadow-lg shadow-blue-500/30">
+                <Scale className="w-8 h-8" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2 font-outfit">Create Account</h1>
+              <p className="text-slate-500">Join LxwyerUp for professional legal assistance</p>
             </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <CorporateInput
-                label="Full Name"
-                type="text"
-                data-testid="user-name-input"
-                value={formData.full_name}
-                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                placeholder="John Doe"
-                icon={User}
-                required
-              />
-              
-              <CorporateInput
-                label="Email"
-                type="email"
-                data-testid="user-email-input"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="john@example.com"
-                icon={Mail}
-                required
-              />
-              
-              <CorporateInput
-                label="Phone"
-                type="tel"
-                data-testid="user-phone-input"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+91 98765 43210"
-                icon={Phone}
-                required
-              />
-              
-              <CorporateInput
-                label="Password"
-                type="password"
-                data-testid="user-password-input"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-                icon={Lock}
-                required
-              />
-              
-              <CorporateButton
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700 ml-1">Full Name</label>
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="text"
+                    required
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                    placeholder="John Doe"
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                    placeholder="john@example.com"
+                  />
+                </div>
+              </div>
+
+              {/* Phone */}
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700 ml-1">Phone Number</label>
+                <div className="relative group">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="tel"
+                    required
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1">
+                <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="password"
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <Button
                 type="submit"
-                loading={loading}
                 disabled={loading}
-                className="w-full"
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-5 rounded-xl shadow-lg shadow-blue-500/25 transition-all text-sm mt-4"
               >
-                Create Account
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </CorporateButton>
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Creating Account...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    Create Account
+                    <ArrowRight className="w-5 h-5" />
+                  </span>
+                )}
+              </Button>
             </form>
-            
+
             <div className="mt-6 text-center">
-              <p className="text-slate-400">
+              <p className="text-slate-500 text-sm">
                 Already have an account?{' '}
-                <Link to="/user-login" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
+                <Link to="/user-login" className="text-blue-600 font-bold hover:text-blue-700 hover:underline transition-colors">
                   Login
                 </Link>
               </p>
             </div>
-            
+
             <div className="mt-4 text-center">
-              <p className="text-slate-400">
-                Want to join as Lawyer or Law Firm?{' '}
-                <Link to="/role-selection" className="text-blue-500 hover:text-blue-400 font-medium transition-colors">
-                  Choose Role
-                </Link>
-              </p>
+              <Link to="/role-selection" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                Wrong role? Change
+              </Link>
             </div>
+          </div>
+
+          {/* Footer Branding */}
+          <div className="text-center mt-6">
+            <span className="text-slate-400 font-medium text-xs flex items-center justify-center gap-2">
+              LxwyerUp • Secure Sign Up
+            </span>
           </div>
         </motion.div>
       </div>
-    </div>
+    </WaveLayout>
   );
 }

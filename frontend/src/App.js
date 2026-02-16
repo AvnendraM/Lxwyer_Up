@@ -6,9 +6,9 @@ import { Toaster } from './components/ui/sonner';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 // Pages
+import LandingPageWave from './pages/LandingPageWave';
 import CinematicHero from './pages/CinematicHero';
 import PremiumHome from './pages/PremiumHome';
-import PremiumAbout from './pages/PremiumAbout';
 import PremiumContact from './pages/PremiumContact';
 import QuickChat from './pages/QuickChat';
 import InitialLanding from './pages/InitialLanding';
@@ -57,6 +57,8 @@ import LawyerProfile from './pages/LawyerProfile';
 import FirmProfile from './pages/FirmProfile';
 import BookingSignup from './pages/BookingSignup';
 import JoinFirmSignup from './pages/JoinFirmSignup';
+import EmergencyPage from './pages/EmergencyPage';
+import ScrollToTop from './components/ScrollToTop';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
@@ -67,7 +69,7 @@ export const AuthContext = React.createContext();
 const ProtectedRoute = ({ children, requiredType }) => {
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  
+
   if (!token) {
     if (requiredType === 'lawyer') return <Navigate to="/lawyer-login" />;
     if (requiredType === 'law_firm') return <Navigate to="/lawfirm-login" />;
@@ -75,32 +77,33 @@ const ProtectedRoute = ({ children, requiredType }) => {
     if (requiredType === 'firm_client') return <Navigate to="/firm-client-login" />;
     return <Navigate to="/user-login" />;
   }
-  
+
   if (requiredType && user.user_type !== requiredType) {
     return <Navigate to="/" />;
   }
-  
+
   return children;
 };
 
 function App() {
   const [user, setUser] = useState(null);
-  
+
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
-  
+
   return (
     <ThemeProvider>
       <AuthContext.Provider value={{ user, setUser }}>
         <div className="App">
           <BrowserRouter>
+            <ScrollToTop />
             <Routes>
-              <Route path="/" element={<PremiumHome />} />
-              <Route path="/premium-about" element={<PremiumAbout />} />
+              <Route path="/" element={<LandingPageWave />} />
+              <Route path="/premium-home" element={<PremiumHome />} />
               <Route path="/premium-contact" element={<PremiumContact />} />
               <Route path="/old-home" element={<CinematicHero />} />
               <Route path="/quick-chat" element={<QuickChat />} />
@@ -136,29 +139,30 @@ function App() {
               <Route path="/user-signup" element={<UserSignupPage />} />
               <Route path="/lawyer-login" element={<LawyerLoginPage />} />
               <Route path="/lawfirm-login" element={<LawFirmLoginPage />} />
-              <Route 
-                path="/user-dashboard" 
+              <Route path="/emergency" element={<EmergencyPage />} />
+              <Route
+                path="/user-dashboard"
                 element={
                   <ProtectedRoute requiredType="client">
                     <UserDashboard />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="/lawyer-dashboard" 
+              <Route
+                path="/lawyer-dashboard"
                 element={
                   <ProtectedRoute requiredType="lawyer">
                     <LawyerDashboard />
                   </ProtectedRoute>
-                } 
+                }
               />
-              <Route 
-                path="/lawfirm-dashboard" 
+              <Route
+                path="/lawfirm-dashboard"
                 element={
                   <ProtectedRoute requiredType="law_firm">
                     <LawFirmDashboard />
                   </ProtectedRoute>
-                } 
+                }
               />
               <Route path="/lawyer-application" element={<LawyerApplication />} />
               <Route path="/lawfirm-application" element={<LawFirmApplication />} />
@@ -166,13 +170,13 @@ function App() {
               <Route path="/lawfirm-lawyer-login" element={<LawFirmLawyerLogin />} />
               <Route path="/firm-lawyer-login" element={<LawFirmLawyerLogin />} />
               <Route path="/firm-lawyer-application" element={<FirmLawyerApplication />} />
-              <Route 
-                path="/firm-lawyer-dashboard" 
+              <Route
+                path="/firm-lawyer-dashboard"
                 element={
                   <ProtectedRoute requiredType="firm_lawyer">
                     <FirmLawyerDashboard />
                   </ProtectedRoute>
-                } 
+                }
               />
               <Route path="/firm-client-login" element={<FirmClientLogin />} />
               <Route path="/firm-client-application" element={<FirmClientApplication />} />

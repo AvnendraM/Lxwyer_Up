@@ -66,6 +66,7 @@ const NavTab = ({ icon: Icon, label, active, onClick, count, color }) => {
     blue: 'border-blue-500 text-blue-400 bg-blue-500/10',
     emerald: 'border-emerald-500 text-emerald-400 bg-emerald-500/10',
     pink: 'border-pink-500 text-pink-400 bg-pink-500/10',
+    cyan: 'border-cyan-500 text-cyan-400 bg-cyan-500/10',
   };
 
   return (
@@ -118,6 +119,7 @@ export default function AdminDashboard() {
   const [firmClientApplications, setFirmClientApplications] = useState([]);
   const [firmClientStats, setFirmClientStats] = useState({ pending: 0, approved: 0, rejected: 0 });
   const [approvedLawyers, setApprovedLawyers] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedApp, setSelectedApp] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
@@ -140,19 +142,21 @@ export default function AdminDashboard() {
       const headers = { Authorization: `Bearer ${token}` };
 
       // Fire ALL API calls in parallel instead of sequentially
-      const [lawyerRes, firmRes, firmLawyerRes, appRes, paidClientRes, approvedLawyersRes] = await Promise.all([
+      const [lawyerRes, firmRes, firmLawyerRes, appRes, paidClientRes, approvedLawyersRes, usersRes] = await Promise.all([
         axios.get(`${API}/admin/lawyer-applications`, { headers }),
         axios.get(`${API}/admin/lawfirm-applications`, { headers }).catch(() => ({ data: { applications: [], stats: { pending: 0, approved: 0, rejected: 0 } } })),
         axios.get(`${API}/firm-lawyers/applications`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API}/firm-clients/applications/all`, { headers }).catch(() => ({ data: [] })),
         axios.get(`${API}/firm-clients/pending-approvals`, { headers }).catch(() => ({ data: [] })),
-        axios.get(`${API}/admin/lawyers`, { headers }).catch(() => ({ data: { lawyers: [] } }))
+        axios.get(`${API}/admin/lawyers`, { headers }).catch(() => ({ data: { lawyers: [] } })),
+        axios.get(`${API}/admin/users`, { headers }).catch(() => ({ data: { users: [] } }))
       ]);
 
       // Process lawyer applications
       setLawyerApplications(lawyerRes.data.applications || []);
       setLawyerStats(lawyerRes.data.stats || { pending: 0, approved: 0, rejected: 0 });
       setApprovedLawyers(approvedLawyersRes.data.lawyers || []);
+      setUsers(usersRes.data.users || []);
 
       // Process law firm applications
       setLawfirmApplications(firmRes.data.applications || []);
@@ -300,15 +304,19 @@ export default function AdminDashboard() {
     activeSection === 'lawfirms' ? lawfirmApplications :
       activeSection === 'firmlawyers' ? firmLawyerApplications :
         activeSection === 'firmclients' ? firmClientApplications :
-          approvedLawyers;
+          activeSection === 'users' ? users :
+            approvedLawyers;
   const currentStats = activeSection === 'lawyers' ? lawyerStats :
     activeSection === 'lawfirms' ? lawfirmStats :
       activeSection === 'firmlawyers' ? firmLawyerStats :
         activeSection === 'firmclients' ? firmClientStats :
-          { pending: 0, approved: approvedLawyers.length, rejected: 0 };
+          activeSection === 'users' ? { pending: users.length, approved: 0, rejected: 0 } :
+            { pending: 0, approved: approvedLawyers.length, rejected: 0 };
 
   const filteredApps = currentApplications.filter(app => {
-    const matchesFilter = filter === 'all' || app.status === filter;
+    // For users, we might not have a 'status' field in the same way, or it might be 'active'
+    // So we adjust the filter logic slightly
+    const matchesFilter = filter === 'all' || (app.status || 'active') === filter || activeSection === 'users';
     const matchesSearch = searchQuery === '' ||
       (app.name || app.full_name || app.firm_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (app.email || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -365,10 +373,21 @@ export default function AdminDashboard() {
         detail1: app.law_firm_name,
         detail2: app.email,
         image: null
+      },
+      user: {
+        color: 'cyan',
+        icon: User,
+        gradient: 'from-cyan-600 to-blue-500',
+        border: 'hover:border-cyan-500/50',
+        name: app.full_name,
+        subtitle: 'Client',
+        detail1: app.email,
+        detail2: app.phone || 'No phone',
+        image: null
       }
     };
 
-    const config = configs[type];
+    const config = configs[type] || configs.user; // Fallback to user if type not found
     const Icon = config.icon;
 
     return (
@@ -396,19 +415,20 @@ export default function AdminDashboard() {
               <h3 className="font-semibold text-white truncate group-hover:text-white">{config.name}</h3>
               <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${app.status === 'pending' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
                 app.status === 'approved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                  'bg-red-500/20 text-red-400 border border-red-500/30'
+                  type === 'user' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                    'bg-red-500/20 text-red-400 border border-red-500/30'
                 }`}>
-                {app.status?.charAt(0).toUpperCase() + app.status?.slice(1)}
+                {app.status ? (app.status.charAt(0).toUpperCase() + app.status.slice(1)) : 'Active'}
               </span>
             </div>
             <p className={`text-${config.color}-400 text-sm mb-2`}>{config.subtitle}</p>
             <div className="flex items-center gap-3 text-xs text-slate-400">
               <span className="flex items-center gap-1">
-                <MapPin className="w-3 h-3" />
+                {type === 'user' ? <Mail className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
                 {config.detail1}
               </span>
               <span className="flex items-center gap-1">
-                <Briefcase className="w-3 h-3" />
+                {type === 'user' ? <Phone className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}
                 {config.detail2}
               </span>
             </div>
@@ -434,9 +454,10 @@ export default function AdminDashboard() {
       lawyer: { color: 'purple', title: 'Lawyer Application', action: handleLawyerAction },
       lawfirm: { color: 'blue', title: 'Law Firm Application', action: handleLawfirmAction },
       firmlawyer: { color: 'emerald', title: 'Firm Lawyer Application', action: handleFirmLawyerAction },
-      firmclient: { color: 'pink', title: 'Client Application', action: handleFirmClientAction }
+      firmclient: { color: 'pink', title: 'Client Application', action: handleFirmClientAction },
+      user: { color: 'cyan', title: 'Client Details', action: () => { } }
     };
-    const config = configs[app.type];
+    const config = configs[app.type] || configs.user;
 
     return (
       <motion.div
@@ -478,7 +499,7 @@ export default function AdminDashboard() {
               <div>
                 <p className={`text-${config.color}-400 text-sm font-medium mb-1`}>{config.title}</p>
                 <h2 className="text-2xl font-bold text-white">{app.full_name || app.name || app.firm_name}</h2>
-                <p className="text-slate-400">{app.specialization || app.case_type || app.practice_areas?.join(', ')}</p>
+                <p className="text-slate-400">{app.specialization || app.case_type || app.practice_areas?.join(', ') || 'Registered Client'}</p>
               </div>
             </div>
           </div>
@@ -492,7 +513,7 @@ export default function AdminDashboard() {
                   <Mail className="w-4 h-4" />
                   <span className="text-xs uppercase tracking-wide">Email</span>
                 </div>
-                <p className="text-white font-medium">{app.email || app.contact_email}</p>
+                <p className="text-white font-medium truncate">{app.email || app.contact_email}</p>
               </div>
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                 <div className="flex items-center gap-2 text-slate-400 mb-2">
@@ -512,6 +533,17 @@ export default function AdminDashboard() {
                 </div>
                 <p className="text-white font-medium">{app.city}, {app.state}</p>
                 {app.court && <p className="text-slate-400 text-sm mt-1">{app.court}</p>}
+              </div>
+            )}
+
+            {/* Registration Date for Users */}
+            {app.type === 'user' && (
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                <div className="flex items-center gap-2 text-slate-400 mb-2">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-xs uppercase tracking-wide">Joined On</span>
+                </div>
+                <p className="text-white font-medium">{new Date(app.created_at).toLocaleDateString()} at {new Date(app.created_at).toLocaleTimeString()}</p>
               </div>
             )}
 
@@ -788,9 +820,8 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <QuickActionCard
             icon={Scale}
-            title="Review Lawyers"
-            description={`${lawyerStats.pending} pending`}
-            color="purple"
+            description={`${lawfirmStats.pending} pending`}
+            color="blue"
             onClick={() => setActiveSection('lawyers')}
           />
           <QuickActionCard
@@ -800,6 +831,14 @@ export default function AdminDashboard() {
             color="blue"
             onClick={() => setActiveSection('lawfirms')}
           />
+          <QuickActionCard
+            icon={Users}
+            title="New Users"
+            description={`${users.length} total`}
+            color="emerald"
+            onClick={() => setActiveSection('users')}
+          />
+
           <QuickActionCard
             icon={Users}
             title="Firm Lawyers"
@@ -854,6 +893,14 @@ export default function AdminDashboard() {
                 color="pink"
               />
               <NavTab
+                icon={Users}
+                label="Users"
+                active={activeSection === 'users'}
+                onClick={() => setActiveSection('users')}
+                count={users.length}
+                color="cyan"
+              />
+              <NavTab
                 icon={Globe}
                 label="State Network"
                 active={activeSection === 'statenetwork'}
@@ -864,59 +911,60 @@ export default function AdminDashboard() {
             </div>
 
             {/* Search and Filter */}
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search applications..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
-              <div className="flex gap-2">
-                {['pending', 'approved', 'rejected', 'all'].map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setFilter(f)}
-                    className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${filter === f
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                      }`}
-                  >
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Applications Grid */}
-          <div className="p-6">
-            {filteredApps.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-10 h-10 text-slate-600" />
+              {activeSection !== 'users' && (
+                <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
+                  {['all', 'pending', 'approved', 'rejected'].map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setFilter(f)}
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === f
+                        ? 'bg-slate-700 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-white'
+                        }`}
+                    >
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </button>
+                  ))}
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">No Applications Found</h3>
-                <p className="text-slate-400">There are no {filter !== 'all' ? filter : ''} applications in this section.</p>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredApps.map((app) => (
+              )}
+            </div>
+
+            {/* Applications Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredApps.length === 0 ? (
+                <div className="col-span-full text-center py-16">
+                  <div className="w-20 h-20 bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-10 h-10 text-slate-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">No Records Found</h3>
+                  <p className="text-slate-400">There are no {filter !== 'all' ? filter : ''} records in this section.</p>
+                </div>
+              ) : (
+                filteredApps.map((app) => (
                   <ApplicationCard
                     key={app._id || app.id}
                     app={app}
                     type={activeSection === 'lawyers' ? 'lawyer' :
                       activeSection === 'lawfirms' ? 'lawfirm' :
                         activeSection === 'firmlawyers' ? 'firmlawyer' :
-                          activeSection === 'statenetwork' ? 'lawyer' :
-                            'firmclient'}
+                          activeSection === 'firmclients' ? 'firmclient' :
+                            activeSection === 'users' ? 'user' :
+                              'lawyer'}
                   />
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
       </main>

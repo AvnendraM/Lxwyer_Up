@@ -1,330 +1,389 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Building2, MapPin, Users, Award, ArrowRight, Send, Bot, Sparkles, User } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Building2, Send, Bot, Briefcase, MapPin, ArrowRight, X, AlertCircle, CheckCircle, MessageSquare, Sparkles, User, Loader2, Star, Globe } from 'lucide-react';
+import { WaveLayout } from '../components/WaveLayout';
+import { Button } from '../components/ui/button';
+import { dummyLawFirms } from '../data/lawFirmsData';
+
+const ChatMessage = ({ message, isBot }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    className={`flex items-start gap-3 ${isBot ? '' : 'flex-row-reverse'}`}
+  >
+    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg ${isBot ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-100'
+      }`}>
+      {isBot ? <Bot className="w-5 h-5" /> : <User className="w-5 h-5" />}
+    </div>
+    <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${isBot
+        ? 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'
+        : 'bg-blue-600 text-white rounded-tr-none shadow-blue-500/20'
+      }`}>
+      {message.content && <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>}
+
+      {message.cards && (
+        <div className="space-y-3 mt-3">
+          {message.cards.map((card, idx) => (
+            <div key={idx} className={`p-3 rounded-xl border ${card.type === 'success' ? 'bg-green-50 border-green-100' :
+                card.type === 'alert' ? 'bg-amber-50 border-amber-100' :
+                  'bg-slate-50 border-slate-100'
+              }`}>
+              <div className="flex items-start gap-3">
+                {card.icon === 'check' && <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />}
+                {card.icon === 'alert' && <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />}
+                {card.icon === 'message' && <MessageSquare className="w-5 h-5 text-blue-600 mt-0.5" />}
+                <div>
+                  <h4 className="font-semibold text-slate-900 text-sm mb-1">{card.title}</h4>
+                  <p className="text-slate-600 text-sm">{card.content}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </motion.div>
+);
 
 export default function FindLawFirmAI() {
   const navigate = useNavigate();
+  const messagesEndRef = useRef(null);
+
   const [messages, setMessages] = useState([
     {
-      type: 'bot',
-      text: "Hello! I'm your AI assistant. I can help you find the perfect law firm for your legal needs. Tell me about your case or what type of legal assistance you're looking for."
+      role: 'assistant',
+      content: "Hello! I'm your AI consultant for connecting with top law firms. I can help find the right legal partners for your business or personal needs.",
+      cards: [
+        {
+          type: 'info',
+          icon: 'message',
+          title: 'How can I assist?',
+          content: 'Describe your requirements. For example: "Looking for a corporate law firm in Mumbai" or "Need help with intellectual property rights"'
+        }
+      ]
     }
   ]);
-  const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [recommendedFirms, setRecommendedFirms] = useState([]);
+  const [showRecommendations, setShowRecommendations] = useState(false);
+  const [selectedFirm, setSelectedFirm] = useState(null);
+  const [conversationState, setConversationState] = useState({
+    practiceArea: null,
+    state: null,
+    hasRecommended: false
+  });
 
-  // Dummy law firms data
-  const lawFirmsData = [
-    {
-      id: '1',
-      firm_name: 'Shah & Associates',
-      city: 'Delhi',
-      state: 'Delhi',
-      specialization: ['Civil Law', 'Criminal Law', 'Corporate Law'],
-      total_lawyers: 15,
-      established_year: 2010,
-      cases_handled: 500,
-      consultation_fee: 2999,
-      description: 'Premier law firm with expertise in civil, criminal, and corporate matters.'
-    },
-    {
-      id: '2',
-      firm_name: 'Mehta Legal Solutions',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      specialization: ['Family Law', 'Property Law', 'Consumer Rights'],
-      total_lawyers: 10,
-      established_year: 2012,
-      cases_handled: 350,
-      consultation_fee: 2499,
-      description: 'Specialized in family law and property disputes.'
-    },
-    {
-      id: '3',
-      firm_name: 'Reddy & Partners',
-      city: 'Hyderabad',
-      state: 'Telangana',
-      specialization: ['Corporate Law', 'Intellectual Property', 'Tax Law'],
-      total_lawyers: 20,
-      established_year: 2015,
-      cases_handled: 650,
-      consultation_fee: 3499,
-      description: 'Leading corporate law firm serving startups and large corporations.'
-    },
-    {
-      id: '4',
-      firm_name: 'Kumar Law Chambers',
-      city: 'Bangalore',
-      state: 'Karnataka',
-      specialization: ['Criminal Law', 'Civil Law', 'Labor Law'],
-      total_lawyers: 12,
-      established_year: 2008,
-      cases_handled: 480,
-      consultation_fee: 2299,
-      description: 'Experienced criminal and civil law practitioners.'
-    },
-    {
-      id: '5',
-      firm_name: 'Patel & Co Legal Advisors',
-      city: 'Ahmedabad',
-      state: 'Gujarat',
-      specialization: ['Real Estate Law', 'Business Law', 'Contract Law'],
-      total_lawyers: 8,
-      established_year: 2013,
-      cases_handled: 280,
-      consultation_fee: 1999,
-      description: 'Focused on real estate and business law.'
-    },
-    {
-      id: '6',
-      firm_name: 'Sharma & Singh Associates',
-      city: 'Chennai',
-      state: 'Tamil Nadu',
-      specialization: ['Family Law', 'Divorce Law', 'Child Custody'],
-      total_lawyers: 7,
-      established_year: 2016,
-      cases_handled: 220,
-      consultation_fee: 1799,
-      description: 'Compassionate family law experts with high success rate.'
-    }
-  ];
-
-  const findMatchingFirms = (query) => {
-    const lowerQuery = query.toLowerCase();
-    let matches = [];
-
-    // Keywords mapping
-    const keywordMap = {
-      'divorce': ['Family Law', 'Divorce Law'],
-      'family': ['Family Law', 'Child Custody'],
-      'property': ['Property Law', 'Real Estate Law'],
-      'criminal': ['Criminal Law'],
-      'corporate': ['Corporate Law', 'Business Law'],
-      'business': ['Business Law', 'Corporate Law', 'Contract Law'],
-      'tax': ['Tax Law'],
-      'startup': ['Corporate Law', 'Intellectual Property'],
-      'ip': ['Intellectual Property'],
-      'patent': ['Intellectual Property'],
-      'labor': ['Labor Law'],
-      'employment': ['Labor Law'],
-      'consumer': ['Consumer Rights'],
-      'real estate': ['Real Estate Law', 'Property Law'],
-      'contract': ['Contract Law', 'Business Law']
-    };
-
-    // Find matching specializations
-    let matchingSpecs = [];
-    for (const [keyword, specs] of Object.entries(keywordMap)) {
-      if (lowerQuery.includes(keyword)) {
-        matchingSpecs = [...matchingSpecs, ...specs];
-      }
-    }
-
-    if (matchingSpecs.length > 0) {
-      matches = lawFirmsData.filter(firm =>
-        firm.specialization.some(spec => matchingSpecs.includes(spec))
-      );
-    }
-
-    // If no keyword matches, return top-rated firms
-    if (matches.length === 0) {
-      matches = [...lawFirmsData].sort((a, b) => b.total_lawyers - a.total_lawyers).slice(0, 3);
-    }
-
-    return matches.slice(0, 3);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
-    // Add user message
-    setMessages(prev => [...prev, { type: 'user', text: inputValue }]);
-    const userQuery = inputValue;
-    setInputValue('');
-    setIsTyping(true);
+  const detectPracticeArea = (message) => {
+    const msg = message.toLowerCase();
+    if (msg.includes('corporate') || msg.includes('business') || msg.includes('merger')) return 'Corporate Law';
+    if (msg.includes('ip') || msg.includes('intellectual') || msg.includes('patent') || msg.includes('trademark')) return 'Intellectual Property';
+    if (msg.includes('tax') || msg.includes('gst') || msg.includes('financial')) return 'Tax Law';
+    if (msg.includes('real estate') || msg.includes('property') || msg.includes('land')) return 'Real Estate';
+    if (msg.includes('criminal') || msg.includes('defense')) return 'Criminal Defense';
+    if (msg.includes('family') || msg.includes('divorce')) return 'Family Law';
+    return null;
+  };
 
-    // Simulate AI response
+  const detectState = (message) => {
+    const msg = message.toLowerCase();
+    if (msg.includes('delhi')) return 'Delhi';
+    if (msg.includes('uttar pradesh') || msg.includes('up') || msg.includes('lucknow') || msg.includes('noida')) return 'Uttar Pradesh';
+    if (msg.includes('haryana') || msg.includes('gurgaon') || msg.includes('faridabad')) return 'Haryana';
+    if (msg.includes('maharashtra') || msg.includes('mumbai') || msg.includes('pune')) return 'Maharashtra';
+    return null;
+  };
+
+  const recommendFirms = (practiceArea, state) => {
+    let filtered = [...dummyLawFirms];
+    if (practiceArea) filtered = filtered.filter(f => f.practiceAreas.includes(practiceArea));
+    if (state) filtered = filtered.filter(f => f.state === state);
+    filtered.sort((a, b) => b.lawyersCount - a.lawyersCount);
+    return filtered.slice(0, 3);
+  };
+
+  const handleSendMessage = () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = inputMessage.trim();
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setInputMessage('');
+    setIsLoading(true);
+
     setTimeout(() => {
-      const matchedFirms = findMatchingFirms(userQuery);
-      setRecommendedFirms(matchedFirms);
+      const detectedArea = detectPracticeArea(userMessage);
+      const detectedState = detectState(userMessage);
 
-      let responseText = '';
-      if (matchedFirms.length > 0) {
-        responseText = `Based on your query, I've found ${matchedFirms.length} law firm${matchedFirms.length > 1 ? 's' : ''} that specialize in cases like yours. Here are my top recommendations:`;
+      const newState = {
+        practiceArea: detectedArea || conversationState.practiceArea,
+        state: detectedState || conversationState.state,
+        hasRecommended: false
+      };
+      setConversationState(newState);
+
+      let responseContent = '';
+      let responseCards = [];
+
+      if (newState.practiceArea && newState.state && !conversationState.hasRecommended) {
+        const firms = recommendFirms(newState.practiceArea, newState.state);
+
+        if (firms.length > 0) {
+          responseContent = `I've identified some top-tier firms in ${newState.state} specialized in ${newState.practiceArea}.`;
+          setRecommendedFirms(firms);
+          setShowRecommendations(true);
+          setConversationState(prev => ({ ...prev, hasRecommended: true }));
+        } else {
+          responseContent = `I understand you're looking for ${newState.practiceArea} expertise in ${newState.state}, but I couldn't find exact matches. Try expanding your search?`;
+        }
+      } else if (newState.practiceArea && !newState.state) {
+        responseContent = `Excellent. For ${newState.practiceArea}, location is key. Which state should I look in?`;
+        responseCards.push({
+          type: 'info',
+          icon: 'message',
+          title: 'Location Required',
+          content: 'Please confirm your preferred state (e.g., Maharashtra, Delhi) to identify local firms.'
+        });
+      } else if (!newState.practiceArea && newState.state) {
+        responseContent = `Got it, ${newState.state}. What specific legal expertise does your organization require?`;
       } else {
-        responseText = "I couldn't find specific matches for your query. Here are some highly-rated law firms that might be able to help:";
+        responseContent = "Could you elaborate on your requirements? I need to understand the practice area and desired location.";
       }
 
-      setMessages(prev => [...prev, { type: 'bot', text: responseText }]);
-      setIsTyping(false);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: responseContent,
+        cards: responseCards.length > 0 ? responseCards : undefined
+      }]);
+      setIsLoading(false);
     }, 1500);
   };
 
-  const handleJoinFirm = (firm) => {
-    navigate('/join-lawfirm-signup', { state: { firm } });
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-white" />
-            </div>
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">AI Law Firm Finder</h1>
-          <p className="text-xl text-slate-400">Tell me about your legal needs and I'll find the perfect law firm for you</p>
-        </motion.div>
+    <WaveLayout activePage="find-law-firm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Chat Section */}
+        <div className="text-center mb-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-full mb-6"
+          >
+            <Sparkles className="w-4 h-4 text-indigo-600" />
+            <span className="text-sm font-medium text-indigo-600">AI Firm Matching</span>
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-4xl font-bold text-slate-900 mb-4"
+          >
+            Connect with  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Legal Excellence</span>
+          </motion.h1>
+        </div>
+
+        <div className="grid lg:grid-cols-12 gap-8 h-[600px]">
+          {/* Chat Interface */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-[600px]"
+            className={`lg:col-span-${showRecommendations ? '7' : '8 lg:col-start-3'} bg-white/80 backdrop-blur-xl border border-white/20 shadow-xl shadow-blue-900/5 rounded-3xl flex flex-col overflow-hidden transition-all duration-500`}
           >
-            {/* Chat Messages */}
-            <div className="flex-1 p-6 overflow-y-auto space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-start gap-3 ${msg.type === 'user' ? 'flex-row-reverse' : ''}`}
-                >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${msg.type === 'bot'
-                    ? 'bg-gradient-to-br from-blue-600 to-blue-500'
-                    : 'bg-slate-700'
-                    }`}>
-                    {msg.type === 'bot' ? <Bot className="w-5 h-5 text-white" /> : <User className="w-5 h-5 text-white" />}
-                  </div>
-                  <div className={`max-w-[80%] p-4 rounded-2xl ${msg.type === 'bot'
-                    ? 'bg-slate-800 text-white rounded-tl-none'
-                    : 'bg-blue-600 text-white rounded-tr-none'
-                    }`}>
-                    <p className="text-sm">{msg.text}</p>
-                  </div>
-                </div>
+                <ChatMessage key={idx} message={msg} isBot={msg.role === 'assistant'} />
               ))}
-              {isTyping && (
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-white" />
+              {isLoading && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
                   </div>
-                  <div className="bg-slate-800 p-4 rounded-2xl rounded-tl-none">
-                    <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                      <span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                      <span className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <div className="bg-white border border-slate-100 rounded-2xl rounded-tl-none p-4 shadow-sm">
+                    <div className="flex gap-1.5">
+                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
+              <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <div className="p-4 border-t border-slate-800">
-              <div className="flex gap-3">
+            <div className="p-4 bg-white/50 border-t border-slate-100">
+              <div className="flex gap-3 relative">
                 <input
                   type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                  placeholder="Describe your legal needs..."
-                  className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Describe your legal requirements..."
+                  className="flex-1 pl-6 pr-14 py-4 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                 />
-                <button
-                  onClick={handleSend}
-                  disabled={!inputValue.trim() || isTyping}
-                  className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white p-3 rounded-xl transition-all"
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || isLoading}
+                  className="absolute right-2 top-2 h-10 w-10 p-0 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20"
                 >
-                  <Send className="w-5 h-5" />
-                </button>
+                  <Send className="w-4 h-4 text-white" />
+                </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-2">
-                Try: "I need help with a divorce case" or "Looking for corporate lawyers"
-              </p>
             </div>
           </motion.div>
 
-          {/* Recommendations Section */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-4"
-          >
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-400" />
-              {recommendedFirms.length > 0 ? 'Recommended Law Firms' : 'Top Law Firms'}
-            </h2>
-
-            {(recommendedFirms.length > 0 ? recommendedFirms : lawFirmsData.slice(0, 3)).map((firm, index) => (
+          {/* Recommendations Interface */}
+          <AnimatePresence>
+            {showRecommendations && (
               <motion.div
-                key={firm.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-blue-500/50 transition-all"
+                initial={{ opacity: 0, x: 20, width: 0 }}
+                animate={{ opacity: 1, x: 0, width: 'auto' }}
+                exit={{ opacity: 0, x: 20, width: 0 }}
+                className="lg:col-span-5 space-y-4 overflow-y-auto pr-1"
               >
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-bold text-white">{firm.firm_name}</h3>
-                    </div>
-                    <p className="text-slate-400 text-sm mt-1">{firm.description}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-amber-500" /> Matches Found
+                  </h3>
+                  <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">
+                    {recommendedFirms.length} Firms
+                  </span>
+                </div>
 
-                    <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        {firm.city}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="w-3 h-3" />
-                        {firm.total_lawyers} lawyers
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Award className="w-3 h-3" />
-                        Since {firm.established_year}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {firm.specialization.slice(0, 2).map((spec, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-blue-500/20 text-blue-300 rounded text-xs">
-                          {spec}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-800">
-                      <div>
-                        <span className="text-slate-500 text-xs">Consultation</span>
-                        <p className="text-blue-400 font-bold">₹{firm.consultation_fee}</p>
+                {recommendedFirms.map((firm, index) => (
+                  <motion.div
+                    key={firm.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-lg shadow-blue-900/5 rounded-2xl p-0 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group"
+                  >
+                    <div className="h-32 relative">
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent z-10" />
+                      <img src={firm.image} alt={firm.name} className="w-full h-full object-cover" />
+                      <div className="absolute bottom-3 left-4 z-20">
+                        <h4 className="font-bold text-white shadow-sm">{firm.name}</h4>
+                        <p className="text-slate-200 text-xs flex items-center gap-1"><MapPin className="w-3 h-3" /> {firm.city}</p>
                       </div>
-                      <button
-                        onClick={() => handleJoinFirm(firm)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all flex items-center gap-2"
-                      >
-                        Join Firm
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                    </div>
+
+                    <div className="p-4">
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {firm.practiceAreas.slice(0, 2).map((area, i) => (
+                          <span key={i} className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{area}</span>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedFirm(firm)}
+                          className="text-xs w-full"
+                        >
+                          Details
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="text-xs w-full bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20"
+                        >
+                          Contact <ArrowRight className="w-3 h-3 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Firm Detail Modal */}
+      <AnimatePresence>
+        {selectedFirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedFirm(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            >
+              <div className="relative h-64">
+                <img
+                  src={selectedFirm.image}
+                  alt={selectedFirm.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                <button
+                  onClick={() => setSelectedFirm(null)}
+                  className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 backdrop-blur-sm rounded-full text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <div className="absolute bottom-6 left-8 right-8 text-white">
+                  <h2 className="text-3xl font-bold mb-2">{selectedFirm.name}</h2>
+                  <div className="flex items-center gap-4 text-slate-200">
+                    <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {selectedFirm.city}, {selectedFirm.state}</span>
+                    <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> {selectedFirm.lawyersCount} Lawyers</span>
+                    <span className="flex items-center gap-1.5"><Star className="w-4 h-4 fill-amber-400 text-amber-400" /> 4.9 Rating</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-8 p-8">
+                <div className="md:col-span-2 space-y-8">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-3">About the Firm</h3>
+                    <p className="text-slate-600 leading-relaxed">{selectedFirm.description}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900 mb-3">Practice Areas</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedFirm.practiceAreas.map((area, idx) => (
+                        <div key={idx} className="px-3 py-1.5 bg-blue-50 text-blue-700 text-sm font-medium rounded-lg border border-blue-100">
+                          {area}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </div>
-    </div>
+
+                <div className="space-y-6">
+                  <div className="p-6 bg-slate-50 rounded-2xl space-y-4">
+                    <h3 className="font-bold text-slate-900">Contact Information</h3>
+                    <div className="space-y-3">
+                      {/* Contact details intentionally generic for this UI refactor */}
+                      <div className="flex items-center gap-3 text-slate-600"><span className="text-sm">+91 98765 43210</span></div>
+                      <div className="flex items-center gap-3 text-slate-600"><span className="text-sm">contact@firm.com</span></div>
+                    </div>
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
+                      Contact Firm
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </WaveLayout>
   );
 }

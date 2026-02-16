@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, User, Phone, Mail, CreditCard, Check, ArrowRight, Shield, Lock, Scale, MapPin, Briefcase, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Mail, CreditCard, Check, ArrowRight, Shield, Lock, Scale, MapPin, Briefcase, ArrowLeft, Star, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
+import { WaveLayout } from '../components/WaveLayout';
+import { Button } from '../components/ui/button';
 
 export default function BookConsultationWithSignup() {
   const navigate = useNavigate();
@@ -43,7 +45,6 @@ export default function BookConsultationWithSignup() {
 
   if (!selectedLawyer) return null;
 
-  // Extract fee from lawyer data (e.g., "₹5,000 - ₹15,000" -> 5000)
   const getFeeAmount = () => {
     if (selectedLawyer.consultation_fee) {
       return selectedLawyer.consultation_fee;
@@ -55,31 +56,27 @@ export default function BookConsultationWithSignup() {
         return parseInt(match[1].replace(/,/g, ''));
       }
     }
-    return 999; // Default fallback
+    return 999;
   };
 
   const consultationFee = getFeeAmount();
 
   const handleSignupSubmit = (e) => {
     e.preventDefault();
-
     if (!signupData.full_name || !signupData.email || !signupData.phone || !signupData.password) {
       toast.error('Please fill all signup fields');
       return;
     }
-
-    setStep(2); // Move to booking details
+    setStep(2);
   };
 
   const handleBookingSubmit = (e) => {
     e.preventDefault();
-
     if (!bookingData.date || !bookingData.time) {
       toast.error('Please select date and time');
       return;
     }
-
-    setStep(3); // Move to payment
+    setStep(3);
   };
 
   const handlePaymentSubmit = async (e) => {
@@ -87,10 +84,8 @@ export default function BookConsultationWithSignup() {
     setLoading(true);
 
     try {
-      // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Create user account
       const userPayload = {
         ...signupData,
         user_type: 'client'
@@ -98,11 +93,9 @@ export default function BookConsultationWithSignup() {
 
       const signupResponse = await axios.post(`${API}/auth/signup`, userPayload);
 
-      // Store token
       localStorage.setItem('token', signupResponse.data.token);
       localStorage.setItem('user', JSON.stringify(signupResponse.data.user));
 
-      // Create booking
       const bookingPayload = {
         lawyer_id: selectedLawyer.id,
         lawyer_name: selectedLawyer.name,
@@ -121,7 +114,7 @@ export default function BookConsultationWithSignup() {
       });
 
       toast.success('Account created and booking confirmed!');
-      setStep(4); // Success
+      setStep(4);
 
     } catch (error) {
       console.error('Error:', error);
@@ -141,433 +134,424 @@ export default function BookConsultationWithSignup() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Back Button */}
-        <button
-          onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)}
-          className="mb-6 flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back
-        </button>
+    <WaveLayout hideNavbar={true}>
+      <div className="min-h-screen pt-20 pb-12 px-4 relative z-10">
+        <div className="max-w-5xl mx-auto">
 
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-center">
-            {[1, 2, 3, 4].map((num) => (
-              <div key={num} className="flex items-center">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold transition-all ${step >= num ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'
-                  }`}>
-                  {step > num ? <Check className="w-6 h-6" /> : num}
-                </div>
-                {num < 4 && (
-                  <div className={`w-20 h-1 mx-2 transition-all ${step > num ? 'bg-blue-600' : 'bg-slate-800'
-                    }`} />
-                )}
-              </div>
-            ))}
+          {/* Header & Back */}
+          <div className="flex items-center justify-between mb-8">
+            <button
+              onClick={() => step > 1 ? setStep(step - 1) : navigate(-1)}
+              className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-medium bg-white/50 px-4 py-2 rounded-full backdrop-blur-md border border-white/60 shadow-sm"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <div className="text-right hidden sm:block">
+              <p className="text-sm font-semibold text-slate-800">Booking Consultation</p>
+              <p className="text-xs text-slate-500">Step {step} of 4</p>
+            </div>
           </div>
-          <div className="flex justify-center mt-4 text-sm text-slate-400 gap-16">
-            <span className={step === 1 ? 'text-blue-400 font-semibold' : ''}>Signup</span>
-            <span className={step === 2 ? 'text-blue-400 font-semibold' : ''}>Booking</span>
-            <span className={step === 3 ? 'text-blue-400 font-semibold' : ''}>Payment</span>
-            <span className={step === 4 ? 'text-blue-400 font-semibold' : ''}>Done</span>
+
+          <div className="grid lg:grid-cols-3 gap-8">
+
+            {/* Left Column: Lawyer Info & Progress */}
+            <div className="lg:col-span-1 space-y-6">
+
+              {/* Progress Steps (Vertical on large screens) */}
+              <div className="bg-white/60 backdrop-blur-md border border-white/60 rounded-3xl p-6 shadow-sm">
+                <div className="flex lg:flex-col justify-between lg:gap-8">
+                  {[
+                    { num: 1, label: 'Signup', icon: User },
+                    { num: 2, label: 'Booking', icon: Calendar },
+                    { num: 3, label: 'Payment', icon: CreditCard },
+                    { num: 4, label: 'Confirmation', icon: Check }
+                  ].map((s) => (
+                    <div key={s.num} className="flex items-center gap-3 relative">
+                      <div className={`
+                        w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all relative z-10
+                        ${step >= s.num ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'bg-white border-2 border-slate-100 text-slate-300'}
+                      `}>
+                        {step > s.num ? <Check className="w-5 h-5" /> : s.icon && <s.icon className="w-4 h-4" />}
+                      </div>
+                      <span className={`hidden lg:block font-medium ${step >= s.num ? 'text-slate-800' : 'text-slate-400'}`}>
+                        {s.label}
+                      </span>
+                      {s.num < 4 && (
+                        <div className={`
+                          hidden lg:block absolute left-5 top-10 w-0.5 h-8 -ml-px transition-all
+                          ${step > s.num ? 'bg-blue-600' : 'bg-slate-100'}
+                        `} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Selected Lawyer Card */}
+              <div className="bg-white/80 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-lg shadow-blue-900/5 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-2xl -mr-16 -mt-16" />
+
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-white border border-blue-100 flex items-center justify-center shadow-sm">
+                      <Scale className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100">
+                      Top Rated
+                    </div>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-slate-900 mb-1">{selectedLawyer.name}</h3>
+                  <p className="text-blue-600 font-medium text-sm mb-4">{selectedLawyer.specialization}</p>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-100">
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <Briefcase className="w-4 h-4 text-slate-400" />
+                      <span>{selectedLawyer.experience} years experience</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                      <MapPin className="w-4 h-4 text-slate-400" />
+                      <span>{selectedLawyer.city}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-slate-100">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Consultation Fee</p>
+                    <p className="text-2xl font-bold text-slate-900">₹{consultationFee}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Security Badge */}
+              <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
+                <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-blue-900">Secure Booking</h4>
+                  <p className="text-xs text-slate-500 mt-1">Your personal information is encrypted and secure.</p>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column: Dynamic Form Steps */}
+            <div className="lg:col-span-2">
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+                className="bg-white/70 backdrop-blur-xl border border-white/80 rounded-3xl p-8 md:p-10 shadow-xl shadow-slate-200/50 h-full"
+              >
+
+                {/* Step 1: Signup Form */}
+                {step === 1 && (
+                  <div className="max-w-lg mx-auto">
+                    <div className="mb-8">
+                      <h2 className="text-3xl font-bold text-slate-900 mb-2 font-outfit">Create Account</h2>
+                      <p className="text-slate-500">Enter your details to create an account and proceed with booking.</p>
+                    </div>
+
+                    <form onSubmit={handleSignupSubmit} className="space-y-5">
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Full Name</label>
+                        <div className="relative group">
+                          <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                          <input
+                            type="text"
+                            required
+                            value={signupData.full_name}
+                            onChange={(e) => setSignupData({ ...signupData, full_name: e.target.value })}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                            placeholder="John Doe"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
+                        <div className="relative group">
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                          <input
+                            type="email"
+                            required
+                            value={signupData.email}
+                            onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                            placeholder="john@example.com"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Phone Number</label>
+                        <div className="relative group">
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                          <input
+                            type="tel"
+                            required
+                            value={signupData.phone}
+                            onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                            placeholder="+91 98765 43210"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+                        <div className="relative group">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                          <input
+                            type="password"
+                            required
+                            minLength={6}
+                            value={signupData.password}
+                            onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                            placeholder="••••••••"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-4">
+                        <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg shadow-blue-500/25 py-6 rounded-xl text-lg font-semibold">
+                          Continue to Booking <ArrowRight className="w-5 h-5 ml-2" />
+                        </Button>
+                      </div>
+
+                      <p className="text-center text-sm text-slate-500 mt-4">
+                        Already have an account?{' '}
+                        <button
+                          type="button"
+                          onClick={() => navigate('/user-login', { state: { lawyer: selectedLawyer } })}
+                          className="text-blue-600 font-bold hover:underline"
+                        >
+                          Login
+                        </button>
+                      </p>
+                    </form>
+                  </div>
+                )}
+
+                {/* Step 2: Booking Details */}
+                {step === 2 && (
+                  <div className="max-w-lg mx-auto">
+                    <div className="mb-8">
+                      <h2 className="text-3xl font-bold text-slate-900 mb-2 font-outfit">Select Date & Time</h2>
+                      <p className="text-slate-500">Choose a suitable slot for your consultation.</p>
+                    </div>
+
+                    <form onSubmit={handleBookingSubmit} className="space-y-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-slate-700 ml-1">Date</label>
+                          <div className="relative">
+                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <input
+                              type="date"
+                              required
+                              min={new Date().toISOString().split('T')[0]}
+                              value={bookingData.date}
+                              onChange={(e) => setBookingData({ ...bookingData, date: e.target.value })}
+                              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-slate-700 ml-1">Time</label>
+                          <div className="relative">
+                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                            <select
+                              required
+                              value={bookingData.time}
+                              onChange={(e) => setBookingData({ ...bookingData, time: e.target.value })}
+                              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm appearance-none"
+                            >
+                              <option value="">Select Time</option>
+                              <option value="10:00 AM">10:00 AM</option>
+                              <option value="11:00 AM">11:00 AM</option>
+                              <option value="12:00 PM">12:00 PM</option>
+                              <option value="2:00 PM">2:00 PM</option>
+                              <option value="3:00 PM">3:00 PM</option>
+                              <option value="4:00 PM">4:00 PM</option>
+                              <option value="5:00 PM">5:00 PM</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Description (Optional)</label>
+                        <textarea
+                          rows={4}
+                          value={bookingData.description}
+                          onChange={(e) => setBookingData({ ...bookingData, description: e.target.value })}
+                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
+                          placeholder="Briefly describe your legal issue..."
+                        />
+                      </div>
+
+                      <div className="pt-4">
+                        <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg shadow-blue-500/25 py-6 rounded-xl text-lg font-semibold">
+                          Proceed to Payment <ArrowRight className="w-5 h-5 ml-2" />
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Step 3: Payment */}
+                {step === 3 && (
+                  <div className="max-w-lg mx-auto">
+                    <div className="mb-8">
+                      <h2 className="text-3xl font-bold text-slate-900 mb-2 font-outfit">Payment Details</h2>
+                      <p className="text-slate-500">Complete payment to confirm your booking.</p>
+                    </div>
+
+                    <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 mb-8">
+                      <h4 className="font-semibold text-slate-900 mb-3 border-b border-slate-200 pb-2">Order Summary</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between text-slate-600">
+                          <span>Consultation with</span>
+                          <span className="font-medium text-slate-900">{selectedLawyer.name}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600">
+                          <span>Date & Time</span>
+                          <span className="font-medium text-slate-900">{bookingData.date}, {bookingData.time}</span>
+                        </div>
+                        <div className="flex justify-between text-slate-600 pt-2 border-t border-slate-200 mt-2">
+                          <span className="font-semibold">Total Amount</span>
+                          <span className="font-bold text-blue-600 text-lg">₹{consultationFee}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <form onSubmit={handlePaymentSubmit} className="space-y-5">
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Card Number</label>
+                        <div className="relative group">
+                          <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                          <input
+                            type="text"
+                            required
+                            maxLength={16}
+                            value={paymentData.cardNumber}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              setPaymentData({ ...paymentData, cardNumber: value });
+                            }}
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                            placeholder="0000 0000 0000 0000"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Cardholder Name</label>
+                        <input
+                          type="text"
+                          required
+                          value={paymentData.cardName}
+                          onChange={(e) => setPaymentData({ ...paymentData, cardName: e.target.value })}
+                          className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                          placeholder="NAME ON CARD"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-slate-700 ml-1">Expiry Date</label>
+                          <input
+                            type="text"
+                            required
+                            maxLength={5}
+                            placeholder="MM/YY"
+                            value={paymentData.expiryDate}
+                            onChange={(e) => {
+                              let value = e.target.value.replace(/\D/g, '');
+                              if (value.length >= 2) value = value.slice(0, 2) + '/' + value.slice(2, 4);
+                              setPaymentData({ ...paymentData, expiryDate: value });
+                            }}
+                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-slate-700 ml-1">CVV</label>
+                          <input
+                            type="password"
+                            required
+                            maxLength={3}
+                            placeholder="123"
+                            value={paymentData.cvv}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              setPaymentData({ ...paymentData, cvv: value });
+                            }}
+                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="pt-4">
+                        <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg shadow-blue-500/25 py-6 rounded-xl text-lg font-semibold disabled:opacity-70">
+                          {loading ? <span className="flex items-center gap-2"><Loader2 className="w-5 h-5 animate-spin" /> Processing...</span> : `Pay ₹${consultationFee}`}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {/* Step 4: Success */}
+                {step === 4 && (
+                  <div className="text-center max-w-lg mx-auto py-8">
+                    <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                      <Check className="w-12 h-12 text-green-600" />
+                    </div>
+
+                    <h2 className="text-3xl font-bold text-slate-900 mb-2 font-outfit">Booking Confirmed!</h2>
+                    <p className="text-slate-500 mb-8 max-w-md mx-auto">Your consultation has been successfully scheduled. You can view details in your dashboard.</p>
+
+                    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-8 text-left max-w-md mx-auto">
+                      <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-4">
+                        <span className="text-slate-500 text-sm">Booking ID</span>
+                        <span className="text-slate-900 font-mono text-sm bg-white px-2 py-1 rounded border border-slate-200">#{Math.floor(Math.random() * 100000)}</span>
+                      </div>
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 text-sm">Client</span>
+                          <span className="font-medium text-slate-900 text-sm">{signupData.full_name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 text-sm">Lawyer</span>
+                          <span className="font-medium text-slate-900 text-sm">{selectedLawyer.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-600 text-sm">Date & Time</span>
+                          <span className="font-medium text-slate-900 text-sm">{bookingData.date}, {bookingData.time}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                      <Button onClick={handleLoginRedirect} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 px-8 py-6 rounded-xl text-base font-semibold">
+                        Go to Dashboard
+                      </Button>
+                      <Button onClick={() => navigate('/')} variant="outline" className="border-slate-200 bg-white hover:bg-slate-50 text-slate-700 px-8 py-6 rounded-xl text-base font-semibold">
+                        Back to Home
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+              </motion.div>
+            </div>
           </div>
         </div>
-
-        {/* Selected Lawyer Card */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 mb-8"
-        >
-          <h3 className="text-sm font-medium text-slate-400 mb-3">Selected Lawyer</h3>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center">
-              <Scale className="w-8 h-8 text-white" />
-            </div>
-            <div className="flex-1">
-              <h4 className="text-xl font-bold text-white">{selectedLawyer.name}</h4>
-              <p className="text-blue-400 text-sm">{selectedLawyer.specialization}</p>
-              <div className="flex items-center gap-4 mt-2 text-xs text-slate-400">
-                <span className="flex items-center gap-1">
-                  <Briefcase className="w-3 h-3" />
-                  {selectedLawyer.experience} years
-                </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {selectedLawyer.city}
-                </span>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-slate-400">Consultation Fee</p>
-              <p className="text-2xl font-bold text-white">₹{consultationFee}</p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Step 1: Signup */}
-        {step === 1 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-8"
-          >
-            <h2 className="text-3xl font-bold text-white mb-2">Create Your Account</h2>
-            <p className="text-slate-400 mb-8">Sign up to book consultation with {selectedLawyer.name}</p>
-
-            <form onSubmit={handleSignupSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                  <input
-                    type="text"
-                    value={signupData.full_name}
-                    onChange={(e) => setSignupData({ ...signupData, full_name: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                  <input
-                    type="email"
-                    value={signupData.email}
-                    onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="john@example.com"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                  <input
-                    type="tel"
-                    value={signupData.phone}
-                    onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="+91 98765 43210"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                  <input
-                    type="password"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="••••••••"
-                    required
-                    minLength="6"
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Minimum 6 characters</p>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                Continue to Booking
-                <ArrowRight className="w-5 h-5" />
-              </button>
-
-              <p className="text-center text-sm text-slate-400">
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => navigate('/user-login', { state: { lawyer: selectedLawyer } })}
-                  className="text-blue-400 hover:text-blue-300"
-                >
-                  Login
-                </button>
-              </p>
-            </form>
-          </motion.div>
-        )}
-
-        {/* Step 2: Booking Details */}
-        {step === 2 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-8"
-          >
-            <h2 className="text-3xl font-bold text-white mb-2">Schedule Consultation</h2>
-            <p className="text-slate-400 mb-8">Choose your preferred date and time</p>
-
-            <form onSubmit={handleBookingSubmit} className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Preferred Date</label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                    <input
-                      type="date"
-                      value={bookingData.date}
-                      onChange={(e) => setBookingData({ ...bookingData, date: e.target.value })}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Preferred Time</label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                    <select
-                      value={bookingData.time}
-                      onChange={(e) => setBookingData({ ...bookingData, time: e.target.value })}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    >
-                      <option value="">Select Time</option>
-                      <option value="10:00 AM">10:00 AM</option>
-                      <option value="11:00 AM">11:00 AM</option>
-                      <option value="12:00 PM">12:00 PM</option>
-                      <option value="2:00 PM">2:00 PM</option>
-                      <option value="3:00 PM">3:00 PM</option>
-                      <option value="4:00 PM">4:00 PM</option>
-                      <option value="5:00 PM">5:00 PM</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Brief Description (Optional)</label>
-                <textarea
-                  value={bookingData.description}
-                  onChange={(e) => setBookingData({ ...bookingData, description: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows="3"
-                  placeholder="Tell us briefly about your legal matter..."
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                Proceed to Payment
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </form>
-          </motion.div>
-        )}
-
-        {/* Step 3: Payment */}
-        {step === 3 && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-8"
-          >
-            <h2 className="text-3xl font-bold text-white mb-2">Payment Details</h2>
-            <p className="text-slate-400 mb-8">Complete your payment to confirm the booking</p>
-
-            {/* Booking Summary */}
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 mb-6">
-              <h3 className="text-lg font-semibold text-white mb-4">Booking Summary</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Lawyer</span>
-                  <span className="text-white font-medium">{selectedLawyer.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Date & Time</span>
-                  <span className="text-white font-medium">{bookingData.date} at {bookingData.time}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Client</span>
-                  <span className="text-white font-medium">{signupData.full_name}</span>
-                </div>
-                <div className="border-t border-slate-700 mt-4 pt-4 flex justify-between">
-                  <span className="text-white font-semibold">Total Amount</span>
-                  <span className="text-2xl font-bold text-blue-400">₹{consultationFee}</span>
-                </div>
-              </div>
-            </div>
-
-            <form onSubmit={handlePaymentSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Card Number</label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                  <input
-                    type="text"
-                    value={paymentData.cardNumber}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\s/g, '');
-                      if (value.length <= 16 && /^\d*$/.test(value)) {
-                        setPaymentData({ ...paymentData, cardNumber: value });
-                      }
-                    }}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="1234 5678 9012 3456"
-                    maxLength="16"
-                    required
-                  />
-                </div>
-                <p className="text-xs text-slate-500 mt-1">For testing: Use 4242424242424242</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Cardholder Name</label>
-                <input
-                  type="text"
-                  value={paymentData.cardName}
-                  onChange={(e) => setPaymentData({ ...paymentData, cardName: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="JOHN DOE"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Expiry Date</label>
-                  <input
-                    type="text"
-                    value={paymentData.expiryDate}
-                    onChange={(e) => {
-                      let value = e.target.value.replace(/\D/g, '');
-                      if (value.length >= 2) {
-                        value = value.slice(0, 2) + '/' + value.slice(2, 4);
-                      }
-                      if (value.length <= 5) {
-                        setPaymentData({ ...paymentData, expiryDate: value });
-                      }
-                    }}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="MM/YY"
-                    maxLength="5"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">CVV</label>
-                  <input
-                    type="text"
-                    value={paymentData.cvv}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/\D/g, '');
-                      if (value.length <= 3) {
-                        setPaymentData({ ...paymentData, cvv: value });
-                      }
-                    }}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="123"
-                    maxLength="3"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 bg-blue-500/10 border border-blue-500/30 rounded-xl p-4">
-                <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="text-blue-300 font-medium">Secure Payment</p>
-                  <p className="text-slate-400">Your payment information is encrypted and secure</p>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {loading ? 'Processing...' : `Pay ₹${consultationFee}`}
-                {!loading && <Lock className="w-5 h-5" />}
-              </button>
-            </form>
-          </motion.div>
-        )}
-
-        {/* Step 4: Success */}
-        {step === 4 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center"
-          >
-            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-10 h-10 text-green-400" />
-            </div>
-
-            <h2 className="text-3xl font-bold text-white mb-2">Success!</h2>
-            <p className="text-slate-400 mb-8">Your account has been created and consultation booking is confirmed</p>
-
-            <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 mb-8 text-left">
-              <h3 className="text-lg font-semibold text-white mb-4">Account & Booking Details</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Email</span>
-                  <span className="text-white font-medium">{signupData.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Lawyer</span>
-                  <span className="text-white font-medium">{selectedLawyer.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Date</span>
-                  <span className="text-white font-medium">{bookingData.date}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Time</span>
-                  <span className="text-white font-medium">{bookingData.time}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Amount Paid</span>
-                  <span className="text-green-400 font-bold">₹{consultationFee}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 mb-6">
-              <p className="text-slate-300 text-sm">
-                ✅ You are now logged in! Access your dashboard to view booking details and track your case.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <button
-                onClick={handleLoginRedirect}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                Go to Dashboard
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => navigate('/')}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-semibold py-4 rounded-xl transition-all"
-              >
-                Back to Home
-              </button>
-            </div>
-          </motion.div>
-        )}
       </div>
-    </div>
+    </WaveLayout>
   );
 }

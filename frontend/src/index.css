@@ -13,7 +13,12 @@ body {
     color: #f8fafc;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
     font-family: 'Outfit', sans-serif;
 }
 
@@ -50,6 +55,7 @@ code {
     * {
         @apply border-border;
     }
+
     body {
         @apply bg-background text-foreground;
     }
@@ -59,13 +65,17 @@ code {
     .glass {
         @apply bg-slate-950/60 backdrop-blur-xl border border-slate-800/50 shadow-2xl;
     }
-    
+
     .glow-blue {
         box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.3);
     }
-    
+
     .glow-blue-hover:hover {
         box-shadow: 0 0 50px -5px rgba(59, 130, 246, 0.5);
+    }
+
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
     }
 }
 
@@ -90,4 +100,167 @@ html {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #3b82f6;
+}
+
+/* ─────────────────────────────────────────────
+   GLOBAL ANIMATIONS (from LandingPageWave)
+   ───────────────────────────────────────────── */
+
+@keyframes orbFloat1 {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    25% {
+        transform: translate(-60px, 40px) scale(1.05);
+    }
+
+    50% {
+        transform: translate(30px, -30px) scale(0.97);
+    }
+
+    75% {
+        transform: translate(-40px, -20px) scale(1.03);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+}
+
+@keyframes orbFloat2 {
+    0% {
+        transform: translate(0, 0) scale(1.02);
+    }
+
+    30% {
+        transform: translate(50px, -50px) scale(0.96);
+    }
+
+    60% {
+        transform: translate(-40px, 30px) scale(1.04);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(1.02);
+    }
+}
+
+@keyframes orbFloat3 {
+    0% {
+        transform: translate(0, 0) scale(0.98);
+    }
+
+    35% {
+        transform: translate(-70px, 20px) scale(1.06);
+    }
+
+    70% {
+        transform: translate(50px, -40px) scale(0.94);
+    }
+
+    100% {
+        transform: translate(0, 0) scale(0.98);
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes pulseGlow {
+
+    0%,
+    100% {
+        opacity: 0.4;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+}
+
+@keyframes spinSlow {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* 3D Animated Sphere */
+@keyframes morphSphere {
+    0% {
+        border-radius: 42% 58% 55% 45% / 56% 45% 55% 44%;
+        transform: rotate(0deg) scale(1);
+    }
+
+    14% {
+        border-radius: 52% 48% 42% 58% / 48% 62% 38% 52%;
+        transform: rotate(51deg) scale(1.04);
+    }
+
+    28% {
+        border-radius: 38% 62% 56% 44% / 55% 38% 62% 45%;
+        transform: rotate(103deg) scale(0.97);
+    }
+
+    42% {
+        border-radius: 58% 42% 48% 52% / 42% 56% 44% 58%;
+        transform: rotate(154deg) scale(1.06);
+    }
+
+    57% {
+        border-radius: 45% 55% 62% 38% / 52% 44% 56% 48%;
+        transform: rotate(206deg) scale(0.98);
+    }
+
+    71% {
+        border-radius: 55% 45% 38% 62% / 44% 58% 42% 56%;
+        transform: rotate(257deg) scale(1.03);
+    }
+
+    85% {
+        border-radius: 48% 52% 45% 55% / 58% 42% 58% 42%;
+        transform: rotate(309deg) scale(1.01);
+    }
+
+    100% {
+        border-radius: 42% 58% 55% 45% / 56% 45% 55% 44%;
+        transform: rotate(360deg) scale(1);
+    }
+}
+
+@keyframes sphereColorShift {
+    0% {
+        background: radial-gradient(ellipse at 30% 20%, #60a5fa 0%, #2563eb 30%, #1d4ed8 55%, #1e3a8a 80%, #0f172a 100%);
+    }
+
+    25% {
+        background: radial-gradient(ellipse at 60% 30%, #93c5fd 0%, #3b82f6 30%, #2563eb 55%, #1d4ed8 80%, #172554 100%);
+    }
+
+    50% {
+        background: radial-gradient(ellipse at 40% 60%, #bfdbfe 0%, #60a5fa 30%, #3b82f6 55%, #1e40af 80%, #0f172a 100%);
+    }
+
+    75% {
+        background: radial-gradient(ellipse at 70% 40%, #93c5fd 0%, #2563eb 30%, #1d4ed8 55%, #1e3a8a 80%, #172554 100%);
+    }
+
+    100% {
+        background: radial-gradient(ellipse at 30% 20%, #60a5fa 0%, #2563eb 30%, #1d4ed8 55%, #1e3a8a 80%, #0f172a 100%);
+    }
 }

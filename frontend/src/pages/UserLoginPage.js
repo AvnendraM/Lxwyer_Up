@@ -1,11 +1,13 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Scale, Mail, Lock, ArrowRight, ArrowLeft, Home } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
 import { motion } from 'framer-motion';
-import { CorporateInput, CorporateButton } from '../components/CorporateComponents';
+import { WaveLayout } from '../components/WaveLayout';
+import { Button } from '../components/ui/button';
 
 export default function UserLoginPage() {
   const [loading, setLoading] = useState(false);
@@ -14,18 +16,18 @@ export default function UserLoginPage() {
     password: ''
   });
   const navigate = useNavigate();
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       const payload = { email: formData.email, password: formData.password, user_type: 'client' };
       const response = await axios.post(`${API}/auth/login`, payload);
-      
+
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      
+
       toast.success('Welcome back!');
       navigate('/user-dashboard');
     } catch (error) {
@@ -34,113 +36,159 @@ export default function UserLoginPage() {
       setLoading(false);
     }
   };
-  
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-slate-950 to-black flex flex-col">
-      {/* Navigation Bar */}
-      <nav className="p-4 flex items-center justify-between">
+    <WaveLayout hideNavbar={true} className="bg-gradient-to-br from-orange-50 via-white to-green-50">
+      <div className="min-h-screen flex items-center justify-center px-4 py-20 relative z-10">
+
+        {/* Back Button */}
         <button
-          onClick={() => navigate(-1)}
-          className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
+          onClick={() => navigate('/role-selection')}
+          className="absolute top-8 left-8 flex items-center space-x-2 text-slate-500 hover:text-blue-600 transition-colors font-medium bg-white/50 px-4 py-2 rounded-full backdrop-blur-md border border-white/60 hover:shadow-sm"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </button>
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center space-x-2 text-slate-400 hover:text-white transition-colors"
-        >
-          <Home className="w-5 h-5" />
-          <span>Home</span>
-        </button>
-      </nav>
 
-      {/* Animated background */}
-      <div className="fixed inset-0 opacity-10 pointer-events-none">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `radial-gradient(circle at 2px 2px, rgb(59, 130, 246) 1px, transparent 0)`,
-          backgroundSize: '40px 40px'
-        }} />
-      </div>
-      
-      {/* Login Card */}
-      <div className="flex-1 flex items-center justify-center px-4">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 w-full max-w-md"
+          className="w-full max-w-md relative"
         >
-          {/* Logo */}
-          <Link to="/" className="flex items-center justify-center space-x-3 mb-8 group">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all">
-              <Scale className="w-7 h-7 text-white" />
+          {/* Card Container with Glassmorphism */}
+          <div
+            className="rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden"
+            style={{
+              background: 'rgba(255, 255, 255, 0.75)',
+              backdropFilter: 'blur(30px)',
+              border: '1px solid rgba(255, 255, 255, 0.8)',
+              boxShadow: '0 20px 60px -10px rgba(0, 0, 0, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.6)'
+            }}
+          >
+            {/* Header */}
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-blue-400 text-white mb-6 shadow-lg shadow-blue-500/30">
+                <Lock className="w-8 h-8" />
+              </div>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2 font-outfit">Welcome Back</h1>
+              <p className="text-slate-500">Sign in to access your legal dashboard</p>
             </div>
-            <span className="text-2xl font-bold text-white">Lxwyer Up</span>
-          </Link>
-          
-          {/* Card */}
-          <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 rounded-2xl p-8 shadow-2xl">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-2">Client Login</h2>
-              <p className="text-slate-400">Welcome back! Sign in to continue</p>
-            </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
-              <CorporateInput
-                label="Email Address"
-                type="email"
-                data-testid="user-email-input"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="your@email.com"
-                icon={Mail}
-                required
-              />
-              
-              <CorporateInput
-                label="Password"
-                type="password"
-                data-testid="user-password-input"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Enter your password"
-                icon={Lock}
-                required
-              />
-              
-              <CorporateButton
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                    placeholder="name@example.com"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-sm font-semibold text-slate-700">Password</label>
+                  <a href="#" className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline">Forgot password?</a>
+                </div>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                  <input
+                    type="password"
+                    required
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full pl-12 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
+
+              <Button
                 type="submit"
-                variant="primary"
-                className="w-full flex items-center justify-center gap-2"
                 disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-6 rounded-xl shadow-lg shadow-blue-500/25 transition-all text-base mt-2"
               >
-                {loading ? 'Signing in...' : (
-                  <>
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Signing in...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
                     Sign In
                     <ArrowRight className="w-5 h-5" />
-                  </>
+                  </span>
                 )}
-              </CorporateButton>
+              </Button>
+
+              <div className="relative my-8">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-slate-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-slate-500 font-medium">Or continue with</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => toast.info('Google Login coming soon!')}
+                className="w-full bg-white text-slate-700 hover:bg-slate-50 border-slate-200 font-medium py-6 rounded-xl transition-all flex items-center justify-center gap-3 group"
+              >
+                <svg className="w-5 h-5" aria-hidden="true" viewBox="0 0 24 24">
+                  <path
+                    d="M12.0003 20.45c4.656 0 8.556-3.218 9.979-7.568h-9.979v-3.764h15.35c.159.853.242 1.734.242 2.641 0 7.82-5.38 13.409-12.833 13.409C5.362 25.168 0 19.806 0 13.192 0 6.578 5.362 1.216 12.0003 1.216c3.246 0 6.182 1.187 8.47 3.328l-4.182 4.182c-1.127-1.078-2.613-1.638-4.288-1.638-3.618 0-6.702 2.39-7.802 5.696h-.002l-5.118-3.957C1.942 3.65 6.602 0.05 12.0003 0.05c6.5 0 12 5.5 12 12s-5.5 12-12 12z"
+                    fill="currentColor"
+                    className="text-slate-900 group-hover:text-blue-600 transition-colors"
+                  />
+                  <path
+                    d="M23.49 12.275c0-.85-.075-1.675-.225-2.465H12v4.66h6.44c-.275 1.485-1.115 2.745-2.38 3.59v2.985h3.855c2.255-2.075 3.555-5.13 3.555-8.77z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 24c3.24 0 5.955-1.075 7.94-2.915l-3.855-2.985c-1.075.72-2.45 1.145-4.085 1.145-3.15 0-5.815-2.125-6.77-4.985H1.26v3.13C3.255 21.36 7.33 24 12 24z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.23 14.26A7.16 7.16 0 0 1 4.87 12c0-.78.13-1.535.36-2.26V6.61H1.26A11.975 11.975 0 0 0 0 12c0 1.93.46 3.755 1.26 5.39l3.97-3.13z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 4.75c1.77 0 3.355.61 4.605 1.8l3.44-3.44C17.95 1.16 15.235 0 12 0 7.33 0 3.255 2.64 1.26 6.61l3.97 3.13C6.185 6.875 8.85 4.75 12 4.75z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                Sign in with Google
+              </Button>
             </form>
-            
-            <div className="mt-6 text-center">
-              <p className="text-slate-400">
+
+            <div className="mt-8 text-center">
+              <p className="text-slate-500 text-sm">
                 Don't have an account?{' '}
-                <Link to="/user-signup" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
-                  Sign up
+                <Link to="/user-signup" className="text-blue-600 font-bold hover:text-blue-700 hover:underline transition-colors">
+                  Create Account
                 </Link>
               </p>
             </div>
-            
-            <div className="mt-4 text-center">
-              <Link to="/role-selection?mode=login" className="text-slate-500 hover:text-slate-400 text-sm transition-colors">
-                Login as different role
-              </Link>
-            </div>
+          </div>
+
+          {/* Footer Branding */}
+          <div className="text-center mt-8">
+            <span className="text-slate-400 font-medium text-sm flex items-center justify-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+              LxwyerUp Secure Login
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+            </span>
           </div>
         </motion.div>
-      </div>
-    </div>
+      </div >
+    </WaveLayout >
   );
 }

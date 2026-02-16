@@ -14,13 +14,13 @@ const SimpleNavbar = ({ navigate }) => {
             <Scale className="w-6 h-6 text-black" />
             <span className="text-xl font-bold text-black">Lxwyer Up</span>
           </button>
-          
+
           <div className="hidden md:flex items-center space-x-8">
             <button onClick={() => navigate('/')} className="text-black hover:text-gray-600 transition-colors">Home</button>
             <button onClick={() => navigate('/premium-about')} className="text-black hover:text-gray-600 transition-colors">About</button>
             <button onClick={() => navigate('/premium-contact')} className="text-black hover:text-gray-600 transition-colors">Contact</button>
           </div>
-          
+
           <Button
             onClick={() => navigate('/login')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-all duration-300"
@@ -110,7 +110,7 @@ const ScatteredImages = () => {
         <motion.div
           key={index}
           initial={{ opacity: 0, scale: 0.8, rotate: 0 }}
-          animate={{ 
+          animate={{
             opacity: 1,
             scale: 1,
             rotate: image.rotation,
@@ -126,7 +126,7 @@ const ScatteredImages = () => {
               ease: 'easeInOut'
             }
           }}
-          whileHover={{ 
+          whileHover={{
             scale: 1.05,
             transition: { duration: 0.3 }
           }}
@@ -180,7 +180,7 @@ const PremiumHome = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1, delay: 0.3 }}
           >
-            <motion.h1 
+            <motion.h1
               className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-800 mb-16 leading-tight"
               style={{ fontFamily: "'Playfair Display', serif" }}
               initial={{ opacity: 0, y: 30 }}
@@ -189,7 +189,7 @@ const PremiumHome = () => {
             >
               <span className="text-blue-600">Justice</span> You Understand, <span className="text-blue-600">Technology</span> You Trust
             </motion.h1>
-            
+
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -204,14 +204,14 @@ const PremiumHome = () => {
                   Get Started
                 </Button>
               </motion.div>
-              
+
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button
                   onClick={() => navigate('/quick-chat')}
                   variant="outline"
                   className="border-2 border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white text-lg px-14 py-8 rounded-full font-semibold transition-all duration-300"
                 >
-                  Free AI Assistant
+                  LxwyerAI
                 </Button>
               </motion.div>
             </motion.div>
@@ -220,8 +220,8 @@ const PremiumHome = () => {
       </section>
 
       {/* Services Section */}
-      <ServicesSection 
-        showAllServices={showAllServices} 
+      <ServicesSection
+        showAllServices={showAllServices}
         setShowAllServices={setShowAllServices}
         fadeInUp={fadeInUp}
         staggerContainer={staggerContainer}
@@ -340,7 +340,7 @@ const ServicesSection = ({ showAllServices, setShowAllServices, fadeInUp, stagge
 // Service Card Component - Optimized
 const ServiceCard = ({ service, index, isVisible }) => {
   const Icon = service.icon;
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -474,7 +474,7 @@ const Footer = ({ navigate }) => {
               Justice You Understand, Technology You Trust
             </p>
           </div>
-          
+
           <div>
             <h3 className="font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-gray-300 text-sm">
@@ -483,7 +483,7 @@ const Footer = ({ navigate }) => {
               <li><button onClick={() => navigate('/premium-contact')} className="hover:text-white transition-colors">Contact</button></li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="font-semibold mb-4">Services</h3>
             <ul className="space-y-2 text-gray-300 text-sm">
@@ -492,7 +492,7 @@ const Footer = ({ navigate }) => {
               <li>AI Assistant</li>
             </ul>
           </div>
-          
+
           <div>
             <h3 className="font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-gray-300 text-sm">
@@ -502,7 +502,7 @@ const Footer = ({ navigate }) => {
             </ul>
           </div>
         </div>
-        
+
         <div className="border-t border-gray-700 pt-8 text-center text-gray-300 text-sm">
           <p>&copy; {new Date().getFullYear()} Lxwyer Up. All rights reserved.</p>
         </div>

@@ -1,72 +1,83 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Scale, User, Mail, Phone, Lock, MapPin, Briefcase, GraduationCap, Languages, IndianRupee, FileText, Camera, CheckCircle, ArrowLeft, Loader2, ArrowRight, Building2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Scale, User, Mail, Phone, Lock, MapPin, Briefcase, GraduationCap, IndianRupee, FileText, Camera, CheckCircle, ArrowLeft, Loader2, ArrowRight, Building2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
 import { dummyLawFirms } from '../data/lawFirmsDataExtended';
+import { WaveLayout } from '../components/WaveLayout';
 
-const states = ["Delhi", "Uttar Pradesh", "Haryana", "Maharashtra", "Karnataka", "Tamil Nadu", "Gujarat", "West Bengal", "Telangana", "Punjab", "Rajasthan", "Kerala"];
+const states = ["Delhi", "Haryana", "Uttar Pradesh"];
 const citiesByState = {
-  "Delhi": ["New Delhi", "North Delhi", "South Delhi", "West Delhi", "East Delhi"],
-  "Uttar Pradesh": ["Lucknow", "Noida", "Ghaziabad", "Varanasi", "Kanpur"],
-  "Haryana": ["Gurugram", "Faridabad", "Chandigarh", "Rohtak"],
-  "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Thane"],
-  "Karnataka": ["Bangalore", "Mysore", "Hubli"],
-  "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai"],
-  "Gujarat": ["Ahmedabad", "Surat", "Vadodara"],
-  "West Bengal": ["Kolkata", "Howrah", "Durgapur"],
-  "Telangana": ["Hyderabad", "Secunderabad", "Warangal"],
-  "Punjab": ["Chandigarh", "Ludhiana", "Amritsar"],
-  "Rajasthan": ["Jaipur", "Jodhpur", "Udaipur"],
-  "Kerala": ["Kochi", "Thiruvananthapuram", "Kozhikode"]
+  "Delhi": [
+    "Central Delhi", "East Delhi", "New Delhi", "North Delhi", "North East Delhi",
+    "North West Delhi", "Shahdara", "South Delhi", "South East Delhi", "South West Delhi", "West Delhi"
+  ],
+  "Haryana": [
+    "Ambala", "Bhiwani", "Charkhi Dadri", "Faridabad", "Fatehabad", "Gurugram", "Hisar", "Jhajjar", "Jind",
+    "Kaithal", "Karnal", "Kurukshetra", "Mahendragarh", "Nuh", "Palwal", "Panchkula", "Panipat", "Rewari",
+    "Rohtak", "Sirsa", "Sonipat", "Yamunanagar"
+  ],
+  "Uttar Pradesh": [
+    "Agra", "Aligarh", "Ambedkar Nagar", "Amethi", "Amroha", "Auraiya", "Ayodhya", "Azamgarh", "Baghpat",
+    "Bahraich", "Ballia", "Balrampur", "Banda", "Barabanki", "Bareilly", "Basti", "Bhadohi", "Bijnor",
+    "Budaun", "Bulandshahr", "Chandauli", "Chitrakoot", "Deoria", "Etah", "Etawah", "Farrukhabad",
+    "Fatehpur", "Firozabad", "Gautam Buddha Nagar", "Ghaziabad", "Ghazipur", "Gonda", "Gorakhpur", "Hamirpur",
+    "Hapur", "Hardoi", "Hathras", "Jalaun", "Jaunpur", "Jhansi", "Kannauj", "Kanpur Dehat", "Kanpur Nagar",
+    "Kasganj", "Kaushambi", "Kheri", "Kushinagar", "Lalitpur", "Lucknow", "Maharajganj", "Mahoba", "Mainpuri",
+    "Mathura", "Mau", "Meerut", "Mirzapur", "Moradabad", "Muzaffarnagar", "Pilibhit", "Pratapgarh",
+    "Prayagraj", "Raebareli", "Rampur", "Saharanpur", "Sambhal", "Sant Kabir Nagar", "Shahjahanpur",
+    "Shamli", "Shravasti", "Siddharthnagar", "Sitapur", "Sonbhadra", "Sultanpur", "Unnao", "Varanasi"
+  ]
 };
+
 const courtsByState = {
-  "Delhi": ["Delhi High Court", "Tis Hazari Courts", "Saket District Court", "Patiala House Court"],
-  "Uttar Pradesh": ["Allahabad High Court", "District Court Lucknow", "Gautam Budh Nagar District Court"],
-  "Haryana": ["Punjab & Haryana High Court", "Gurugram District Court", "Faridabad District Court"],
-  "Maharashtra": ["Bombay High Court", "Pune District Court", "NCLT Mumbai"],
-  "Karnataka": ["Karnataka High Court", "Bangalore City Civil Court"],
-  "Tamil Nadu": ["Madras High Court", "Chennai City Civil Court"],
-  "Gujarat": ["Gujarat High Court", "City Civil Court Ahmedabad"],
-  "West Bengal": ["Calcutta High Court", "City Civil Court Kolkata"],
-  "Telangana": ["Telangana High Court", "City Civil Court Hyderabad"],
-  "Punjab": ["Punjab and Haryana High Court", "District Court Chandigarh"],
-  "Rajasthan": ["Rajasthan High Court", "District Court Jaipur"],
-  "Kerala": ["Kerala High Court", "District Court Kochi"]
+  "Delhi": [
+    "Delhi High Court", "Tis Hazari Courts Complex", "Patiala House Courts Complex",
+    "Karkardooma Courts Complex", "Rohini Courts Complex", "Dwarka Courts Complex",
+    "Saket Courts Complex", "Rouse Avenue Courts Complex"
+  ],
+  "Haryana": [
+    "Punjab and Haryana High Court", "District Court Ambala", "District Court Bhiwani", "District Court Charkhi Dadri",
+    "District Court Faridabad", "District Court Fatehabad", "District Court Gurugram", "District Court Hisar",
+    "District Court Jhajjar", "District Court Jind", "District Court Kaithal", "District Court Karnal",
+    "District Court Kurukshetra", "District Court Mahendragarh", "District Court Nuh", "District Court Palwal",
+    "District Court Panchkula", "District Court Panipat", "District Court Rewari", "District Court Rohtak",
+    "District Court Sirsa", "District Court Sonipat", "District Court Yamunanagar"
+  ],
+  "Uttar Pradesh": [
+    "Allahabad High Court", "Allahabad High Court - Lucknow Bench",
+    "District Court Agra", "District Court Aligarh", "District Court Ambedkar Nagar", "District Court Amethi",
+    "District Court Amroha", "District Court Auraiya", "District Court Ayodhya", "District Court Azamgarh",
+    "District Court Baghpat", "District Court Bahraich", "District Court Ballia", "District Court Balrampur",
+    "District Court Banda", "District Court Barabanki", "District Court Bareilly", "District Court Basti",
+    "District Court Bhadohi", "District Court Bijnor", "District Court Budaun", "District Court Bulandshahr",
+    "District Court Chandauli", "District Court Chitrakoot", "District Court Deoria", "District Court Etah",
+    "District Court Etawah", "District Court Farrukhabad", "District Court Fatehpur", "District Court Firozabad",
+    "District Court Gautam Buddha Nagar", "District Court Ghaziabad", "District Court Ghazipur", "District Court Gonda",
+    "District Court Gorakhpur", "District Court Hamirpur", "District Court Hapur", "District Court Hardoi",
+    "District Court Hathras", "District Court Jalaun", "District Court Jaunpur", "District Court Jhansi",
+    "District Court Kannauj", "District Court Kanpur Dehat", "District Court Kanpur Nagar", "District Court Kasganj",
+    "District Court Kaushambi", "District Court Kheri", "District Court Kushinagar", "District Court Lalitpur",
+    "District Court Lucknow", "District Court Maharajganj", "District Court Mahoba", "District Court Mainpuri",
+    "District Court Mathura", "District Court Mau", "District Court Meerut", "District Court Mirzapur",
+    "District Court Moradabad", "District Court Muzaffarnagar", "District Court Pilibhit", "District Court Pratapgarh",
+    "District Court Prayagraj", "District Court Raebareli", "District Court Rampur", "District Court Saharanpur",
+    "District Court Sambhal", "District Court Sant Kabir Nagar", "District Court Shahjahanpur", "District Court Shamli",
+    "District Court Shravasti", "District Court Siddharthnagar", "District Court Sitapur", "District Court Sonbhadra",
+    "District Court Sultanpur", "District Court Unnao", "District Court Varanasi"
+  ]
 };
+
 const specializations = [
   "Criminal Law", "Family Law", "Property Law", "Corporate Law", "Civil Law",
   "Cyber Law", "Tax Law", "Labour Law", "Constitutional Law", "Consumer Law",
   "Banking Law", "Immigration Law", "Intellectual Property", "Medical Negligence", "Environmental Law"
 ];
 const languageOptions = ["Hindi", "English", "Marathi", "Punjabi", "Gujarati", "Tamil", "Telugu", "Bengali", "Kannada", "Malayalam", "Urdu"];
-
-const SimpleNavbar = ({ navigate }) => {
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <button onClick={() => navigate('/')} className="flex items-center space-x-2">
-            <Scale className="w-6 h-6 text-[#0F2944]" />
-            <span className="text-xl font-bold text-[#0F2944]">Lxwyer Up</span>
-          </button>
-
-          <button
-            onClick={() => navigate('/role-selection')}
-            className="flex items-center gap-2 text-gray-600 hover:text-[#0F2944] transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-        </div>
-      </div>
-    </nav>
-  );
-};
 
 export default function LawyerApplication() {
   const navigate = useNavigate();
@@ -88,7 +99,6 @@ export default function LawyerApplication() {
     barCouncilNumber: '',
     specialization: '',
     experience: '',
-    casesWon: '',
     state: '',
     city: '',
     court: '',
@@ -101,7 +111,6 @@ export default function LawyerApplication() {
   });
 
   useEffect(() => {
-    // Fetch law firms from API or use dummy data
     const fetchLawFirms = async () => {
       try {
         const response = await axios.get(`${API}/lawfirms`);
@@ -119,6 +128,25 @@ export default function LawyerApplication() {
 
   const updateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateFields = (fields) => {
+    setFormData(prev => ({ ...prev, ...fields }));
+  };
+
+  const handlePhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) { // 10MB limit
+        toast.error('File size must be less than 10MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        updateField('photo', reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const toggleLanguage = (lang) => {
@@ -182,7 +210,7 @@ export default function LawyerApplication() {
 
     setLoading(true);
     try {
-      await axios.post(`${API}/lawyer-applications`, {
+      const payload = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
@@ -193,8 +221,8 @@ export default function LawyerApplication() {
         law_firm_name: formData.lawyerType === 'law_firm' ? formData.lawFirmName : null,
         bar_council_number: formData.barCouncilNumber,
         specialization: formData.specialization,
-        experience: parseInt(formData.experience),
-        cases_won: parseInt(formData.casesWon) || 0,
+        experience: parseInt(formData.experience) || 0,
+        cases_won: 0,
         state: formData.state,
         city: formData.city,
         court: formData.court,
@@ -203,12 +231,15 @@ export default function LawyerApplication() {
         fee_range: `₹${formData.feeMin} - ₹${formData.feeMax}`,
         bio: formData.bio,
         office_address: formData.officeAddress
-      });
+      };
 
+      const response = await axios.post(`${API}/lawyer-applications`, payload);
       setSubmitted(true);
       toast.success('Application submitted successfully!');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to submit application');
+      console.error('Submission error:', error);
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to submit application';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -216,13 +247,12 @@ export default function LawyerApplication() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
-        <SimpleNavbar navigate={navigate} />
-        <div className="pt-24 flex items-center justify-center p-4">
+      <WaveLayout>
+        <div className="flex-1 flex items-center justify-center p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white border border-gray-200 shadow-xl rounded-2xl p-8 max-w-md w-full text-center"
+            className="w-full max-w-md text-center p-8 bg-white/60 backdrop-blur-xl rounded-2xl border border-white/50 shadow-xl"
           >
             <motion.div
               initial={{ scale: 0 }}
@@ -232,55 +262,52 @@ export default function LawyerApplication() {
             >
               <CheckCircle className="w-10 h-10 text-green-600" />
             </motion.div>
-            <h2 className="text-2xl font-bold text-[#0F2944] mb-3">Application Submitted!</h2>
-            <p className="text-gray-600 mb-4">
-              Thank you for applying to join Lxwyer Up. Our team will review your application and get back to you within 24-48 hours.
+            <h2 className="text-2xl font-bold text-slate-800 mb-3">Application Submitted!</h2>
+            <p className="text-slate-600 mb-4">
+              Thank you for applying to join LxwyerAI. Our team will review your application and get back to you within 24-48 hours.
             </p>
 
-            <div className="bg-blue-50 rounded-xl p-4 mb-6 text-left">
-              <p className="text-sm text-[#0F2944]">
+            <div className="bg-blue-50/50 rounded-xl p-4 mb-6 text-left border border-blue-100">
+              <p className="text-sm text-slate-800">
                 <strong>Application Type:</strong> {formData.lawyerType === 'independent' ? 'Independent Lawyer' : 'Law Firm Associate'}
               </p>
               {formData.lawyerType === 'law_firm' && (
-                <p className="text-sm text-[#0F2944] mt-1">
+                <p className="text-sm text-slate-800 mt-1">
                   <strong>Law Firm:</strong> {formData.lawFirmName}
                 </p>
               )}
-              <p className="text-sm text-gray-600 mt-2">
-                Once approved, you can login with <strong>{formData.email}</strong> to access your {formData.lawyerType === 'independent' ? 'personal lawyer' : 'law firm'} dashboard.
+              <p className="text-sm text-slate-600 mt-2">
+                Once approved, you can login with <strong>{formData.email}</strong> to access your dashboard.
               </p>
             </div>
 
             <Button
               onClick={() => navigate('/')}
-              className="bg-[#0F2944] hover:bg-[#0F2944]/90 text-white rounded-xl px-8"
+              className="w-full bg-slate-900 text-white rounded-xl py-6 hover:bg-slate-800"
             >
               Back to Home
             </Button>
           </motion.div>
         </div>
-      </div>
+      </WaveLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
-      <SimpleNavbar navigate={navigate} />
-
-      <div className="pt-24 pb-12 max-w-2xl mx-auto px-4">
+    <WaveLayout>
+      <div className="flex-1 flex flex-col items-center justify-center p-4 sm:px-6 lg:px-8 pt-24 pb-12">
         {/* Progress Steps */}
-        <div className="flex items-center justify-center mb-8">
+        <div className="w-full max-w-2xl flex items-center justify-center mb-8">
           {[1, 2, 3, 4].map((s) => (
             <div key={s} className="flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${s === step ? 'bg-[#0F2944] text-white' :
-                s < step ? 'bg-green-600 text-white' :
-                  'bg-gray-200 text-gray-500'
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all shadow-sm ${s === step ? 'bg-indigo-600 text-white shadow-indigo-200' :
+                s < step ? 'bg-green-500 text-white' :
+                  'bg-white text-slate-400 border border-slate-200'
                 }`}>
                 {s < step ? '✓' : s}
               </div>
               {s < 4 && (
-                <div className={`w-16 h-1 mx-2 rounded ${s < step ? 'bg-green-600' : 'bg-gray-200'
-                  }`} />
+                <div className={`w-16 h-1 mx-2 rounded ${s < step ? 'bg-green-500' : 'bg-slate-200'}`} />
               )}
             </div>
           ))}
@@ -291,81 +318,82 @@ export default function LawyerApplication() {
           key={step}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-white border border-gray-200 shadow-lg rounded-2xl p-6"
+          exit={{ opacity: 0, x: -20 }}
+          className="w-full max-w-2xl bg-white/60 backdrop-blur-xl border border-white/50 shadow-2xl rounded-2xl p-6 sm:p-8"
         >
           {/* Step 1: Personal Info + Lawyer Type */}
           {step === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-[#0F2944]">Personal Information</h2>
-                <p className="text-gray-600">Let's start with your basic details</p>
+                <h2 className="text-2xl font-bold text-slate-800">Personal Information</h2>
+                <p className="text-slate-500">Let's start with your basic details</p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Full Name *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Full Name *</label>
                   <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <Input
                       value={formData.name}
                       onChange={(e) => updateField('name', e.target.value)}
                       placeholder="Adv. Rajesh Kumar"
-                      className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                      className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Email Address *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Email Address *</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <Input
                       type="email"
                       value={formData.email}
                       onChange={(e) => updateField('email', e.target.value)}
                       placeholder="advocate@example.com"
-                      className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                      className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Phone Number *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Phone Number *</label>
                   <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <Input
                       value={formData.phone}
                       onChange={(e) => updateField('phone', e.target.value)}
                       placeholder="+91 98765 43210"
-                      className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                      className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#0F2944] mb-2">Password *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Password *</label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <Input
                         type="password"
                         value={formData.password}
                         onChange={(e) => updateField('password', e.target.value)}
                         placeholder="••••••••"
-                        className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                        className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-[#0F2944] mb-2">Confirm Password *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Confirm Password *</label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <Input
                         type="password"
                         value={formData.confirmPassword}
                         onChange={(e) => updateField('confirmPassword', e.target.value)}
                         placeholder="••••••••"
-                        className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                        className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                       />
                     </div>
                   </div>
@@ -373,84 +401,102 @@ export default function LawyerApplication() {
 
                 {/* Lawyer Type Selection */}
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-3">Are you an Independent Lawyer or Law Firm Associate? *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">Professional Type *</label>
                   <div className="grid grid-cols-2 gap-4">
                     <button
                       type="button"
                       onClick={() => {
-                        updateField('lawyerType', 'independent');
-                        updateField('lawFirmId', '');
-                        updateField('lawFirmName', '');
+                        updateFields({
+                          lawyerType: 'independent',
+                          lawFirmId: '',
+                          lawFirmName: ''
+                        });
                       }}
                       className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${formData.lawyerType === 'independent'
-                        ? 'border-[#0F2944] bg-[#0F2944]/5'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-indigo-600 bg-indigo-50/50'
+                        : 'border-slate-200 hover:border-indigo-200 bg-white/50'
                         }`}
                     >
-                      <User className={`w-8 h-8 ${formData.lawyerType === 'independent' ? 'text-[#0F2944]' : 'text-gray-400'}`} />
-                      <span className={`font-medium ${formData.lawyerType === 'independent' ? 'text-[#0F2944]' : 'text-gray-600'}`}>
-                        Independent Lawyer
+                      <User className={`w-8 h-8 ${formData.lawyerType === 'independent' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                      <span className={`font-medium ${formData.lawyerType === 'independent' ? 'text-indigo-900' : 'text-slate-600'}`}>
+                        Independent
                       </span>
-                      <span className="text-xs text-gray-500 text-center">Personal practice</span>
+                      <span className="text-xs text-slate-500 text-center">Personal practice</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => updateField('lawyerType', 'law_firm')}
                       className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${formData.lawyerType === 'law_firm'
-                        ? 'border-[#0F2944] bg-[#0F2944]/5'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-indigo-600 bg-indigo-50/50'
+                        : 'border-slate-200 hover:border-indigo-200 bg-white/50'
                         }`}
                     >
-                      <Building2 className={`w-8 h-8 ${formData.lawyerType === 'law_firm' ? 'text-[#0F2944]' : 'text-gray-400'}`} />
-                      <span className={`font-medium ${formData.lawyerType === 'law_firm' ? 'text-[#0F2944]' : 'text-gray-600'}`}>
-                        Law Firm Associate
+                      <Building2 className={`w-8 h-8 ${formData.lawyerType === 'law_firm' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                      <span className={`font-medium ${formData.lawyerType === 'law_firm' ? 'text-indigo-900' : 'text-slate-600'}`}>
+                        Associate
                       </span>
-                      <span className="text-xs text-gray-500 text-center">Working with a firm</span>
+                      <span className="text-xs text-slate-500 text-center">Law Firm</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Law Firm Selection (if law_firm type selected) */}
-                {formData.lawyerType === 'law_firm' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="overflow-hidden"
-                  >
-                    <label className="block text-sm font-medium text-[#0F2944] mb-2">Select Your Law Firm *</label>
-                    <select
-                      value={formData.lawFirmId}
-                      onChange={(e) => {
-                        const selectedFirm = lawFirms.find(f => f.id === e.target.value);
-                        updateField('lawFirmId', e.target.value);
-                        updateField('lawFirmName', selectedFirm?.firm_name || '');
-                      }}
-                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-[#0F2944]/20 focus:border-[#0F2944]"
+                <AnimatePresence>
+                  {formData.lawyerType === 'law_firm' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
                     >
-                      <option value="">Select a law firm</option>
-                      {lawFirms.map(firm => (
-                        <option key={firm.id} value={firm.id}>
-                          {firm.firm_name} - {firm.city}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-2">
-                      Don't see your firm? Ask your firm admin to register on Lxwyer Up first.
-                    </p>
-                  </motion.div>
-                )}
+                      <label className="block text-sm font-medium text-slate-700 mb-2">Select Your Law Firm *</label>
+                      <select
+                        value={formData.lawFirmId}
+                        onChange={(e) => {
+                          const selectedFirm = lawFirms.find(f => f.id === e.target.value);
+                          updateFields({
+                            lawFirmId: e.target.value,
+                            lawFirmName: selectedFirm?.firm_name || ''
+                          });
+                        }}
+                        className="w-full bg-white/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      >
+                        <option value="">Select a law firm</option>
+                        {lawFirms.map(firm => (
+                          <option key={firm.id} value={firm.id}>
+                            {firm.firm_name} - {firm.city}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Don't see your firm? Ask your firm admin to register first.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Profile Photo URL (Optional)</label>
-                  <div className="relative">
-                    <Camera className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      value={formData.photo}
-                      onChange={(e) => updateField('photo', e.target.value)}
-                      placeholder="https://example.com/photo.jpg"
-                      className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
-                    />
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Profile Photo (Max 10MB)</label>
+                  <div className="flex items-center space-x-4">
+                    <div className="relative flex-1">
+                      <Camera className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="pl-10 bg-white/50 border-slate-200 file:bg-indigo-50 file:text-indigo-700 file:border-0 file:rounded-lg text-slate-900"
+                      />
+                    </div>
+                    {formData.photo && (
+                      <div className="h-12 w-12 rounded-full overflow-hidden border border-slate-200 shadow-sm">
+                        <img
+                          src={formData.photo}
+                          alt="Preview"
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -461,30 +507,30 @@ export default function LawyerApplication() {
           {step === 2 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-[#0F2944]">Professional Details</h2>
-                <p className="text-gray-600">Tell us about your legal practice</p>
+                <h2 className="text-2xl font-bold text-slate-800">Professional Details</h2>
+                <p className="text-slate-500">Your expertise and qualifications</p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Bar Council Registration Number *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Bar Council Number *</label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <Input
                       value={formData.barCouncilNumber}
                       onChange={(e) => updateField('barCouncilNumber', e.target.value)}
                       placeholder="D/1234/2015"
-                      className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                      className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Specialization *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Specialization *</label>
                   <select
                     value={formData.specialization}
                     onChange={(e) => updateField('specialization', e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-[#0F2944]/20 focus:border-[#0F2944]"
+                    className="w-full bg-white/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
                     <option value="">Select your specialization</option>
                     {specializations.map(spec => (
@@ -493,30 +539,21 @@ export default function LawyerApplication() {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#0F2944] mb-2">Years of Experience *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Years of Experience *</label>
                     <div className="relative">
-                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <Input
                         type="number"
                         value={formData.experience}
-                        onChange={(e) => updateField('experience', e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value.slice(0, 2);
+                          updateField('experience', val);
+                        }}
                         placeholder="10"
-                        className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0F2944] mb-2">Cases Won (Approx)</label>
-                    <div className="relative">
-                      <Scale className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                      <Input
-                        type="number"
-                        value={formData.casesWon}
-                        onChange={(e) => updateField('casesWon', e.target.value)}
-                        placeholder="150"
-                        className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                        className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
+                        min="0"
                       />
                     </div>
                   </div>
@@ -529,21 +566,23 @@ export default function LawyerApplication() {
           {step === 3 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-[#0F2944]">Practice Location</h2>
-                <p className="text-gray-600">Where do you practice law?</p>
+                <h2 className="text-2xl font-bold text-slate-800">Practice Location</h2>
+                <p className="text-slate-500">Where you actively practice</p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">State *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">State *</label>
                   <select
                     value={formData.state}
                     onChange={(e) => {
-                      updateField('state', e.target.value);
-                      updateField('city', '');
-                      updateField('court', '');
+                      updateFields({
+                        state: e.target.value,
+                        city: '',
+                        court: ''
+                      });
                     }}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-[#0F2944]/20 focus:border-[#0F2944]"
+                    className="w-full bg-white/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
                     <option value="">Select State</option>
                     {states.map(state => (
@@ -553,11 +592,11 @@ export default function LawyerApplication() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">City *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">City *</label>
                   <select
                     value={formData.city}
                     onChange={(e) => updateField('city', e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-[#0F2944]/20 focus:border-[#0F2944]"
+                    className="w-full bg-white/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     disabled={!formData.state}
                   >
                     <option value="">Select City</option>
@@ -568,11 +607,11 @@ export default function LawyerApplication() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Primary Court *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Primary Court *</label>
                   <select
                     value={formData.court}
                     onChange={(e) => updateField('court', e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-black focus:outline-none focus:ring-2 focus:ring-[#0F2944]/20 focus:border-[#0F2944]"
+                    className="w-full bg-white/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     disabled={!formData.state}
                   >
                     <option value="">Select Court</option>
@@ -583,13 +622,13 @@ export default function LawyerApplication() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Office Address *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Office Address *</label>
                   <textarea
                     value={formData.officeAddress}
                     onChange={(e) => updateField('officeAddress', e.target.value)}
-                    placeholder="e.g. Chamber 405, Delhi High Court, Sher Shah Road, New Delhi..."
+                    placeholder="e.g. Chamber 405, Delhi High Court..."
                     rows={2}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-black placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#0F2944]/20 focus:border-[#0F2944]"
+                    className="w-full bg-white/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -600,26 +639,26 @@ export default function LawyerApplication() {
           {step === 4 && (
             <div className="space-y-6">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-[#0F2944]">Additional Information</h2>
-                <p className="text-gray-600">Complete your profile</p>
+                <h2 className="text-2xl font-bold text-slate-800">Additional Information</h2>
+                <p className="text-slate-500">Finishing touches</p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Education & Qualifications *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Education & Qualifications *</label>
                   <div className="relative">
-                    <GraduationCap className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                    <GraduationCap className="absolute left-3 top-3 w-5 h-5 text-slate-400" />
                     <Input
                       value={formData.education}
                       onChange={(e) => updateField('education', e.target.value)}
                       placeholder="LLB from Delhi University, LLM from NLS"
-                      className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                      className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Languages *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Languages *</label>
                   <div className="flex flex-wrap gap-2">
                     {languageOptions.map(lang => (
                       <button
@@ -627,8 +666,8 @@ export default function LawyerApplication() {
                         type="button"
                         onClick={() => toggleLanguage(lang)}
                         className={`px-3 py-1.5 rounded-full text-sm transition-all ${formData.languages.includes(lang)
-                          ? 'bg-[#0F2944] text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                           }`}
                       >
                         {lang}
@@ -638,39 +677,39 @@ export default function LawyerApplication() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Consultation Fee Range *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Consultation Fee Range *</label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="relative">
-                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <Input
                         type="number"
                         value={formData.feeMin}
                         onChange={(e) => updateField('feeMin', e.target.value)}
                         placeholder="Min (e.g., 3000)"
-                        className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                        className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                       />
                     </div>
                     <div className="relative">
-                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <Input
                         type="number"
                         value={formData.feeMax}
                         onChange={(e) => updateField('feeMax', e.target.value)}
                         placeholder="Max (e.g., 10000)"
-                        className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                        className="pl-10 bg-white/50 border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-indigo-500/20"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#0F2944] mb-2">Professional Bio *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Professional Bio *</label>
                   <textarea
                     value={formData.bio}
                     onChange={(e) => updateField('bio', e.target.value)}
-                    placeholder="Write a brief description about your practice, expertise, and achievements..."
+                    placeholder="Write a brief description about your practice..."
                     rows={4}
-                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-black placeholder:text-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-[#0F2944]/20 focus:border-[#0F2944]"
+                    className="w-full bg-white/50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -678,12 +717,12 @@ export default function LawyerApplication() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8">
+          <div className="flex justify-between mt-8 pt-4 border-t border-slate-100">
             {step > 1 ? (
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => setStep(step - 1)}
-                className="border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl px-6"
+                className="text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 -ml-4"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Previous
@@ -695,7 +734,7 @@ export default function LawyerApplication() {
             {step < 4 ? (
               <Button
                 onClick={handleNext}
-                className="bg-[#0F2944] hover:bg-[#0F2944]/90 text-white rounded-xl px-8"
+                className="bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 rounded-xl px-8"
               >
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -704,7 +743,7 @@ export default function LawyerApplication() {
               <Button
                 onClick={handleSubmit}
                 disabled={loading}
-                className="bg-[#0F2944] hover:bg-[#0F2944]/90 text-white rounded-xl px-8"
+                className="bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 rounded-xl px-8"
               >
                 {loading ? (
                   <>
@@ -720,10 +759,10 @@ export default function LawyerApplication() {
         </motion.div>
 
         {/* Info Note */}
-        <p className="text-center text-gray-500 text-sm mt-6">
-          By submitting, you agree to our verification process. Applications are typically reviewed within 24-48 hours.
+        <p className="text-center text-slate-500 text-sm mt-6">
+          By submitting, you agree to our verification process.
         </p>
       </div>
-    </div>
+    </WaveLayout>
   );
 }

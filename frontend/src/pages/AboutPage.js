@@ -1,365 +1,396 @@
-import { Navbar } from '../components/Navbar';
+import React, { useRef } from 'react';
+import { motion, useInView } from 'framer-motion';
+import { Target, Eye, Shield, Users, Zap, Heart, Scale } from 'lucide-react';
+import { NavbarWave } from '../components/NavbarWave';
+import { GradientOrbs } from '../components/GradientOrbs';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '../components/ui/button';
 import { Footer } from '../components/Footer';
-import { Target, Heart, Zap, Users, Shield, Globe, Award, Sparkles, Scale, Building2, CheckCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
 
-// Floating Card Component with Glow Effect
-const FloatingCard = ({ children, className = '', delay = 0, glowColor = 'blue' }) => {
-  const glowColors = {
-    blue: 'shadow-blue-500/20 hover:shadow-blue-500/40',
-    purple: 'shadow-purple-500/20 hover:shadow-purple-500/40',
-    green: 'shadow-green-500/20 hover:shadow-green-500/40',
-    amber: 'shadow-amber-500/20 hover:shadow-amber-500/40',
-    cyan: 'shadow-cyan-500/20 hover:shadow-cyan-500/40',
+const AboutPage = () => {
+  const navigate = useNavigate();
+
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 60 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.15
+      }
+    }
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, delay }}
-      whileHover={{ y: -8, scale: 1.02 }}
-      className={`relative bg-gradient-to-br from-slate-900/90 to-slate-800/90 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl ${glowColors[glowColor]} transition-all duration-500 ${className}`}
-    >
-      {/* Background Glow */}
-      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br from-${glowColor}-500/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500`} />
-      <div className="relative z-10">{children}</div>
-    </motion.div>
-  );
-};
+    <div className="min-h-screen bg-white relative overflow-hidden font-['Outfit']">
+      <GradientOrbs />
+      <NavbarWave />
 
-// Team Member Card
-const TeamCard = ({ name, role, image, delay }) => (
-  <FloatingCard delay={delay} glowColor="purple">
-    <div className="text-center">
-      <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden border-2 border-purple-500/30 shadow-lg shadow-purple-500/20">
-        <img src={image} alt={name} className="w-full h-full object-cover" />
-      </div>
-      <h4 className="text-lg font-semibold text-white mb-1">{name}</h4>
-      <p className="text-purple-400 text-sm">{role}</p>
-    </div>
-  </FloatingCard>
-);
+      {/* Hero Section */}
+      <AboutHero fadeInUp={fadeInUp} />
 
-// Stat Card
-const StatCard = ({ number, label, icon: Icon, delay, glowColor }) => (
-  <FloatingCard delay={delay} glowColor={glowColor}>
-    <div className="text-center">
-      <div className={`inline-flex p-4 bg-${glowColor}-500/10 rounded-xl mb-4`}>
-        <Icon className={`w-8 h-8 text-${glowColor}-400`} />
-      </div>
-      <div className="text-4xl font-bold text-white mb-2">{number}</div>
-      <p className="text-slate-400">{label}</p>
-    </div>
-  </FloatingCard>
-);
+      {/* Mission & Vision */}
+      <MissionVision fadeInUp={fadeInUp} />
 
-export default function AboutPage() {
-  const values = [
-    {
-      icon: Target,
-      title: 'Clarity',
-      description: 'We believe everyone deserves to understand their legal situation in simple, clear language. No more confusing jargon.',
-      glowColor: 'blue'
-    },
-    {
-      icon: Heart,
-      title: 'Empathy',
-      description: 'We understand the stress of legal proceedings and design our platform with human compassion at its core.',
-      glowColor: 'purple'
-    },
-    {
-      icon: Zap,
-      title: 'Innovation',
-      description: 'We leverage cutting-edge AI technology to make the legal system more accessible and efficient for everyone.',
-      glowColor: 'amber'
-    },
-    {
-      icon: Shield,
-      title: 'Trust',
-      description: 'Your data security and privacy are paramount. We maintain the highest standards of confidentiality.',
-      glowColor: 'green'
-    },
-    {
-      icon: Globe,
-      title: 'Accessibility',
-      description: 'Legal help should be available to everyone, regardless of location or background. We break down barriers.',
-      glowColor: 'cyan'
-    },
-    {
-      icon: Award,
-      title: 'Excellence',
-      description: 'We partner only with verified, experienced legal professionals to ensure quality assistance.',
-      glowColor: 'purple'
-    }
-  ];
+      {/* Why We Exist */}
+      <WhyWeExist fadeInUp={fadeInUp} staggerContainer={staggerContainer} />
 
-  const milestones = [
-    { year: '2026', title: 'Founded', description: 'Lxwyer Up was born with a vision to democratize legal assistance' },
-    { year: '2026', title: 'AI Integration', description: 'Launched AI-powered case analysis and legal assistant' },
-    { year: '2026', title: 'Growing Fast', description: 'Rapidly expanding our network of verified lawyers and law firms' },
-    { year: '2026', title: 'Pan-India Vision', description: 'Building towards coverage across all major cities in India' }
-  ];
+      {/* Our Approach */}
+      <OurApproach fadeInUp={fadeInUp} />
 
-  return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      
-      {/* Hero Section with Background Image */}
-      <section className="relative pt-24 pb-20 px-4 overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-black to-black" />
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-        
-        <div className="max-w-7xl mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-16"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/30 rounded-full mb-6">
-              <Sparkles className="w-4 h-4 text-blue-400" />
-              <span className="text-blue-400 text-sm font-medium">About Us</span>
-            </div>
-            <h1 className="text-5xl sm:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-blue-100 to-blue-200 bg-clip-text text-transparent">
-              About Lxwyer Up
-            </h1>
-            <p className="text-xl text-slate-400 max-w-3xl mx-auto leading-relaxed">
-              We're on a mission to bridge the gap between citizens and the justice system using technology, AI, and human expertise
-            </p>
-          </motion.div>
+      {/* Trust & Credibility */}
+      <TrustSection fadeInUp={fadeInUp} />
 
-          {/* Hero Image */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative rounded-3xl overflow-hidden border border-slate-700/50 shadow-2xl shadow-blue-500/10"
-          >
-            <img 
-              src="https://images.pexels.com/photos/7841466/pexels-photo-7841466.jpeg" 
-              alt="Legal team collaboration" 
-              className="w-full h-[400px] object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-8">
-              <p className="text-2xl font-semibold text-white">Building the future of legal assistance in India</p>
-              <p className="text-slate-400 mt-2">A team dedicated to making justice accessible to all</p>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+      {/* CTA */}
+      <AboutCTA navigate={navigate} fadeInUp={fadeInUp} />
 
-      {/* Mission Section */}
-      <section className="py-20 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/5 via-transparent to-purple-900/5" />
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/30 rounded-full mb-6">
-                <Target className="w-4 h-4 text-purple-400" />
-                <span className="text-purple-400 text-sm font-medium">Our Mission</span>
-              </div>
-              <h2 className="text-4xl font-bold mb-6 text-white">Making Justice <span className="text-blue-400">Accessible</span> to Everyone</h2>
-              <p className="text-lg text-slate-300 leading-relaxed mb-6">
-                Every day, millions of people interact with the legal system but struggle to understand their cases, 
-                their rights, and their next steps. This confusion leads to anxiety, delays, and injustice.
-              </p>
-              <p className="text-lg text-slate-300 leading-relaxed mb-6">
-                Lxwyer Up exists to solve this problem by making legal information accessible, understandable, 
-                and actionable for everyone—from first-time users to seasoned professionals.
-              </p>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                  <span className="text-slate-300">AI-Powered Analysis</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                  <span className="text-slate-300">Verified Lawyers</span>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                  <span className="text-slate-300">24/7 Support</span>
-                </div>
-              </div>
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative"
-            >
-              <div className="relative rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl shadow-purple-500/10">
-                <img 
-                  src="https://images.pexels.com/photos/6077797/pexels-photo-6077797.jpeg" 
-                  alt="Justice and technology" 
-                  className="w-full h-[400px] object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
-              </div>
-              {/* Floating Stats */}
-              <div className="absolute -bottom-6 -left-6 bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-xl">
-                <div className="text-3xl font-bold text-blue-400">200+</div>
-                <div className="text-slate-400 text-sm">Cases Resolved</div>
-              </div>
-              <div className="absolute -top-6 -right-6 bg-slate-900 border border-slate-700 rounded-xl p-4 shadow-xl">
-                <div className="text-3xl font-bold text-purple-400">100+</div>
-                <div className="text-slate-400 text-sm">Verified Lawyers</div>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Values Section */}
-      <section className="py-20 px-4 relative">
-        <div className="absolute top-1/2 left-0 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2" />
-        <div className="absolute top-1/2 right-0 w-72 h-72 bg-purple-500/10 rounded-full blur-3xl -translate-y-1/2" />
-        
-        <div className="max-w-7xl mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-full mb-6">
-              <Heart className="w-4 h-4 text-green-400" />
-              <span className="text-green-400 text-sm font-medium">Our Values</span>
-            </div>
-            <h2 className="text-4xl font-bold mb-4 text-white">What We Stand For</h2>
-            <p className="text-slate-400 max-w-2xl mx-auto">
-              These core values guide every decision we make and every feature we build
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {values.map((value, index) => (
-              <FloatingCard key={value.title} delay={index * 0.1} glowColor={value.glowColor}>
-                <div className={`inline-flex p-4 bg-${value.glowColor}-500/10 rounded-xl mb-4`}>
-                  <value.icon className={`w-8 h-8 text-${value.glowColor}-400`} />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-white">{value.title}</h3>
-                <p className="text-slate-400 leading-relaxed">{value.description}</p>
-              </FloatingCard>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Story Section */}
-      <section className="py-20 px-4 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-blue-900/5 to-transparent" />
-        
-        <div className="max-w-7xl mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-full mb-6">
-              <Scale className="w-4 h-4 text-amber-400" />
-              <span className="text-amber-400 text-sm font-medium">Our Journey</span>
-            </div>
-            <h2 className="text-4xl font-bold mb-4 text-white">The Lxwyer Up Story</h2>
-          </motion.div>
-
-          <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
-            <FloatingCard glowColor="amber" className="h-full">
-              <div className="space-y-6 text-slate-300 leading-relaxed">
-                <p className="text-lg">
-                  <span className="text-amber-400 font-semibold">Lxwyer Up was born from a simple observation:</span> while India has made significant strides in 
-                  digitalizing court records and case data, most citizens still struggle to make sense of this information.
-                </p>
-                <p>
-                  The legal language is complex, the processes are confusing, and finding reliable help is expensive and time-consuming. 
-                  We realized that technology—especially AI—could transform this experience.
-                </p>
-                <p>
-                  Our founders, having witnessed the struggles of common people navigating the legal system, decided to create a platform 
-                  that would democratize access to legal assistance. Today, Lxwyer Up serves both citizens and legal professionals, 
-                  creating a more transparent, efficient, and humane justice system for all.
-                </p>
-              </div>
-            </FloatingCard>
-
-            <div className="space-y-4">
-              {milestones.map((milestone, index) => (
-                <motion.div
-                  key={milestone.year}
-                  initial={{ opacity: 0, x: 30 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex gap-4 items-start"
-                >
-                  <div className="flex-shrink-0 w-20 h-20 bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-xl flex items-center justify-center border border-amber-500/30">
-                    <span className="text-amber-400 font-bold">{milestone.year}</span>
-                  </div>
-                  <div className="flex-1 bg-slate-900/50 border border-slate-700/50 rounded-xl p-4">
-                    <h4 className="text-white font-semibold mb-1">{milestone.title}</h4>
-                    <p className="text-slate-400 text-sm">{milestone.description}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-20 px-4 relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/10 via-purple-900/10 to-blue-900/10" />
-        
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard number="200+" label="Cases Resolved" icon={Scale} delay={0} glowColor="blue" />
-            <StatCard number="100+" label="Verified Lawyers" icon={Users} delay={0.1} glowColor="purple" />
-            <StatCard number="25+" label="Trusted Law Firms" icon={Building2} delay={0.2} glowColor="green" />
-            <StatCard number="98%" label="Client Satisfaction" icon={Award} delay={0.3} glowColor="amber" />
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-4xl mx-auto">
-          <FloatingCard glowColor="blue" className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-white">Ready to Get Started?</h2>
-            <p className="text-slate-400 mb-8 max-w-2xl mx-auto">
-              Join thousands of users who have transformed their legal journey with Lxwyer Up
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a 
-                href="/role-selection" 
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-blue-500/30"
-              >
-                Get Started Now
-              </a>
-              <a 
-                href="/contact" 
-                className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-xl transition-all border border-slate-700"
-              >
-                Contact Us
-              </a>
-            </div>
-          </FloatingCard>
-        </div>
-      </section>
-
+      {/* Footer */}
       <Footer />
     </div>
   );
-}
+};
+
+// About Hero Component
+const AboutHero = ({ fadeInUp }) => {
+  return (
+    <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden pt-24">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeInUp}
+        >
+          <motion.h1
+            className="text-5xl sm:text-6xl lg:text-7xl font-bold text-slate-900 mb-6 leading-tight"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            Making Legal Services
+            <br />
+            <span className="text-slate-600">Accessible to All Indians</span>
+          </motion.h1>
+
+          <motion.p
+            className="text-xl sm:text-2xl text-slate-600 max-w-3xl mx-auto font-light"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            We believe every Indian deserves quality legal representation, regardless of location or economic status
+          </motion.p>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+// Mission & Vision Component
+const MissionVision = ({ fadeInUp }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  return (
+    <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8 relative z-10 bg-white/80 backdrop-blur-md border border-slate-200 shadow-2xl m-4 rounded-3xl animate-float">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* Image */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.6 }}
+            className="relative"
+          >
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+              <img
+                src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                alt="Indian High Court Interior"
+                className="w-full h-[500px] object-cover brightness-110 contrast-110 saturate-120"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent" />
+            </div>
+          </motion.div>
+
+          {/* Content */}
+          <motion.div
+            initial="hidden"
+            animate={isInView ? 'visible' : 'hidden'}
+            variants={fadeInUp}
+          >
+            <div className="mb-12">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                  <Target className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-slate-900">Our Mission</h2>
+              </div>
+              <p className="text-lg text-slate-600 leading-relaxed">
+                To democratize access to legal services in India by leveraging technology to connect citizens with qualified lawyers, provide transparent pricing, and simplify complex legal processes through AI-powered assistance.
+              </p>
+            </div>
+
+            <div>
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                  <Eye className="w-6 h-6 text-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-slate-900">Our Vision</h2>
+              </div>
+              <p className="text-lg text-slate-600 leading-relaxed">
+                A future where every Indian has immediate access to affordable, quality legal assistance—transforming the legal system into a transparent, efficient, and citizen-friendly service powered by cutting-edge technology.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Why We Exist Component
+const WhyWeExist = ({ fadeInUp, staggerContainer }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  const problems = [
+    {
+      icon: Users,
+      title: 'Finding Lawyers is Difficult',
+      description: 'Most Indians struggle to find qualified lawyers in their area who specialize in their specific legal needs.'
+    },
+    {
+      icon: Shield,
+      title: 'Lack of Transparency',
+      description: 'Hidden fees and unclear timelines create mistrust and financial stress for clients seeking legal help.'
+    },
+    {
+      icon: Zap,
+      title: 'Complex Legal Language',
+      description: 'Legal jargon and complex procedures intimidate citizens and prevent them from seeking justice.'
+    },
+    {
+      icon: Heart,
+      title: 'Limited Accessibility',
+      description: 'Quality legal services are concentrated in major cities, leaving rural and semi-urban areas underserved.'
+    }
+  ];
+
+  return (
+    <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/50 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto">
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">
+            Why We Exist
+          </h2>
+          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+            The traditional legal system in India faces significant challenges that prevent ordinary citizens from accessing justice
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={staggerContainer}
+          className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
+        >
+          {problems.map((problem, index) => (
+            <motion.div
+              key={index}
+              variants={fadeInUp}
+              className="bg-white/80 backdrop-blur-md p-8 rounded-2xl border border-slate-200 hover:shadow-xl transition-all duration-300"
+            >
+              <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center mb-6 shadow-lg shadow-blue-600/20">
+                <problem.icon className="w-7 h-7 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-3">{problem.title}</h3>
+              <p className="text-slate-600">{problem.description}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+// Our Approach Component
+const OurApproach = ({ fadeInUp }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  const approaches = [
+    {
+      number: '01',
+      title: 'Technology-Driven',
+      description: 'AI-powered matching algorithms connect you with the right lawyer for your specific needs in seconds.'
+    },
+    {
+      number: '02',
+      title: 'Client-First Philosophy',
+      description: 'Transparent pricing, regular updates, and easy communication keep you informed at every step.'
+    },
+    {
+      number: '03',
+      title: 'Ethical & Verified',
+      description: 'Every lawyer on our platform is verified, with credentials checked and client reviews visible.'
+    }
+  ];
+
+  return (
+    <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="max-w-7xl mx-auto">
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">
+            Our Approach
+          </h2>
+          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+            Combining technology, ethics, and client-centric values to revolutionize legal services
+          </p>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-3 gap-12">
+          {approaches.map((approach, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 50 }}
+              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
+              transition={{ duration: 0.6, delay: index * 0.2 }}
+              className="relative bg-white/60 backdrop-blur-md p-8 rounded-3xl border border-slate-100"
+            >
+              <div className="text-6xl font-bold text-blue-100 mb-4">{approach.number}</div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-4">{approach.title}</h3>
+              <p className="text-slate-600 leading-relaxed">{approach.description}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Trust Section Component
+const TrustSection = ({ fadeInUp }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: '-100px' });
+
+  return (
+    <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/50">
+      <div className="max-w-7xl mx-auto">
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 mb-4">
+            Built on Trust & Credibility
+          </h2>
+          <p className="text-xl text-slate-600">
+            Professional, verified, and committed to excellence
+          </p>
+        </motion.div>
+
+        <div className="grid lg:grid-cols-2 gap-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.6 }}
+            className="relative rounded-3xl overflow-hidden shadow-xl group"
+          >
+            <img
+              src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+              alt="Indian High Court Interior - Courtroom"
+              className="w-full h-[400px] object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4">
+                <p className="text-lg font-semibold text-white">Indian High Court Interior</p>
+                <p className="text-sm text-slate-200">Where justice is served</p>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative rounded-3xl overflow-hidden shadow-xl group"
+          >
+            <img
+              src="https://images.unsplash.com/photo-1521791136064-7986c2920216?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+              alt="Legal Consultation Room"
+              className="w-full h-[400px] object-cover transition-transform duration-700 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-blue-900/80 to-transparent" />
+            <div className="absolute bottom-6 left-6 right-6">
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4">
+                <p className="text-lg font-semibold text-white">Legal Consultation</p>
+                <p className="text-sm text-slate-200">Professional legal guidance</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// About CTA Component
+const AboutCTA = ({ navigate, fadeInUp }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+
+  return (
+    <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto text-center">
+        <motion.div
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={fadeInUp}
+          className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-12 text-center text-white shadow-2xl relative overflow-hidden"
+        >
+          {/* Background shine effect */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+
+          <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6 relative z-10">
+            Join Us in Transforming Legal Access
+          </h2>
+          <p className="text-xl text-blue-100 mb-10 relative z-10">
+            Whether you're seeking legal help or want to join our network of lawyers, we're here for you
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
+            <Button
+              onClick={() => navigate('/role-selection')}
+              className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-10 py-7 rounded-full font-semibold shadow-xl transition-transform hover:scale-105"
+            >
+              Get Started
+            </Button>
+            <Button
+              onClick={() => navigate('/premium-contact')}
+              variant="outline"
+              className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-blue-600 text-lg px-10 py-7 rounded-full font-semibold transition-all"
+            >
+              Contact Us
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+export default AboutPage;
