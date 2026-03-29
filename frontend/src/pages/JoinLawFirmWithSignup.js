@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, User, Phone, Mail, CreditCard, Check, ArrowRight, Shield, Lock, Building2, ArrowLeft, Users, Award } from 'lucide-react';
+import { Calendar, Clock, User, Phone, Mail, CreditCard, Check, ArrowRight, Shield, Lock, Building2, ArrowLeft, Users, Award, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
+import GoogleSignupButton from '../components/GoogleSignupButton';
+import IndianPhoneInput from '../components/IndianPhoneInput';
+import OtpVerificationModal from '../components/OtpVerificationModal';
 
 export default function JoinLawFirmWithSignup() {
   const navigate = useNavigate();
   const location = useLocation();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
 
   const selectedFirm = location.state?.firm || null;
 
@@ -60,7 +64,26 @@ export default function JoinLawFirmWithSignup() {
       return;
     }
 
-    setStep(2); // Move to case details
+    if (signupData.phone.length !== 10) {
+      toast.error('Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    setOtpModalOpen(true);
+  };
+
+  const handleGoogleSignup = async (googleData) => {
+    setSignupData(prev => ({
+      ...prev,
+      full_name: googleData.name,
+      email: googleData.email,
+      phone: googleData.phone,
+      case_type: googleData.case_type || prev.case_type,
+      password: `google_${Date.now()}`,
+      _googleToken: googleData.accessToken,
+    }));
+    setStep(2);
+    toast.success('Google account connected! Tell us about your case.');
   };
 
   const handleCaseDetailsSubmit = (e) => {
@@ -123,6 +146,14 @@ export default function JoinLawFirmWithSignup() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 py-12 px-4">
+      <OtpVerificationModal
+        isOpen={otpModalOpen}
+        onClose={() => setOtpModalOpen(false)}
+        onVerified={() => { setOtpModalOpen(false); setStep(2); }}
+        email={signupData.email}
+        phone={signupData.phone}
+        darkMode={true}
+      />
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <button
@@ -197,7 +228,29 @@ export default function JoinLawFirmWithSignup() {
             className="bg-slate-900 border border-slate-800 rounded-2xl p-8"
           >
             <h2 className="text-3xl font-bold text-white mb-2">Create Your Account</h2>
-            <p className="text-slate-400 mb-8">Sign up to join {selectedFirm.firm_name}</p>
+            <p className="text-slate-400 mb-6">Sign up to join {selectedFirm.firm_name}</p>
+
+            {/* Google Signup */}
+            <GoogleSignupButton
+              onSuccess={handleGoogleSignup}
+              theme="dark"
+              extraFields={[
+                {
+                  key: 'case_type',
+                  label: 'Case Type',
+                  type: 'select',
+                  required: true,
+                  options: caseTypes.map(t => ({ value: t.value, label: t.label }))
+                }
+              ]}
+            />
+
+            {/* OR Divider */}
+            <div className="flex items-center gap-4 my-4">
+              <div className="flex-1 h-px bg-slate-700" />
+              <span className="text-xs text-slate-500 font-medium">OR</span>
+              <div className="flex-1 h-px bg-slate-700" />
+            </div>
 
             <form onSubmit={handleSignupSubmit} className="space-y-6">
               <div>
@@ -230,34 +283,34 @@ export default function JoinLawFirmWithSignup() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                  <input
-                    type="tel"
-                    value={signupData.phone}
-                    onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="+91 98765 43210"
-                    required
-                  />
-                </div>
-              </div>
+              <IndianPhoneInput
+                value={signupData.phone}
+                onChange={(digits) => setSignupData({ ...signupData, phone: digits })}
+                label="Phone Number"
+                required
+                darkMode
+              />
 
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={signupData.password}
                     onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl pl-11 pr-11 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="••••••••"
                     required
                     minLength="6"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
                 <p className="text-xs text-slate-500 mt-1">Minimum 6 characters</p>
               </div>

@@ -1,16 +1,21 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Scale, Mail, Lock, ArrowRight, User, Phone, ArrowLeft, Loader2 } from 'lucide-react';
+import { Scale, Mail, Lock, ArrowRight, User, Phone, ArrowLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
 import { motion } from 'framer-motion';
 import { WaveLayout } from '../components/WaveLayout';
 import { Button } from '../components/ui/button';
+import GoogleSignupButton from '../components/GoogleSignupButton';
+import IndianPhoneInput from '../components/IndianPhoneInput';
+import OtpVerificationModal from '../components/OtpVerificationModal';
 
 export default function UserSignupPage() {
   const [loading, setLoading] = useState(false);
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -21,21 +26,26 @@ export default function UserSignupPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Phone validation
+    if (formData.phone.length !== 10) {
+      toast.error('Please enter a valid 10-digit phone number');
+      return;
+    }
+    if (!otpVerified) {
+      setOtpModalOpen(true); // Show OTP first
+      return;
+    }
+    await createAccount();
+  };
+
+  const createAccount = async () => {
     setLoading(true);
-
     try {
-      const payload = {
-        ...formData,
-        user_type: 'client'
-      };
+      const payload = { ...formData, user_type: 'client' };
       const response = await axios.post(`${API}/auth/signup`, payload);
-
       toast.success('Account created successfully!');
-
-      // Auto login
       sessionStorage.setItem('token', response.data.token);
       sessionStorage.setItem('user', JSON.stringify(response.data.user));
-
       navigate('/user-dashboard');
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Signup failed');
@@ -44,13 +54,52 @@ export default function UserSignupPage() {
     }
   };
 
+  const handleGoogleSignup = async (googleData) => {
+    setLoading(true);
+    try {
+      // Register/login via Google endpoint
+      const response = await axios.post(`${API}/auth/google`, {
+        token: googleData.accessToken,
+        user_type: 'client'
+      });
+      // Update phone after login
+      if (googleData.phone) {
+        await axios.put(`${API}/auth/profile`, { phone: googleData.phone }, {
+          headers: { Authorization: `Bearer ${response.data.token}` }
+        }).catch(() => { }); // non-critical
+      }
+      toast.success('Account created with Google!');
+      sessionStorage.setItem('token', response.data.token);
+      sessionStorage.setItem('user', JSON.stringify(response.data.user));
+      navigate('/user-dashboard');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Google signup failed');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <WaveLayout hideNavbar={true}>
+      {/* OTP Modal */}
+      <OtpVerificationModal
+        isOpen={otpModalOpen}
+        onClose={() => setOtpModalOpen(false)}
+        onVerified={() => {
+          setOtpModalOpen(false);
+          setOtpVerified(true);
+          createAccount();
+        }}
+        email={formData.email}
+        phone={formData.phone}
+      />
+
       <div className="min-h-screen flex items-center justify-center px-4 py-20 relative z-10">
 
         {/* Back Button */}
         <button
-          onClick={() => navigate('/role-selection')}
+          onClick={() => navigate('/register')}
           className="absolute top-8 left-8 flex items-center space-x-2 text-slate-500 hover:text-blue-600 transition-colors font-medium bg-white/50 px-4 py-2 rounded-full backdrop-blur-md border border-white/60 hover:shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -80,6 +129,16 @@ export default function UserSignupPage() {
               </div>
               <h1 className="text-3xl font-bold text-slate-900 mb-2 font-outfit">Create Account</h1>
               <p className="text-slate-500">Join LxwyerUp for professional legal assistance</p>
+            </div>
+
+            {/* Google Signup */}
+            <GoogleSignupButton onSuccess={handleGoogleSignup} theme="light" />
+
+            {/* OR Divider */}
+            <div className="flex items-center gap-4 my-2">
+              <div className="flex-1 h-px bg-slate-200" />
+              <span className="text-xs text-slate-400 font-medium">OR</span>
+              <div className="flex-1 h-px bg-slate-200" />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -117,20 +176,13 @@ export default function UserSignupPage() {
               </div>
 
               {/* Phone */}
-              <div className="space-y-1">
-                <label className="text-sm font-semibold text-slate-700 ml-1">Phone Number</label>
-                <div className="relative group">
-                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                    placeholder="+91 98765 43210"
-                  />
-                </div>
-              </div>
+              <IndianPhoneInput
+                value={formData.phone}
+                onChange={(digits) => setFormData({ ...formData, phone: digits })}
+                label="Phone Number"
+                required
+                className="space-y-1"
+              />
 
               {/* Password */}
               <div className="space-y-1">
@@ -138,13 +190,20 @@ export default function UserSignupPage() {
                 <div className="relative group">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                    className="w-full pl-12 pr-12 py-3 bg-white border border-slate-200 rounded-xl text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
                     placeholder="••••••••"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
 
@@ -170,14 +229,14 @@ export default function UserSignupPage() {
             <div className="mt-6 text-center">
               <p className="text-slate-500 text-sm">
                 Already have an account?{' '}
-                <Link to="/user-login" className="text-blue-600 font-bold hover:text-blue-700 hover:underline transition-colors">
+                <Link to="/login" className="text-blue-600 font-bold hover:text-blue-700 hover:underline transition-colors">
                   Login
                 </Link>
               </p>
             </div>
 
             <div className="mt-4 text-center">
-              <Link to="/role-selection" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              <Link to="/register" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
                 Wrong role? Change
               </Link>
             </div>

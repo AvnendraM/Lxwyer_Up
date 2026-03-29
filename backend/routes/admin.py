@@ -98,15 +98,30 @@ async def approve_lawyer_application(app_id: str, admin: dict = Depends(get_admi
             'state': application.get('state'),
             'city': application.get('city'),
             'court': application.get('court', ''),
+            'detailed_court_experience': application.get('detailed_court_experience', []),
+            'primary_court': application.get('primary_court', ''),
             'education': application.get('education'),
             'languages': application.get('languages', []),
-            'fee_range': application.get('fee_range', '₹5,000 - ₹15,000'),
+            'fee_range': application.get('fee_range', ''),
+            'charge_30min': application.get('charge_30min', ''),
+            'charge_60min': application.get('charge_60min', ''),
             'bio': application.get('bio', 'Experienced lawyer'),
             'office_address': application.get('office_address'),
             'rating': 4.5,
             'is_verified': True,
             'practice_start_date': application.get('practice_start_date'),
-            'education_details': application.get('education_details')
+            'education_details': application.get('education_details'),
+            'bar_council_photo': application.get('bar_council_photo'),
+            'college_degree_photo': application.get('college_degree_photo'),
+            'office_address_photo': application.get('office_address_photo'),
+            'aadhar_card_photo': application.get('aadhar_card_photo'),
+            'aadhar_card_front': application.get('aadhar_card_front'),
+            'aadhar_card_back': application.get('aadhar_card_back'),
+            'pan_card': application.get('pan_card'),
+            'application_type': application.get('application_type', ['normal']),
+            'sos_locations': application.get('sos_locations', []),
+            'sos_matters': application.get('sos_matters', []),
+            'sos_terms_accepted': application.get('sos_terms_accepted', False)
         }
         
         await db.users.insert_one(user_data)
@@ -234,6 +249,41 @@ async def reject_lawfirm_application(app_id: str, admin: dict = Depends(get_admi
     return {'message': 'Law firm application rejected'}
 
 
+# Firm Lawyer Applications (submitted via LawyerApplication when law_firm type selected)
+@router.get("/firm-lawyer-applications")
+async def get_firm_lawyer_applications_admin(admin: dict = Depends(get_admin)):
+    """Get all firm lawyer applications — visible in admin dashboard and monitor"""
+    applications = await db.firm_lawyer_applications.find({}, {'_id': 0, 'password_hash': 0}).sort('created_at', -1).to_list(1000)
+    stats = {
+        'pending': len([a for a in applications if a.get('status') == 'pending']),
+        'approved': len([a for a in applications if a.get('status') == 'approved']),
+        'rejected': len([a for a in applications if a.get('status') == 'rejected'])
+    }
+    return {'applications': applications, 'stats': stats}
+
+
+@router.put("/firm-lawyer-applications/{app_id}/approve")
+async def admin_approve_firm_lawyer(app_id: str, admin: dict = Depends(get_admin)):
+    """Admin approve a firm lawyer application"""
+    from datetime import datetime, timezone
+    await db.firm_lawyer_applications.update_one(
+        {'id': app_id},
+        {'$set': {'status': 'approved', 'updated_at': datetime.now(timezone.utc).isoformat()}}
+    )
+    return {'message': 'Firm lawyer application approved'}
+
+
+@router.put("/firm-lawyer-applications/{app_id}/reject")
+async def admin_reject_firm_lawyer(app_id: str, admin: dict = Depends(get_admin)):
+    """Admin reject a firm lawyer application"""
+    from datetime import datetime, timezone
+    await db.firm_lawyer_applications.update_one(
+        {'id': app_id},
+        {'$set': {'status': 'rejected', 'updated_at': datetime.now(timezone.utc).isoformat()}}
+    )
+    return {'message': 'Firm lawyer application rejected'}
+
+
 class StateUpdate(BaseModel):
     state: str
 
@@ -287,7 +337,7 @@ async def update_lawyer_state(lawyer_id: str, state_data: StateUpdate, admin: di
 @router.get("/users", response_model=dict)
 async def get_users(admin: dict = Depends(get_admin)):
     """Get all registered users (clients)"""
-    users = await db.users.find({'user_type': 'client'}).sort('created_at', -1).to_list(1000)
+    users = await db.users.find({'user_type': {'$in': ['client', 'user']}}).sort('created_at', -1).to_list(1000)
     
     # Clean up data for frontend
     for user in users:
@@ -297,3 +347,129 @@ async def get_users(admin: dict = Depends(get_admin)):
             del user['password']
             
     return {'users': users}
+
+
+@router.get("/bookings", response_model=dict)
+async def get_all_bookings(admin: dict = Depends(get_admin)):
+    """Get all bookings across all users — for Monitor Dashboard."""
+    bookings = await db.bookings.find({}).sort('created_at', -1).to_list(1000)
+
+    for b in bookings:
+        b['_id'] = str(b.get('_id', ''))
+        if 'password' in b:
+            del b['password']
+
+        # Enrich with user name if possible
+        if b.get('user_id') and not b.get('user_name'):
+            u = await db.users.find_one({'id': b['user_id']}, {'full_name': 1, 'email': 1})
+            if u:
+                b['user_name'] = u.get('full_name') or u.get('email')
+
+        # Enrich with lawyer name if possible
+        if b.get('lawyer_id') and not b.get('lawyer_name'):
+            l = await db.users.find_one({'id': b['lawyer_id']}, {'full_name': 1})
+            if l:
+                b['lawyer_name'] = l.get('full_name')
+
+    return {'bookings': bookings}
+
+@router.get("/deactivation-requests", response_model=dict)
+async def get_deactivation_requests(admin: dict = Depends(get_admin)):
+    """Get all pending deactivation requests from lawyers"""
+    pipeline = [
+        {
+            '$match': {
+                'user_type': 'lawyer',
+                'deactivation_request.status': 'pending'
+            }
+        },
+        {
+            '$project': {
+                '_id': 1,
+                'id': 1,
+                'full_name': 1,
+                'email': 1,
+                'phone': 1,
+                'deactivation_request': 1
+            }
+        }
+    ]
+    
+    requests = await db.users.aggregate(pipeline).to_list(1000)
+    
+    # Clean up data for frontend
+    for req in requests:
+        if '_id' in req:
+            req['_id'] = str(req['_id'])
+            
+    return {'requests': requests}
+
+@router.put("/deactivation-requests/{user_id}/approve", response_model=dict)
+async def approve_deactivation_request(user_id: str, admin: dict = Depends(get_admin)):
+    """Approve a lawyer's deactivation request"""
+    try:
+        # Find the lawyer with a pending request
+        lawyer = await db.users.find_one({
+            'id': user_id, 
+            'user_type': 'lawyer',
+            'deactivation_request.status': 'pending'
+        })
+        
+        if not lawyer:
+            raise HTTPException(status_code=404, detail="Pending deactivation request not found for this user")
+            
+        # Update user status
+        await db.users.update_one(
+            {'id': user_id},
+            {
+                '$set': {
+                    'account_status': 'deactivated',
+                    'is_approved': False, # Hide from public listings
+                    'deactivation_request.status': 'approved',
+                    'deactivation_request.approved_at': datetime.now().isoformat()
+                }
+            }
+        )
+        
+        return {'message': 'Deactivation request approved successfully'}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f'Failed to approve deactivation request: {str(e)}')
+
+class LawyerTypeUpdate(BaseModel):
+    application_type: List[str]
+
+@router.patch("/lawyers/{lawyer_id}/type")
+async def update_lawyer_type(lawyer_id: str, body: LawyerTypeUpdate, admin: dict = Depends(get_admin)):
+    """Admin override: update a lawyer's application_type (normal/sos/both)"""
+    valid = {'normal', 'sos'}
+    if not all(t in valid for t in body.application_type):
+        raise HTTPException(status_code=400, detail='application_type values must be "normal" and/or "sos"')
+    try:
+        # Update both the users collection and the lawyer_applications collection
+        result = await db.users.update_one(
+            {'id': lawyer_id},
+            {'$set': {'application_type': body.application_type}}
+        )
+        if result.matched_count == 0:
+            try:
+                result = await db.users.update_one(
+                    {'_id': ObjectId(lawyer_id)},
+                    {'$set': {'application_type': body.application_type}}
+                )
+            except Exception:
+                pass
+        # Also update in the applications collection
+        try:
+            await db.lawyer_applications.update_one(
+                {'$or': [{'id': lawyer_id}, {'_id': ObjectId(lawyer_id) if len(lawyer_id) == 24 else None}]},
+                {'$set': {'application_type': body.application_type}}
+            )
+        except Exception:
+            pass
+        return {'message': f'Lawyer type updated to {body.application_type}'}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f'Failed to update type: {str(e)}')

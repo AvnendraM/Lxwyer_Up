@@ -1,13 +1,19 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTheme } from 'next-themes'
+import axios from 'axios'
 import {
   Send, ArrowLeft, Sparkles, ShieldCheck, Trash2,
-  Info, ArrowRight, Clock, Zap, Scale,
-  X, Lightbulb, User, Ghost, Bot, Menu
+  Info, ArrowRight, Clock, Zap, Scale, ChevronDown, ChevronUp,
+  X, Lightbulb, User, Ghost, Bot, Menu,
+  MapPin, Phone, Mail, Building2, Briefcase, Users
 } from 'lucide-react'
-import { NavbarWave } from '../components/NavbarWave'
-import { GradientOrbs } from '../components/GradientOrbs'
+import { dummyLawyers } from '../data/lawyersData'
+import { dummyLawFirms } from '../data/lawFirmsData'
+import { API } from '../App'
+
+import GenerativeBubble from '../components/GenerativeBubble'
 
 /* ========== CARD DEFINITIONS ========== */
 const CARD_DEFS = [
@@ -26,10 +32,10 @@ const CARD_DEFS = [
 
 /* ========== SUGGESTIONS ========== */
 const SUGGESTED_QUERIES = [
-  { text: 'What is murder under IPC?', icon: '👮' },
-  { text: 'How to file for divorce?', icon: '🏠' },
-  { text: 'Steps for company incorporation', icon: '💼' },
-  { text: 'What are my rights during arrest?', icon: '⚖️' },
+  { text: 'What is murder under IPC?', icon: '↗' },
+  { text: 'How to file for divorce?', icon: '↗' },
+  { text: 'Steps for company incorporation', icon: '↗' },
+  { text: 'What are my rights during arrest?', icon: '↗' },
 ]
 
 /* ========== CLASSIFIERS ========== */
@@ -38,8 +44,33 @@ const FAMILY_KW = ['divorce', 'marriage', 'custody', 'alimony', 'property', 'wil
 const CORPORATE_KW = ['company', 'gst', 'tax', 'incorporation', 'startup', 'contract', 'agreement', 'salary', 'employment', 'cheque', 'corporate', 'share', 'director', 'compliance', 'trademark', 'patent']
 const GREETING_KW = ['hi', 'hello', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening']
 
-const INTENT_LABELS = ['Criminal Law 👮', 'Family/Civil 🏠', 'Corporate 💼']
-const SENTIMENT_LABELS = ['Neutral 😐', 'URGENT 🚨', 'Positive 🟢']
+// Recommendation intent keywords
+const LAWYER_REC_KW = ['recommend', 'find lawyer', 'suggest lawyer', 'need lawyer', 'want lawyer', 'good lawyer', 'lawyer in', 'lawyer for', 'attorney', 'advocate', 'legal counsel', 'find me a lawyer', 'show me lawyers', 'get me a lawyer']
+const FIRM_REC_KW = ['law firm', 'legal firm', 'firm in', 'find firm', 'suggest firm', 'recommend firm', 'best firm', 'legal team', 'law office']
+
+function detectRecommendationIntent(text) {
+  const l = text.toLowerCase()
+  const isFirm = FIRM_REC_KW.some(k => l.includes(k))
+  const isLawyer = LAWYER_REC_KW.some(k => l.includes(k))
+  if (isFirm) return 'firm'
+  if (isLawyer) return 'lawyer'
+  return null
+}
+
+function extractLocation(text) {
+  const cities = ['delhi', 'mumbai', 'bangalore', 'bengaluru', 'chennai', 'kolkata', 'hyderabad', 'pune', 'jaipur', 'lucknow', 'noida', 'gurgaon', 'ahmedabad', 'surat', 'faridabad']
+  const l = text.toLowerCase()
+  return cities.find(c => l.includes(c)) || null
+}
+
+function extractSpecialization(text) {
+  const specs = ['criminal', 'family', 'divorce', 'property', 'corporate', 'civil', 'tax', 'labour', 'consumer', 'cyber', 'banking', 'constitutional', 'intellectual property']
+  const l = text.toLowerCase()
+  return specs.find(s => l.includes(s)) || null
+}
+
+const INTENT_LABELS = ['Criminal Law', 'Family/Civil', 'Corporate']
+const SENTIMENT_LABELS = ['Neutral', 'URGENT', 'Positive']
 
 function classifyIntent(t) {
   const l = t.toLowerCase()
@@ -60,23 +91,31 @@ function classifySentiment(t) {
   return 0
 }
 
-function generateResponse(query) {
-  const lower = query.toLowerCase().trim()
-  if (GREETING_KW.includes(lower)) {
-    return {
-      acknowledgment: "Hello! I am **LxwyerAI**, your AI Legal Assistant. I can help you with Indian laws, legal procedures, and rights.\n\nHow can I assist you today?",
-      cards: null, intent: null, sentiment: null, isGreeting: true,
-    }
-  }
-  const intent = classifyIntent(query)
-  const sentiment = classifySentiment(query)
-  const intentLabel = INTENT_LABELS[intent]
-  const sentimentLabel = SENTIMENT_LABELS[sentiment]
-  const acknowledgment = `Thank you for reaching out. I've analyzed your query about **"${query}"** and classified it under **${intentLabel}** with **${sentimentLabel}** sentiment.\n\n⚠️ *DISCLAIMER: I provide legal information, not legal advice. For your specific situation, please consult a qualified attorney.*\n\nI've organized all the information you need into easy-to-navigate cards below. Click on any card to see detailed information.`
-  return { acknowledgment, cards: CARD_DEFS, intent, sentiment, intentLabel, sentimentLabel, isGreeting: false, query }
+/* ── Chat History helpers ── */
+const HISTORY_KEY = 'lxwyer_chat_history'
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]') } catch { return [] }
+}
+function saveHistory(sessions) {
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions)) } catch { }
 }
 
-export default function QuickChat() {
+export default function QuickChat({ embedded = false, darkMode: darkModeProp }) {
+
+  // Reactively track the app theme (next-themes puts 'dark' class on <html>)
+  const { resolvedTheme } = useTheme()
+  const [htmlDark, setHtmlDark] = useState(() =>
+    typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  )
+  useEffect(() => {
+    const obs = new MutationObserver(() => {
+      setHtmlDark(document.documentElement.classList.contains('dark'))
+    })
+    obs.observe(document.documentElement, { attributeFilter: ['class'] })
+    return () => obs.disconnect()
+  }, [])
+  const dm = embedded ? !!darkModeProp : true // lxwyerai always monochrome dark
+
   const navigate = useNavigate()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -84,68 +123,190 @@ export default function QuickChat() {
   const [expandedCard, setExpandedCard] = useState(null)
   const [expandedCtx, setExpandedCtx] = useState(null)
   const [isSidebarOpen, setSidebarOpen] = useState(false)
+  const [showGuidelines, setShowGuidelines] = useState(false)
+  const [chatHistory, setChatHistory] = useState(() => loadHistory())
+  const [currentSessionId, setCurrentSessionId] = useState(() => Date.now().toString())
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const chatContainerRef = useRef(null)
 
+  // Persist current session whenever messages change
+  useEffect(() => {
+    if (messages.length === 0) return
+    const title = messages.find(m => m.role === 'user')?.content?.slice(0, 60) || 'New Chat'
+    const session = { id: currentSessionId, title, messages, ts: Date.now() }
+    setChatHistory(prev => {
+      const filtered = prev.filter(s => s.id !== currentSessionId)
+      const next = [session, ...filtered].slice(0, 30) // keep max 30 sessions
+      saveHistory(next)
+      return next
+    })
+  }, [messages])
+
+  const startNewChat = () => {
+    setMessages([])
+    setCurrentSessionId(Date.now().toString())
+  }
+
+  const loadSession = (session) => {
+    setMessages(session.messages)
+    setCurrentSessionId(session.id)
+  }
+
+  const deleteSession = (id, e) => {
+    e.stopPropagation()
+    setChatHistory(prev => {
+      const next = prev.filter(s => s.id !== id)
+      saveHistory(next)
+      return next
+    })
+    if (id === currentSessionId) startNewChat()
+  }
+
   const scrollToBottom = () => {
     if (chatContainerRef.current) {
       const { scrollHeight, clientHeight } = chatContainerRef.current
-      chatContainerRef.current.scrollTo({
-        top: scrollHeight - clientHeight,
-        behavior: 'smooth'
-      })
+      chatContainerRef.current.scrollTo({ top: scrollHeight - clientHeight, behavior: 'smooth' })
     }
   }
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, isTyping])
-
+  useEffect(() => { scrollToBottom() }, [messages, isTyping])
   useEffect(() => { inputRef.current?.focus() }, [])
 
   const handleSend = async (text) => {
     const query = (text || input).trim()
     if (!query) return
 
-    // 1. Add User Message
     const userMsg = { role: 'user', content: query, id: Date.now() }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setIsTyping(true)
 
+    // --- Check for recommendation intent first ---
+    const recIntent = detectRecommendationIntent(query)
+    if (recIntent) {
+      const city = extractLocation(query)
+      const spec = extractSpecialization(query)
+      try {
+        if (recIntent === 'lawyer') {
+          // Fetch lawyers from API, fall back to dummy
+          let lawyers = []
+          try {
+            const res = await axios.get(`${API}/lawyers`)
+            lawyers = res.data.map(l => ({
+              ...l,
+              name: l.full_name || l.name,
+              city: l.city,
+              state: l.state,
+              specialization: Array.isArray(l.specialization) ? l.specialization[0] : l.specialization,
+              fee: l.consultation_fee || 'Contact for fee',
+              rating: 4.8,
+              photo: l.photo
+                ? (l.photo.startsWith('http') ? l.photo : `http://localhost:8000${l.photo.startsWith('/') ? '' : '/'}${l.photo}`)
+                : null,
+              isReal: true,
+            }))
+          } catch { lawyers = [] }
+          // Merge with dummy, shuffle, filter
+          const all = [...lawyers, ...dummyLawyers]
+          let filtered = all
+          if (city) filtered = filtered.filter(l => (l.city || '').toLowerCase().includes(city))
+          if (spec) filtered = filtered.filter(l => (l.specialization || '').toLowerCase().includes(spec))
+          const results = filtered.slice(0, 5)
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            id: Date.now() + 1,
+            is_recommendation: true,
+            rec_type: 'lawyer',
+            rec_items: results,
+            rec_query: query,
+            city, spec,
+            intentLabel: 'Lawyer Finder',
+            sentiment: 0,
+            cards: [],
+            sources: [],
+          }])
+        } else {
+          // Fetch firms from API, fall back to dummy
+          let firms = []
+          try {
+            const res = await axios.get(`${API}/lawfirms`)
+            firms = res.data.map(f => ({
+              ...f,
+              name: f.firm_name || f.name,
+              city: f.city,
+              state: f.state,
+              practiceAreas: f.practice_areas || f.practiceAreas || [],
+              lawyersCount: f.total_lawyers || f.lawyersCount || 0,
+              isReal: true,
+            }))
+          } catch { firms = [] }
+          const all = [...firms, ...dummyLawFirms]
+          let filtered = all
+          if (city) filtered = filtered.filter(f => (f.city || '').toLowerCase().includes(city))
+          if (spec) filtered = filtered.filter(f => (f.practiceAreas || []).some(a => a.toLowerCase().includes(spec)))
+          const results = filtered.slice(0, 5)
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            id: Date.now() + 1,
+            is_recommendation: true,
+            rec_type: 'firm',
+            rec_items: results,
+            rec_query: query,
+            city, spec,
+            intentLabel: 'Firm Finder',
+            sentiment: 0,
+            cards: [],
+            sources: [],
+          }])
+        }
+      } catch (err) {
+        setMessages(prev => [...prev, {
+          role: 'assistant', id: Date.now() + 1, is_greeting: true,
+          greeting_text: '⚠️ Could not fetch recommendations right now. Please try again.',
+          intentLabel: 'Error', sentiment: 0, cards: [], sources: [],
+        }])
+      } finally {
+        setIsTyping(false)
+      }
+      return
+    }
+
+    // --- Default: legal information from AI ---
     try {
-      // 2. Call Backend API
-      const response = await fetch('http://localhost:5001/api/chat/legal', {
+      const response = await fetch('http://localhost:8000/api/chat/legal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, history: [] }) // Simple history for now
+        body: JSON.stringify({ query, history: [] })
       })
 
       if (!response.ok) throw new Error('API Error')
-
       const data = await response.json()
 
-      // 3. Add Assistant Message
       setMessages(prev => [...prev, {
         role: 'assistant',
         id: Date.now() + 1,
-        content: data.response, // The main text
+        intro: data.intro || '',
+        cards: data.cards || [],
         intentLabel: data.intent,
         sentimentLabel: data.sentiment,
-        sentiment: data.sentiment === 'URGENT 🚨' ? 1 : data.sentiment === 'Positive 🟢' ? 2 : 0,
-        cards: null, // We can restore cards logic later if needed
-        isGreeting: data.intent === 'Greeting/Casual 💬'
+        sentiment: data.sentiment === 'URGENT' ? 1 : data.sentiment === 'Positive' ? 2 : 0,
+        sources: data.sources || [],
+        is_greeting: data.is_greeting || false,
+        greeting_text: data.greeting_text || '',
       }])
-
     } catch (error) {
-      console.error("Chat Error:", error)
+      console.error('Chat Error:', error)
       setMessages(prev => [...prev, {
         role: 'assistant',
         id: Date.now() + 1,
-        content: "I apologize, but I'm having trouble connecting to my legal database right now. Please try again later.",
-        sentimentLabel: "Error ⚠️",
-        sentiment: 0
+        is_greeting: true,
+        greeting_text: "⚠️ I'm having trouble connecting right now. Please try again in a moment.",
+        intentLabel: 'Error',
+        sentimentLabel: 'Neutral',
+        sentiment: 0,
+        cards: [],
+        sources: [],
       }])
     } finally {
       setIsTyping(false)
@@ -155,179 +316,466 @@ export default function QuickChat() {
   const openCard = (card, ctx) => { setExpandedCard(card); setExpandedCtx(ctx) }
   const closeCard = () => { setExpandedCard(null); setExpandedCtx(null) }
 
+  // ── Semantic color helpers keyed to dm ──────────────────────────────────
+  // ── Strict monochrome palette for LxwyerAI standalone ─────────────────
+  const bg = dm ? 'bg-black' : 'bg-white'
+  const surfaceBg = dm ? 'bg-black' : 'bg-white'
+  const borderCol = dm ? 'border-zinc-800' : 'border-zinc-200'
+  const textPrimary = dm ? 'text-white' : 'text-zinc-900'
+  const textMuted = dm ? 'text-zinc-500' : 'text-zinc-500'
+  const inputBg = dm ? 'bg-zinc-950/90 border-zinc-800' : 'bg-white/70 border-zinc-300'
+  const suggCard = dm ? 'bg-zinc-900/70 border-zinc-800 hover:bg-zinc-800 hover:border-zinc-600' : 'bg-zinc-50 border-zinc-200 hover:bg-white hover:border-zinc-400'
+  const typingBg = dm ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+  const msgAst = dm ? 'bg-zinc-900/90 border-zinc-800 text-zinc-200' : 'bg-white border-zinc-200 text-zinc-800'
+
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-sans overflow-hidden transition-colors duration-300">
-      {/* Background Decor */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-50/50 via-slate-50 to-slate-100 dark:from-slate-900 dark:via-slate-950 dark:to-black -z-10" />
+    <div className={`flex ${embedded ? 'h-full w-full' : 'h-screen w-full'} ${bg} font-sans overflow-hidden transition-colors duration-300 relative`}>
 
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-30 w-72 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-auto ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-              <Scale size={20} />
+      {/* Background Decor (standalone only) */}
+      {!embedded && (
+        <div className={`absolute inset-0 -z-10 ${dm ? 'bg-black' : 'bg-white'}`} />
+      )}
+
+      {/* Sidebar (standalone only) */}
+      {!embedded && (
+        <aside className={`fixed inset-y-0 left-0 z-30 w-44 ${dm ? 'bg-black border-zinc-800' : 'bg-white border-zinc-200'} border-r flex flex-col transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:inset-auto ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+          <div className={`p-4 border-b ${borderCol} shrink-0`}>
+            <div className="flex items-center justify-between">
+              <h1 className={`font-bold text-base ${textPrimary} leading-tight`}>Lxwyer <span className="text-blue-400">AI</span></h1>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 tracking-widest">v1.0</span>
             </div>
-            <div>
-              <h1 className="font-bold text-lg text-slate-900 dark:text-white leading-tight">Lxwyer <span className="text-blue-600 dark:text-blue-400">AI</span></h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Legal Intelligence</p>
-            </div>
+            <p className={`text-[10px] ${textMuted} mt-0.5`}>Legal Intelligence</p>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-800/30">
-              <div className="flex items-start gap-3">
-                <Info className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" size={18} />
-                <div>
-                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-200 mb-1">About This Assistant</h4>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                    AI-powered legal information based on Indian Constitution, IPC, and BNS. Not a substitute for professional legal advice.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="px-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">AI Pipeline</h4>
-              <div className="space-y-1">
-                {['Sentiment Analysis', 'Intent Classification', 'RAG Legal Search', 'Answer Generation', 'Safety Check', 'Recommendations'].map((step, idx) => (
-                  <div key={step} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 group transition-colors">
-                    <div className={`w-2 h-2 rounded-full ${idx === 5 ? 'bg-green-500 animate-pulse' : 'bg-slate-300 dark:bg-slate-700 group-hover:bg-blue-500 transition-colors'}`} />
-                    <span className="text-sm text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200">{step}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* New Chat button */}
+          <div className={`px-3 pt-3 shrink-0`}>
+            <button
+              onClick={startNewChat}
+              className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border border-dashed transition-all
+                ${dm ? 'border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200 hover:bg-white/[0.04]' : 'border-slate-300 text-slate-500 hover:border-slate-400 hover:text-slate-700 hover:bg-slate-50'}`}
+            >
+              <span className="text-base">+</span> New Chat
+            </button>
           </div>
 
-          <div className="p-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
-            <button onClick={() => setMessages([])} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all text-sm font-medium">
+          {/* Chat history list */}
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+            {chatHistory.length === 0 ? (
+              <p className={`text-xs ${textMuted} text-center py-6 opacity-60`}>No previous chats</p>
+            ) : chatHistory.map(session => (
+              <div
+                key={session.id}
+                onClick={() => loadSession(session)}
+                className={`group flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all text-sm
+                  ${session.id === currentSessionId
+                    ? (dm ? 'bg-white/[0.08] text-slate-200 border border-slate-700' : 'bg-slate-100 text-slate-800 border border-slate-200')
+                    : (dm ? 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')
+                  }`}
+              >
+                <span className="flex-1 truncate">{session.title}</span>
+                <button
+                  onClick={(e) => deleteSession(session.id, e)}
+                  className={`opacity-0 group-hover:opacity-100 p-1 rounded-lg transition-all shrink-0
+                    ${dm ? 'hover:bg-red-900/30 text-red-400' : 'hover:bg-red-50 text-red-500'}`}
+                  title="Delete this chat"
+                >
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom actions */}
+          <div className={`p-3 border-t ${borderCol} space-y-1 shrink-0`}>
+            <button
+              onClick={startNewChat}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl ${dm ? 'text-red-400 hover:bg-red-900/10' : 'text-red-600 hover:bg-red-50'} transition-all text-sm font-medium`}
+            >
               <Trash2 size={16} /> Clear Chat
             </button>
-            <button onClick={() => navigate('/')} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-all text-sm font-medium">
+            <button onClick={() => navigate('/')} className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl ${dm ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'} transition-all text-sm font-medium`}>
               <ArrowLeft size={16} /> Back to Home
             </button>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative w-full h-full">
-        {/* Header */}
-        <header className="h-16 px-4 md:px-8 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm absolute top-0 w-full z-20">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="md:hidden p-2 -ml-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
-              <Menu size={20} />
-            </button>
+      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden">
+
+        {/* Standalone Header */}
+        {!embedded && (
+          <header className={`h-14 px-4 md:px-6 border-b ${borderCol}/50 flex items-center justify-between ${dm ? 'bg-black/80' : 'bg-white/80'} backdrop-blur-sm absolute top-0 w-full z-20`}>
+            {/* Left: mobile menu toggle */}
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-              <span className="text-sm font-medium text-slate-600 dark:text-slate-300 hidden sm:inline">System Online</span>
+              <button onClick={() => setSidebarOpen(!isSidebarOpen)} className={`md:hidden p-2 -ml-2 ${dm ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'} rounded-lg`}>
+                <Menu size={20} />
+              </button>
             </div>
-          </div>
-          <div className="px-3 py-1.5 rounded-full bg-slate-100/50 dark:bg-slate-800/50 text-xs font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-md">
-            <ShieldCheck size={14} className="text-blue-500" />
-            <span>Safety Protocols Active</span>
-          </div>
-        </header>
+
+            {/* Right: About & Guidelines + Safety badge */}
+            <div className="flex items-center gap-3 relative">
+              {/* About & Guidelines toggle */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowGuidelines(g => !g)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all
+                    ${showGuidelines
+                      ? (dm ? 'bg-white/10 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-400 text-slate-700')
+                      : (dm ? 'bg-white/[0.04] border-white/10 text-slate-400 hover:border-white/20 hover:text-slate-200' : 'bg-slate-100/80 border-slate-200 text-slate-500 hover:text-slate-700')}`}
+                >
+                  <Info size={12} />
+                  <span>About &amp; Guidelines</span>
+                  <ChevronDown size={11} className={`transition-transform ${showGuidelines ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown panel */}
+                {showGuidelines && (
+                  <div className={`absolute right-0 top-full mt-2 w-80 rounded-2xl border shadow-2xl z-50 overflow-hidden
+                    ${dm ? 'bg-[#111] border-white/10 shadow-black/60' : 'bg-white border-slate-200 shadow-slate-200/80'}`}>
+                    <div className={`px-4 py-3 border-b ${dm ? 'border-white/5' : 'border-slate-100'} flex items-center justify-between`}>
+                      <span className={`text-xs font-bold uppercase tracking-widest ${dm ? 'text-slate-300' : 'text-slate-700'}`}>About &amp; Guidelines</span>
+                      <button onClick={() => setShowGuidelines(false)} className={`p-1 rounded-lg ${dm ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}><X size={14} /></button>
+                    </div>
+                    <div className={`px-4 py-4 space-y-3 text-xs leading-relaxed ${dm ? 'text-slate-400' : 'text-slate-600'}`}>
+                      <p>AI-powered legal info based on <strong className={dm ? 'text-slate-200' : 'text-slate-800'}>Indian Constitution, IPC, and BNS</strong>.</p>
+                      <p>Best for understanding laws, rights, procedures, and general legal terms.</p>
+                      <p>For lawyer or firm recommendations, ask: <em>"Find a lawyer in Delhi"</em></p>
+                      <p className={`font-semibold pt-1 border-t ${dm ? 'border-white/5 text-amber-400/80' : 'border-slate-100 text-amber-700'}`}>Not a substitute for professional legal advice. Always consult a qualified advocate for your case.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Safety badge */}
+              <div className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 border
+                ${dm ? 'bg-white/[0.04] border-white/10 text-slate-400' : 'bg-slate-100/80 border-slate-200/80 text-slate-500'}`}>
+                <ShieldCheck size={13} className={dm ? 'text-slate-400' : 'text-slate-500'} />
+                <span className="hidden sm:inline">Safety Protocols Active</span>
+              </div>
+            </div>
+          </header>
+        )}
 
         {/* Chat Area */}
-        <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 md:px-8 py-6 pt-20">
-          {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto animate-in fade-in zoom-in duration-500">
-              <div className="w-24 h-24 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-3xl flex items-center justify-center mb-8 ring-1 ring-blue-500/20 backdrop-blur-xl">
-                <Scale size={48} className="text-blue-600 dark:text-blue-400 drop-shadow-lg" />
-              </div>
-              <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight">
-                Welcome to <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">LxwyerAI</span>
-              </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-400 mb-10 leading-relaxed max-w-lg">
-                Your intelligent legal companion. Ask about criminal charges, family disputes, or corporate regulations in India.
-              </p>
+        <div ref={chatContainerRef} className={`flex-1 overflow-y-auto ${embedded ? 'px-2 md:px-6 py-6' : 'px-4 md:px-8 py-6 pt-20'}`}>
+          <GenerativeBubble active={messages.length > 0 && input.length === 0} typing={input.length > 0} />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
-                {SUGGESTED_QUERIES.map((sq, i) => (
+
+          {messages.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto animate-in fade-in zoom-in duration-500" style={{ position: 'relative', zIndex: 1 }}>
+
+              {/* ── LAUNCHING SOON — cinematic ── */}
+              <style>{`
+                @keyframes ls-shine { 0%{left:-120%} 60%,100%{left:160%} }
+              `}</style>
+              <div style={{
+                position: 'relative', overflow: 'hidden',
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '8px 20px', borderRadius: 50, marginBottom: 28,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: '0 0 32px rgba(59,130,246,0.08)',
+              }}>
+                <div style={{
+                  position: 'absolute', top: 0, bottom: 0, width: '45%',
+                  background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.06),transparent)',
+                  animation: 'ls-shine 4s ease-in-out infinite',
+                }} />
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  background: '#60a5fa',
+                  boxShadow: '0 0 6px rgba(96,165,250,0.9)',
+                  flexShrink: 0,
+                }} />
+                <span style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: '0.25em',
+                  textTransform: 'uppercase', color: 'rgba(255,255,255,0.45)',
+                }}>Launching Soon</span>
+              </div>
+
+              <h2 className={`text-3xl font-extrabold text-white mb-1 tracking-tight`}>
+                Welcome to Lxwyer<span className="text-blue-400">AI</span>
+              </h2>
+              <p className={`text-xs ${textMuted} mb-8`}>Your AI legal companion for India</p>
+
+              {/* 2 small flat pill buttons */}
+              <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
+                {SUGGESTED_QUERIES.slice(0, 2).map((sq, i) => (
                   <button
                     key={i}
                     onClick={() => handleSend(sq.text)}
-                    className="group flex items-center gap-3 p-4 bg-white/50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-blue-300 dark:hover:border-blue-700 hover:bg-white dark:hover:bg-slate-900 hover:shadow-lg hover:-translate-y-0.5 transition-all text-left backdrop-blur-sm"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-medium transition-all hover:scale-[1.02] hover:shadow-md active:scale-95 backdrop-blur-sm
+                      ${dm
+                        ? 'bg-slate-900/60 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-300'
+                        : 'bg-white/70 border-slate-200 text-slate-500 hover:border-slate-400 hover:text-slate-700'
+                      }`}
                   >
-                    <span className="text-xl p-2 bg-slate-100 dark:bg-slate-800 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-sm">{sq.icon}</span>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex-1">{sq.text}</span>
-                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors transform group-hover:translate-x-1" />
+                    <span>{sq.icon}</span>
+                    <span>{sq.text}</span>
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="space-y-8 max-w-4xl mx-auto pb-6">
+            <div className="min-h-full flex flex-col justify-end space-y-8 max-w-4xl mx-auto pb-6" style={{ position: 'relative', zIndex: 1 }}>
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-in slide-in-from-bottom-4 duration-500`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-md ${msg.role === 'user'
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                    : 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white'
+                  {/* Avatar */}
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-md ${msg.role === 'user'
+                    ? (dm ? 'bg-slate-800 text-slate-300' : 'bg-slate-200 text-slate-600')
+                    : (dm ? 'bg-slate-700 text-slate-200' : 'bg-slate-800 text-white')
                     }`}>
                     {msg.role === 'user' ? <User size={18} /> : <Bot size={18} />}
                   </div>
 
-                  <div className={`flex flex-col gap-2 max-w-[85%] md:max-w-[75%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                    <div className={`p-5 rounded-3xl shadow-sm backdrop-blur-sm ${msg.role === 'user'
-                      ? 'bg-blue-600 dark:bg-blue-600 text-white rounded-tr-sm'
-                      : 'bg-white/80 dark:bg-slate-900/80 border border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-sm'
-                      }`}>
-                      {msg.role === 'assistant' && !msg.isGreeting && msg.intentLabel && (
-                        <div className="flex flex-wrap gap-2 mb-4 pb-3 border-b border-slate-100/50 dark:border-slate-700/50">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border shadow-sm ${msg.sentiment === 1 ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800' :
-                            msg.sentiment === 2 ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border-green-100 dark:border-green-800' :
-                              'bg-slate-100 dark:bg-slate-800/50 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
-                            }`}>
-                            <Zap size={10} /> {msg.sentimentLabel}
-                          </span>
-                        </div>
-                      )}
+                  {/* Message bubble */}
+                  <div className={`flex flex-col gap-2 max-w-[90%] md:max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
 
-                      <div className="prose prose-sm dark:prose-invert max-w-none leading-relaxed">
-                        {(msg.acknowledgment || msg.content || '').split('\n').map((line, i) => (
-                          line.trim() === '' ? <div key={i} className="h-3" /> : <p key={i} className="mb-1">{line.replace(/\*\*/g, '')}</p>
-                        ))}
+                    {/* USER bubble — monochrome */}
+                    {msg.role === 'user' && (
+                      <div className={`px-5 py-3 rounded-3xl rounded-tr-sm shadow-sm ${dm ? 'bg-slate-700 text-white' : 'bg-slate-800 text-white'}`}>
+                        <p className="text-sm leading-relaxed">{msg.content}</p>
                       </div>
+                    )}
 
-                      {msg.role === 'assistant' && msg.cards && (
-                        <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 not-prose">
-                          {msg.cards.map((card, i) => (
-                            <button
-                              key={card.id}
-                              className="text-left p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-lg hover:-translate-y-0.5 transition-all group animate-in zoom-in duration-500 fill-mode-backwards"
-                              style={{ animationDelay: `${i * 0.1}s` }}
-                              onClick={() => openCard(card, { intent: msg.intent, sentiment: msg.sentiment, query: msg.query })}
-                            >
-                              <div className="flex justify-between items-start mb-3">
-                                <div className="text-2xl p-2.5 bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800 group-hover:scale-110 transition-transform">{card.icon}</div>
-                                <span className="text-[10px] font-bold tracking-wide uppercase text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded-md flex items-center gap-1">
-                                  <Clock size={10} /> {card.readTime}
-                                </span>
-                              </div>
-                              <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{card.title}</h4>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{card.preview}</p>
-                            </button>
-                          ))}
+                    {/* ASSISTANT — greeting (plain text) */}
+                    {msg.role === 'assistant' && msg.is_greeting && (
+                      <div className={`px-5 py-4 rounded-3xl rounded-tl-sm ${msgAst} border shadow-sm`}>
+                        <p className="text-sm leading-relaxed">{msg.greeting_text}</p>
+                      </div>
+                    )}
+
+                    {/* ASSISTANT — recommendation cards */}
+                    {msg.role === 'assistant' && msg.is_recommendation && (
+                      <div className="w-full space-y-3 max-w-full">
+                        <div className={`px-4 py-3 rounded-2xl rounded-tl-sm ${msgAst} border shadow-sm`}>
+                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${dm ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}
+                          <p className={`text-sm ${textMuted}`}>
+                            {msg.rec_items.length > 0
+                              ? `Found ${msg.rec_items.length} ${msg.rec_type === 'lawyer' ? 'lawyer' : 'law firm'}${msg.rec_items.length > 1 ? 's' : ''}${msg.city ? ` in ${msg.city.charAt(0).toUpperCase() + msg.city.slice(1)}` : ''}.`
+                              : `No ${msg.rec_type === 'lawyer' ? 'lawyers' : 'law firms'} found matching your criteria. Try broadening your search.`}
+                          </p>
                         </div>
-                      )}
-                    </div>
+                        {msg.rec_items.map((item, i) => {
+                          const GRADIENTS = [
+                            'from-blue-600 to-indigo-700',
+                            'from-violet-600 to-purple-700',
+                            'from-rose-500 to-pink-600',
+                            'from-emerald-500 to-teal-600',
+                            'from-orange-500 to-amber-600',
+                            'from-cyan-500 to-sky-600',
+                            'from-fuchsia-500 to-violet-600',
+                            'from-green-500 to-emerald-600',
+                          ]
+                          const grad = GRADIENTS[i % GRADIENTS.length]
+                          const photoSrc = item.photo && item.photo.length > 5
+                            ? item.photo
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || 'L')}&background=3b82f6&color=fff&size=128`
+
+                          return msg.rec_type === 'lawyer' ? (
+                            <div key={item.id || i} className={`rounded-3xl overflow-hidden border ${dm ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'} shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5`}>
+                              {/* Gradient header */}
+                              <div className={`relative h-20 bg-gradient-to-br ${grad}`}>
+                                <div className="absolute inset-0 opacity-[0.08]"
+                                  style={{ backgroundImage: 'repeating-linear-gradient(45deg, white 0, white 1px, transparent 0, transparent 50%)', backgroundSize: '12px 12px' }} />
+                                <span className="absolute top-3 right-4 text-white/20 font-black text-base tracking-widest uppercase select-none">LXWYER UP</span>
+                                {/* Photo — overlaps header/body */}
+                                <div className="absolute bottom-0 left-4 translate-y-1/2">
+                                  <div className="w-16 h-16 rounded-2xl overflow-hidden ring-4 ring-white dark:ring-slate-900 shadow-lg">
+                                    <img src={photoSrc} alt={item.name}
+                                      className="w-full h-full object-cover"
+                                      onError={e => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.name || 'L')}&background=3b82f6&color=fff&size=128` }} />
+                                  </div>
+                                  {item.verified && (
+                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center shadow">
+                                      <span className="text-white text-[9px] font-bold">✓</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Card body */}
+                              <div className="pt-12 px-4 pb-4">
+                                <div className="mb-3">
+                                  <div className="flex items-center justify-between">
+                                    <h3 className={`font-bold text-lg leading-tight ${dm ? 'text-white' : 'text-slate-900'}`}>{item.name}</h3>
+                                    {item.verified && (
+                                      <span className="text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 border border-green-500/20 rounded-full font-semibold">✓ Verified</span>
+                                    )}
+                                  </div>
+                                  {item.specialization && (
+                                    <p className={`text-sm font-semibold mt-0.5 ${dm ? 'text-blue-400' : 'text-blue-600'}`}>{item.specialization}</p>
+                                  )}
+                                </div>
+
+                                {/* Info tiles */}
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                  {item.experience && (
+                                    <div className={`rounded-xl px-3 py-2.5 border ${dm ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                      <p className={`text-[9px] font-bold uppercase tracking-widest ${textMuted} mb-0.5`}>Experience</p>
+                                      <p className={`text-sm font-bold ${dm ? 'text-slate-100' : 'text-slate-800'}`}>{item.experience} Years</p>
+                                    </div>
+                                  )}
+                                  {item.city && (
+                                    <div className={`rounded-xl px-3 py-2.5 border ${dm ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                      <p className={`text-[9px] font-bold uppercase tracking-widest ${textMuted} mb-0.5`}>Location</p>
+                                      <p className={`text-sm font-bold ${dm ? 'text-slate-100' : 'text-slate-800'} truncate`}>{item.city}</p>
+                                    </div>
+                                  )}
+                                  {item.education && (
+                                    <div className={`rounded-xl px-3 py-2.5 border col-span-2 ${dm ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                      <p className={`text-[9px] font-bold uppercase tracking-widest ${textMuted} mb-0.5`}>Education</p>
+                                      <p className={`text-sm font-bold ${dm ? 'text-slate-100' : 'text-slate-800'} truncate`}>{item.education}</p>
+                                    </div>
+                                  )}
+                                  <div className={`rounded-xl px-3 py-2.5 border ${item.education ? 'col-span-2' : ''} ${dm ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                    <p className={`text-[9px] font-bold uppercase tracking-widest ${textMuted} mb-0.5`}>Consultation Fee</p>
+                                    <p className={`text-sm font-bold ${dm ? 'text-slate-100' : 'text-slate-800'}`}>{item.fee ? `₹${item.fee}/hr` : 'Contact for fee'}</p>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() => navigate(`/lawyer/${item.id || item.unique_id}`)}
+                                  className={`w-full py-2.5 rounded-2xl bg-gradient-to-r ${grad} hover:opacity-90 text-white text-sm font-bold transition-all shadow-sm`}
+                                >
+                                  View Profile →
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div key={item.id || i} className={`rounded-3xl overflow-hidden border ${dm ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'} shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5`}>
+                              <div className={`relative h-20 bg-gradient-to-br ${grad}`}>
+                                <div className="absolute inset-0 opacity-[0.08]"
+                                  style={{ backgroundImage: 'repeating-linear-gradient(45deg, white 0, white 1px, transparent 0, transparent 50%)', backgroundSize: '12px 12px' }} />
+                                <span className="absolute top-3 right-4 text-white/20 font-black text-base tracking-widest uppercase select-none">LXWYER UP</span>
+                                <div className="absolute bottom-0 left-4 translate-y-1/2">
+                                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${grad} ring-4 ring-white dark:ring-slate-900 shadow-lg flex items-center justify-center`}>
+                                    <Building2 size={28} className="text-white" />
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="pt-12 px-4 pb-4">
+                                <div className="mb-3">
+                                  <h3 className={`font-bold text-lg leading-tight ${dm ? 'text-white' : 'text-slate-900'}`}>{item.name}</h3>
+                                  {item.city && <p className={`text-sm font-semibold mt-0.5 ${dm ? 'text-slate-400' : 'text-slate-500'}`}>{item.city}{item.state ? `, ${item.state}` : ''}</p>}
+                                </div>
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                  {item.lawyersCount > 0 && (
+                                    <div className={`rounded-xl px-3 py-2.5 border ${dm ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                      <p className={`text-[9px] font-bold uppercase tracking-widest ${textMuted} mb-0.5`}>Team Size</p>
+                                      <p className={`text-sm font-bold ${dm ? 'text-slate-100' : 'text-slate-800'}`}>{item.lawyersCount} Lawyers</p>
+                                    </div>
+                                  )}
+                                  <div className={`rounded-xl px-3 py-2.5 border ${!item.lawyersCount ? 'col-span-2' : ''} ${dm ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                    <p className={`text-[9px] font-bold uppercase tracking-widest ${textMuted} mb-0.5`}>Practice</p>
+                                    <p className={`text-sm font-bold ${dm ? 'text-slate-100' : 'text-slate-800'} truncate`}>{(item.practiceAreas || [])[0] || 'General Law'}</p>
+                                  </div>
+                                  {(item.practiceAreas || []).length > 1 && (
+                                    <div className={`rounded-xl px-3 py-2.5 border col-span-2 ${dm ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                                      <p className={`text-[9px] font-bold uppercase tracking-widest ${textMuted} mb-1`}>Areas of Expertise</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {(item.practiceAreas || []).slice(1, 4).map((a, j) => (
+                                          <span key={j} className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${dm ? 'bg-indigo-900/40 text-indigo-300' : 'bg-indigo-50 text-indigo-700'}`}>{a}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => navigate(`/firm/${item.id || item._id}`)}
+                                  className={`w-full py-2.5 rounded-2xl bg-gradient-to-r ${grad} hover:opacity-90 text-white text-sm font-bold transition-all shadow-sm`}
+                                >
+                                  View Firm →
+                                </button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {msg.rec_items.length > 0 && (
+                          <button
+                            onClick={() => navigate(msg.rec_type === 'lawyer' ? '/find-lawyer/manual' : '/find-lawfirm/manual')}
+                            className={`w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 ${dm ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                              } transition-colors`}
+                          >
+                            Browse all {msg.rec_type === 'lawyer' ? 'lawyers' : 'law firms'} <ArrowRight size={14} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ASSISTANT — legal response (cards) */}
+                    {msg.role === 'assistant' && !msg.is_greeting && !msg.is_recommendation && (
+                      <div className="w-full space-y-3">
+
+                        {/* Intent + Sentiment badges + intro */}
+                        <div className={`px-4 py-3 rounded-2xl rounded-tl-sm ${msgAst} border shadow-sm`}>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {/* Intent badge */}
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${dm ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{msg.intentLabel}</span>
+                            {/* Urgent badge */}
+                            {msg.sentiment === 1 && (
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${dm ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}><Zap size={10} /> URGENT</span>
+                            )}
+                          </div>
+                          <p className={`text-sm ${textMuted}`}>{msg.intro}</p>
+                        </div>
+
+                        {/* Summary cards grid */}
+                        {msg.cards && msg.cards.length > 0 && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {msg.cards.map((card, i) => (
+                              <button
+                                key={card.id}
+                                onClick={() => openCard(card, msg)}
+                                className={`text-left p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg group ${dm
+                                  ? 'bg-slate-900 border-slate-800 hover:border-slate-600 hover:bg-slate-800/80'
+                                  : 'bg-white border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                                  } animate-in zoom-in duration-300 fill-mode-backwards`}
+                                style={{ animationDelay: `${i * 80}ms` }}
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <span className={`text-2xl p-2 rounded-xl ${dm ? 'bg-slate-800' : 'bg-slate-100'
+                                    } group-hover:scale-110 transition-transform`}>{card.icon}</span>
+                                  <span className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-md ${dm ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400'
+                                    } flex items-center gap-1`}>
+                                    <ArrowRight size={9} /> View
+                                  </span>
+                                </div>
+                                <h4 className={`font-bold text-sm mb-1 ${dm ? 'text-white group-hover:text-slate-300' : 'text-slate-900 group-hover:text-slate-600'} transition-colors`}>{card.title}</h4>
+                                <p className={`text-xs ${textMuted} line-clamp-2 leading-relaxed`}>{card.summary}</p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Sources row */}
+                        {msg.sources && msg.sources.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>📚 Sources:</span>
+                            {msg.sources.map((src, i) => (
+                              <span key={i} className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${dm ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'
+                                }`}>{src}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
-
               {isTyping && (
                 <div className="flex gap-4 max-w-4xl justify-start animate-in fade-in duration-300">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shrink-0 shadow-md">
+                      <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center text-white shrink-0 shadow-md`}>
                     <Bot size={18} />
                   </div>
-                  <div className="p-4 rounded-3xl rounded-tl-sm bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center gap-3 shadow-sm">
+                  <div className={`p-4 rounded-3xl rounded-tl-sm ${typingBg} border flex items-center gap-3 shadow-sm`}>
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                      <div className={`w-2 h-2 ${dm ? 'bg-slate-400' : 'bg-slate-500'} rounded-full animate-bounce [animation-delay:-0.3s]`} />
+                      <div className={`w-2 h-2 ${dm ? 'bg-slate-400' : 'bg-slate-500'} rounded-full animate-bounce [animation-delay:-0.15s]`} />
+                      <div className={`w-2 h-2 ${dm ? 'bg-slate-400' : 'bg-slate-500'} rounded-full animate-bounce`} />
                     </div>
-                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500">Processing legal data...</span>
+                    <span className={`text-xs font-medium ${textMuted}`}>Processing legal data...</span>
                   </div>
                 </div>
               )}
@@ -336,16 +784,17 @@ export default function QuickChat() {
           )}
         </div>
 
-        {/* New Input Area Design - Glowing Sphere Style */}
-        <div className="p-4 md:p-6 pb-8 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent dark:from-slate-950 dark:via-slate-950 dark:to-transparent z-20">
+        {/* Input Area */}
+        <div className={`p-4 md:p-6 pb-8 ${dm
+          ? 'bg-gradient-to-t from-black via-black/90 to-transparent'
+          : 'bg-gradient-to-t from-white via-white/90 to-transparent'} z-20`}>
           <div className="max-w-4xl mx-auto relative group">
-            {/* Ambient Glow behind input */}
-            <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-            <div className="relative flex items-center gap-2 p-2 pl-6 bg-slate-900/5 dark:bg-slate-900/80 border border-slate-200/50 dark:border-slate-800/80 rounded-full shadow-2xl shadow-slate-200/20 dark:shadow-black/40 focus-within:ring-2 focus-within:ring-blue-500/20 dark:focus-within:ring-blue-500/20 transition-all backdrop-blur-2xl">
+            <div className="absolute inset-0 rounded-full blur-3xl opacity-0 group-hover:opacity-0" />
+            <div className={`relative flex items-center gap-2 p-1.5 pl-5 ${inputBg} border rounded-full shadow-xl focus-within:border-zinc-600 transition-all backdrop-blur-2xl`} style={{ outline: 'none' }}>
               <input
                 ref={inputRef}
-                className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 font-medium py-3 text-lg"
+                className={`flex-1 bg-transparent border-none ${textPrimary} ${dm ? 'placeholder-slate-600' : 'placeholder-slate-400'} font-medium py-2 text-sm`}
+                style={{ outline: 'none', boxShadow: 'none' }}
                 placeholder="Ask a legal question..."
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -355,84 +804,103 @@ export default function QuickChat() {
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || isTyping}
-                className={`
-                  p-4 rounded-full transition-all duration-300 transform
-                  ${!input.trim() || isTyping
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed scale-90'
-                    : 'bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-500 text-white shadow-[0_0_20px_rgba(99,102,241,0.5)] hover:shadow-[0_0_30px_rgba(99,102,241,0.8)] hover:scale-105 active:scale-95'
-                  }
-                `}
+                className={`p-3 rounded-full transition-all duration-300 transform ${!input.trim() || isTyping
+                  ? (dm ? 'bg-zinc-800 text-zinc-600' : 'bg-zinc-200 text-zinc-400') + ' cursor-not-allowed scale-90'
+                  : 'bg-blue-500 hover:bg-blue-400 text-white shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:scale-105 active:scale-95'
+                  }`}
               >
                 <div className={`transition-transform duration-300 ${isTyping ? 'animate-spin' : ''}`}>
-                  {isTyping ? <Sparkles size={24} /> : <Send size={24} className={input.trim() ? 'translate-x-0.5 translate-y-0.5' : ''} />}
+                  {isTyping ? <Sparkles size={18} /> : <Send size={18} className={input.trim() ? 'translate-x-0.5 translate-y-0.5' : ''} />}
                 </div>
               </button>
             </div>
-            <p className="text-center text-[10px] uppercase tracking-widest text-slate-400 dark:text-slate-600 mt-4 font-semibold opacity-70">
+            <p className={`text-center text-[10px] uppercase tracking-widest ${dm ? 'text-slate-600' : 'text-slate-400'} mt-4 font-semibold opacity-70`}>
               AI-Generated Information • Verify with Counsel
             </p>
           </div>
         </div>
-      </main>
+      </main >
 
       {/* Expanded Card Modal */}
-      {expandedCard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-300" onClick={closeCard}>
-          <div className="bg-white dark:bg-slate-950 w-full max-w-2xl max-h-[85vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border border-white/20 dark:border-slate-800 animate-in zoom-in-95 duration-300 ring-1 ring-black/5" onClick={e => e.stopPropagation()}>
-            <div className="p-6 md:p-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between shrink-0">
-              <div className="flex gap-5">
-                <div className="text-4xl p-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">{expandedCard.icon}</div>
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">{expandedCard.title}</h2>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                    <Clock size={14} /> {expandedCard.readTime} read
-                  </p>
+      {
+        expandedCard && (
+          <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${dm ? 'bg-black/80' : 'bg-slate-900/40'} backdrop-blur-md animate-in fade-in duration-300`} onClick={closeCard}>
+            <div className={`${dm ? 'bg-slate-950 border-slate-800' : 'bg-white border-white/20'} w-full max-w-2xl max-h-[85vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col border animate-in zoom-in-95 duration-300 ring-1 ring-black/5`} onClick={e => e.stopPropagation()}>
+              <div className={`p-6 md:p-8 ${dm ? 'bg-slate-900 border-slate-800' : 'bg-gradient-to-br from-slate-50 to-white border-slate-100'} border-b flex items-start justify-between shrink-0`}>
+                <div className="flex gap-5">
+                  <div className={`text-4xl p-4 ${dm ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-100'} rounded-2xl shadow-sm border`}>{expandedCard.icon}</div>
+                  <div>
+                    <h2 className={`text-2xl font-bold ${textPrimary} mb-1`}>{expandedCard.title}</h2>
+                    <p className={`text-sm font-medium ${textMuted}`}>{expandedCard.summary}</p>
+                  </div>
+                </div>
+                <button onClick={closeCard} className={`p-2 ${dm ? 'bg-slate-800 text-slate-400 hover:bg-slate-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'} rounded-full transition-all`}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className={`flex-1 overflow-y-auto p-6 md:p-8 ${dm ? 'bg-slate-950' : 'bg-white'}`}>
+                {/* Render card.detail markdown */}
+                <div className={`space-y-2 text-sm leading-7 ${dm ? 'text-slate-300' : 'text-slate-700'}`}>
+                  {(expandedCard.detail || '').split('\n').map((line, i) => {
+                    if (line.trim() === '') return <div key={i} className="h-2" />
+                    // Bold **text**
+                    const parts = line.split(/\*\*([^*]+)\*\*/g)
+                    const formatted = parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)
+                    // Numbered list
+                    if (/^\d+\./.test(line.trim())) {
+                      return <p key={i} className="flex gap-2 mb-1"><span className={`font-bold ${dm ? 'text-blue-400' : 'text-blue-600'}`}>{line.trim().match(/^\d+\./)}</span><span>{formatted}</span></p>
+                    }
+                    // Bullet point
+                    if (line.trim().startsWith('-') || line.trim().startsWith('•')) {
+                      return <p key={i} className="flex gap-2 pl-2 mb-1"><span className={dm ? 'text-blue-400' : 'text-blue-500'}>•</span><span>{formatted}</span></p>
+                    }
+                    // Heading (emoji prefix or **bold** only line)
+                    if (parts.length === 3 && parts[0].trim() === '' && parts[2].trim() === '') {
+                      return <p key={i} className={`font-bold text-base mt-4 mb-1 ${dm ? 'text-white' : 'text-slate-900'}`}>{parts[1]}</p>
+                    }
+                    // Italic / disclaimer
+                    if (line.trim().startsWith('*') && line.trim().endsWith('*')) {
+                      return <p key={i} className={`text-xs italic ${textMuted} mt-3`}>{line.replace(/\*/g, '')}</p>
+                    }
+                    return <p key={i} className="mb-1">{formatted}</p>
+                  })}
                 </div>
               </div>
-              <button onClick={closeCard} className="p-2 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-all">
-                <X size={20} />
-              </button>
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white dark:bg-slate-950 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-              <ExpandedCardContent cardId={expandedCard.id} ctx={expandedCtx} />
-            </div>
-
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
-              <button onClick={closeCard} className="w-full py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                Close Details
-              </button>
+              <div className={`p-4 ${dm ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-100'} border-t`}>
+                <button onClick={closeCard} className={`w-full py-3 ${dm ? 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'} border rounded-xl font-medium transition-colors`}>
+                  Close Details
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
 
-function ExpandedCardContent({ cardId, ctx }) {
+function ExpandedCardContent({ cardId, ctx, dm }) {
   const intent = ctx?.intent ?? 0
   const intentLabels = ['Criminal Law', 'Family/Civil Law', 'Corporate/Business Law']
-  const severities = ['🟡 Moderate', '🔴 Serious', '🟢 Minor']
 
-  const styles = {
-    h3: "text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3 flex items-center gap-2",
-    p: "text-slate-700 dark:text-slate-300 leading-7 text-[15px]"
-  }
+  const textMuted = dm ? 'text-slate-400' : 'text-slate-500'
+  const textBody = dm ? 'text-slate-300' : 'text-slate-700'
 
   const Section = ({ title, children }) => (
-    <div className="p-5 bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50">
-      <h3 className={styles.h3}>
+    <div className={`p-5 ${dm ? 'bg-slate-900/30 border-slate-800/50' : 'bg-slate-50/50 border-slate-100'} rounded-2xl border`}>
+      <h3 className={`text-xs font-bold uppercase tracking-widest ${textMuted} mb-3 flex items-center gap-2`}>
         <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" /> {title}
       </h3>
-      <div className={styles.p}>{children}</div>
+      <div className={`${textBody} leading-7 text-[15px]`}>{children}</div>
     </div>
   )
 
   const List = ({ items }) => (
     <ul className="space-y-3 mt-2">
       {items.map((item, i) => (
-        <li key={i} className="flex gap-3 text-slate-700 dark:text-slate-300 text-[15px]">
+        <li key={i} className={`flex gap-3 ${textBody} text-[15px]`}>
           <div className="mt-2 w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
           <span className="flex-1">{item}</span>
         </li>
@@ -444,7 +912,7 @@ function ExpandedCardContent({ cardId, ctx }) {
     case 'case-overview': return (
       <div className="space-y-6">
         <div className="flex flex-wrap gap-2">
-          <span className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-800/50">{intentLabels[intent]}</span>
+          <span className={`px-3 py-1.5 ${dm ? 'bg-blue-900/20 text-blue-300 border-blue-800/50' : 'bg-blue-50 text-blue-700 border-blue-100'} rounded-lg text-xs font-bold border`}>{intentLabels[intent]}</span>
         </div>
         <Section title="Legal Summary">
           {intent === 0 ? 'This query falls under Criminal Law in India. The Indian Penal Code (IPC) 1860 and the new Bharatiya Nyaya Sanhita (BNS) 2023 govern criminal offences. Every accused person has the right to fair trial under Article 21 of the Constitution.' :
@@ -463,8 +931,8 @@ function ExpandedCardContent({ cardId, ctx }) {
     )
     default: return (
       <div className="text-center py-12">
-        <Ghost className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-700 mb-3" />
-        <p className="text-slate-500 dark:text-slate-400">Detailed content for this section is being updated.</p>
+        <Ghost className={`mx-auto h-12 w-12 ${dm ? 'text-slate-700' : 'text-slate-300'} mb-3`} />
+        <p className={textMuted}>Detailed content for this section is being updated.</p>
       </div>
     )
   }

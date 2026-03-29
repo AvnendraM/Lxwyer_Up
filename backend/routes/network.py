@@ -13,10 +13,13 @@ router = APIRouter(prefix="/network", tags=["Network"])
 @router.post("/messages")
 async def send_network_message(
     message_data: NetworkMessageCreate,
+    state: str = Query(None),
     current_user: dict = Depends(get_current_user)
 ):
     """Send a message to the user's state network"""
-    user_state = current_user.get("state")
+    # If state is explicitly provided via query (e.g., from Admin Dashboard), use it.
+    # Otherwise fallback to the user's own state, or default to Delhi.
+    user_state = state if state else current_user.get("state")
     
     # Fallback to Delhi if no state (e.g., legacy users or manual testing)
     if not user_state:
@@ -50,16 +53,24 @@ async def send_network_message(
 
 @router.get("/messages", response_model=List[dict])
 async def get_network_messages(
+    state: str = Query(None),
     current_user: dict = Depends(get_current_user),
     limit: int = Query(50, ge=1, le=100)
 ):
     """Get messages for the user's state network with sender details"""
-    user_state = current_user.get("state")
-    if not user_state:
-        user_state = "Delhi"
-            
-    # Fetch messages for this state
-    cursor = db.network_messages.find({"state": user_state}).sort("timestamp", -1).limit(limit)
+    user_state = state if state else current_user.get("state")
+    
+    if not user_state or user_state == "All States":
+        # Note: If admin selects "All States", it might be useful to not filter
+        # But for now let's fall back to "Delhi" if really missing, though we can support "All States"
+        if user_state == "All States":
+            cursor = db.network_messages.find({}).sort("timestamp", -1).limit(limit)
+        else:
+            user_state = "Delhi"
+            cursor = db.network_messages.find({"state": user_state}).sort("timestamp", -1).limit(limit)
+    else:
+        cursor = db.network_messages.find({"state": user_state}).sort("timestamp", -1).limit(limit)
+        
     messages = await cursor.to_list(length=limit)
     
     # Enrich messages with sender details (photo, unique_id)

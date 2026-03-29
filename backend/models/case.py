@@ -13,6 +13,8 @@ class CaseCreate(BaseModel):
     case_type: str = "General"
     next_hearing: str = None
     court: str = None
+    lawyer_name: Optional[str] = None
+    updates: list = []
 
 
 class Case(BaseModel):
@@ -27,5 +29,7 @@ class Case(BaseModel):
     case_type: str = "General"
     next_hearing: str = None
     court: str = None
+    lawyer_name: Optional[str] = None
+    updates: list[dict] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

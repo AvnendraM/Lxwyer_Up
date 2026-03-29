@@ -189,7 +189,7 @@ const BookingSignup = () => {
         <SimpleNavbar navigate={navigate} />
         <div className="pt-24 pb-16 px-4 text-center">
           <h1 className="text-2xl font-bold text-[#0F2944]">Lawyer not found</h1>
-          <Button onClick={() => navigate('/browse-lawyers')} className="mt-4">
+          <Button onClick={() => navigate('/find-lawyer/manual')} className="mt-4">
             Browse Lawyers
           </Button>
         </div>
@@ -355,11 +355,10 @@ const BookingSignup = () => {
                   {/* Consultation Type */}
                   <div>
                     <label className="block text-sm font-medium text-[#0F2944] mb-3">Consultation Type</label>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                       {[
-                        { value: 'video', label: 'Video Call', icon: '📹' },
-                        { value: 'in-person', label: 'In-Person', icon: '🏢' },
-                        { value: 'phone', label: 'Phone Call', icon: '📞' }
+                        ...(lawyer.consultation_preferences === 'both' || lawyer.consultation_preferences === 'video' || !lawyer.consultation_preferences ? [{ value: 'video', label: 'Video Call', icon: '📹' }] : []),
+                        ...(lawyer.consultation_preferences === 'both' || lawyer.consultation_preferences === 'in_person' ? [{ value: 'in-person', label: 'In-Person', icon: '🏢' }] : []),
                       ].map((type) => (
                         <button
                           key={type.value}

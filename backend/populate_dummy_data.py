@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 import uuid
+import random
 from motor.motor_asyncio import AsyncIOMotorClient
 from dotenv import load_dotenv
 
@@ -103,6 +104,7 @@ async def clear_existing_data():
     await db.firm_lawyer_applications.delete_many({"id": {"$regex": "^dummy_"}})
     await db.firm_clients.delete_many({"id": {"$regex": "^dummy_"}})
     await db.cases.delete_many({"id": {"$regex": "^dummy_"}})
+    await db.users.delete_many({"email": {"$regex": ".*@generated律师.com"}}) # Clean up old diverse lawyers
     print("✅ Existing demo data cleared")
 
 
@@ -137,6 +139,7 @@ async def create_demo_accounts():
         "city": lawyer["city"],
         "state": lawyer["state"],
         "is_approved": lawyer["is_approved"],
+        "consultation_preferences": random.choice(["video", "both"]),
         "created_at": datetime.now(timezone.utc).isoformat()
     })
     print(f"   ✅ Created Lawyer: {lawyer['email']} / {lawyer['password']}")
@@ -239,7 +242,7 @@ async def create_dummy_data_for_dashboards():
             "date": (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%d"),
             "time": "10:00 AM",
             "description": "Initial Consultation (Video)",
-            "consultation_type": "video",
+            "consultation_type": random.choice(["video", "in_person"]),
             "meet_link": "https://meet.google.com/abc-defg-hij",
             "location": "Google Meet",
             "status": "confirmed",
@@ -254,7 +257,7 @@ async def create_dummy_data_for_dashboards():
             "date": (datetime.now(timezone.utc) + timedelta(days=2)).strftime("%Y-%m-%d"),
             "time": "02:00 PM",
             "description": "Follow-up Call (Audio)",
-            "consultation_type": "audio",
+            "consultation_type": "video",
             "location": "831216968",
             "status": "confirmed",
             "amount": 500,
@@ -268,7 +271,7 @@ async def create_dummy_data_for_dashboards():
             "date": (datetime.now(timezone.utc) + timedelta(days=3)).strftime("%Y-%m-%d"),
             "time": "11:00 AM",
             "description": "Office Meeting (In-Person)",
-            "consultation_type": "in_person",
+            "consultation_type": "video",
             "location": "Chamber 405, Delhi High Court, Sher Shah Road, New Delhi, 110003",
             "status": "confirmed",
             "amount": 2000,
@@ -281,6 +284,83 @@ async def create_dummy_data_for_dashboards():
     print("   ✅ Created dummy cases")
 
 
+async def create_diverse_dummy_lawyers(count=100):
+    """Generate and insert N diverse dummy lawyers."""
+    print(f"\n👩‍⚖️👨‍⚖️ Generating {count} diverse dummy lawyers...")
+    
+    cities_states = [
+        ("Delhi", "Delhi"), ("Gurugram", "Haryana"), ("Noida", "Uttar Pradesh"),
+        ("Mumbai", "Maharashtra"), ("Pune", "Maharashtra"), ("Bangalore", "Karnataka"),
+        ("Hyderabad", "Telangana"), ("Chennai", "Tamil Nadu"), ("Kolkata", "West Bengal"),
+        ("Ahmedabad", "Gujarat"), ("Jaipur", "Rajasthan"), ("Lucknow", "Uttar Pradesh")
+    ]
+    
+    specializations = [
+        "Criminal Law", "Civil Law", "Family Law", "Corporate Law", "Immigration Law",
+        "Intellectual Property", "Real Estate", "Tax Law", "Labor & Employment", "Personal Injury"
+    ]
+    
+    urgent_matters_list = ["Bail", "Police Station Visit", "Medical Emergency", "Domestic Violence", "Accident/FIR"]
+    
+    first_names = ["Aarav", "Vivaan", "Aditya", "Vihaan", "Arjun", "Sai", "Riyaan", "Ayaan", "Krishna", "Ishaan",
+                   "Diya", "Sanya", "Kashvi", "Avni", "Manya", "Aadhya", "Ananya", "Myra", "Kiara", "Prisha"]
+    last_names = ["Sharma", "Verma", "Gupta", "Singh", "Yadav", "Patel", "Reddy", "Nair", "Iyer", "Rao", "Das", "Bose", "Jain"]
+
+    lawyers = []
+    
+    locations_by_state = {
+        "Delhi": ["South Delhi", "North Delhi", "Connaught Place", "Rohini", "Dwarka", "Mayur Vihar"],
+        "Maharashtra": ["Andheri", "Bandra", "Colaba", "Dadar", "Juhu", "Koregaon Park", "Viman Nagar"],
+        "Karnataka": ["Indiranagar", "Koramangala", "Whitefield", "Jayanagar", "Malleswaram"],
+        "Haryana": ["Cyber City", "Sohna Road", "MG Road"],
+        "Uttar Pradesh": ["Sector 18", "Indirapuram", "Gomti Nagar", "Hazratganj"]
+    }
+
+    for i in range(1, count + 1):
+        first = random.choice(first_names)
+        last = random.choice(last_names)
+        full_name = f"{first} {last}"
+        city, state = random.choice(cities_states)
+        app_type = random.choice([["normal"], ["sos"], ["normal", "sos"]])
+        
+        sos_locations = []
+        sos_matters = []
+        sos_terms = False
+        
+        if "sos" in app_type:
+            state_locs = locations_by_state.get(state, [f"{city} Central", f"{city} North", f"{city} South"])
+            sos_locations = random.sample(state_locs, min(len(state_locs), random.randint(1, 4)))
+            sos_matters = random.sample(urgent_matters_list, random.randint(1, 3))
+            sos_terms = True
+            
+        lawyer_doc = {
+            "id": f"dummy_gen_{uuid.uuid4().hex[:8]}",
+            "email": f"{first.lower()}.{last.lower()}{i}@generatedlawyer.com",
+            "password": hash_password("demo123"),
+            "full_name": full_name,
+            "user_type": "lawyer",
+            "phone": f"+91 91{str(random.randint(10000000, 99999999))}",
+            "specialization": random.sample(specializations, random.randint(1, 3)),
+            "experience_years": random.randint(1, 25),
+            "fee_range": f"{random.randint(1, 10) * 500}-{random.randint(2, 20) * 1000}",
+            "city": city,
+            "state": state,
+            "office_address": f"Chamber {random.randint(100, 999)}, District Court {city}",
+            "is_approved": True,
+            "consultation_preferences": random.choice(["video", "both"]),
+            "application_type": app_type,
+            "sos_locations": sos_locations,
+            "sos_matters": sos_matters,
+            "sos_terms_accepted": sos_terms,
+            "created_at": (datetime.now(timezone.utc) - timedelta(days=random.randint(0, 365))).isoformat()
+        }
+        lawyers.append(lawyer_doc)
+
+    if lawyers:
+        await db.users.insert_many(lawyers)
+        print(f"   ✅ Successfully inserted {len(lawyers)} generated lawyers.")
+
+
 async def main():
     """Main function to populate all data"""
     print("=" * 60)
@@ -291,6 +371,7 @@ async def main():
         await clear_existing_data()
         await create_demo_accounts()
         await create_dummy_data_for_dashboards()
+        await create_diverse_dummy_lawyers(100)
         
         print("\n" + "=" * 60)
         print("✅ POPULATION COMPLETE!")

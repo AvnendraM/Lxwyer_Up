@@ -130,7 +130,7 @@ export default function LawyerLoginPage() {
             </div>
 
             <div className="mt-4 text-center">
-              <Link to="/role-selection?mode=login" className="text-slate-500 hover:text-slate-400 text-sm transition-colors">
+              <Link to="/login" className="text-slate-500 hover:text-slate-400 text-sm transition-colors">
                 Login as different role
               </Link>
             </div>

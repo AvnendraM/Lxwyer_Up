@@ -91,13 +91,12 @@ const StyleInjector = () => {
 const SmoothScrolling = () => {
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: 0.85,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      direction: 'vertical',
       gestureDirection: 'vertical',
       smooth: true,
       smoothTouch: false,
-      touchMultiplier: 2,
+      touchMultiplier: 1.5,
     });
 
     function raf(time) {
@@ -126,7 +125,6 @@ export const WaveLayout = ({ children, hideNavbar = false, className = '', style
   return (
     <div className={`min-h-screen relative bg-[#f8faff] dark:bg-black transition-colors duration-300 ${className}`} style={mergedStyle}>
       <StyleInjector />
-      <SmoothScrolling />
       <GradientOrbs />
 
       {/* Content Level */}

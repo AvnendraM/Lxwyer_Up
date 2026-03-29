@@ -25,16 +25,22 @@ from routes import (
     waitlist_router,
     admin_router,
     firm_lawyers_router,
-    admin_router,
-    firm_lawyers_router,
     firm_clients_router,
     dashboard_router,
     auth_google_router,
     messages_router,
     network_router,
     events_router,
-    notifications_router
+    notifications_router,
+    otp_router,
+    billing_router,
+    legal_chat_router,
+    sos_router
 )
+from routes.monitor import router as monitor_router
+from routes.smart_match import router as smart_match_router
+from middleware import IPGuardMiddleware
+from middleware.security import SecurityMiddleware
 
 from services.database import close_db
 from models.lawyer_application import LawyerApplicationCreate
@@ -77,6 +83,12 @@ api_router.include_router(messages_router)
 api_router.include_router(network_router)
 api_router.include_router(events_router)
 api_router.include_router(notifications_router)
+api_router.include_router(otp_router)
+api_router.include_router(billing_router)
+api_router.include_router(legal_chat_router)
+api_router.include_router(sos_router)
+api_router.include_router(monitor_router)
+api_router.include_router(smart_match_router)
 
 # Legacy endpoint for lawyer applications (for backward compatibility)
 # These are already included via their respective routers, but if we need specific paths:
@@ -107,14 +119,26 @@ if not os.path.exists(ROOT_DIR / "uploads"):
     os.makedirs(ROOT_DIR / "uploads")
 app.mount("/uploads", StaticFiles(directory=ROOT_DIR / "uploads"), name="uploads")
 
-# CORS middleware
+# CORS — restrict to known origins in production
+# Update ALLOWED_ORIGIN env var when you go live
+_cors_origins_raw = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+_cors_origins = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=False,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+    expose_headers=["X-Request-ID"],
+    max_age=600,
 )
+
+# IP Guard — restrict /api/admin/* and /api/monitor/* to localhost only.
+app.add_middleware(IPGuardMiddleware)
+
+# Security headers, brute-force lockout, request size limits
+app.add_middleware(SecurityMiddleware)
 
 # Configure logging
 logging.basicConfig(
@@ -123,6 +147,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+import asyncio
+
+@app.on_event("startup")
+async def startup_event():
+    from services.scheduler import run_scheduler
+    asyncio.create_task(run_scheduler())
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

@@ -61,7 +61,7 @@ const AboutHero = ({ fadeInUp }) => {
           animate="visible"
           variants={fadeInUp}
         >
-          <motion.h1 
+          <motion.h1
             className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-800 mb-6 leading-tight"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -71,8 +71,8 @@ const AboutHero = ({ fadeInUp }) => {
             <br />
             <span className="text-gray-600">Accessible to All Indians</span>
           </motion.h1>
-          
-          <motion.p 
+
+          <motion.p
             className="text-xl sm:text-2xl text-gray-600 max-w-3xl mx-auto font-light"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -372,13 +372,13 @@ const AboutCTA = ({ navigate, fadeInUp }) => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
-              onClick={() => navigate('/role-selection')}
+              onClick={() => navigate('/register')}
               className="bg-white text-[#0F2944] hover:bg-blue-50 text-lg px-10 py-7 rounded-full font-semibold shadow-xl"
             >
               Get Started
             </Button>
             <Button
-              onClick={() => navigate('/premium-contact')}
+              onClick={() => navigate('/contact')}
               variant="outline"
               className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-[#0F2944] text-lg px-10 py-7 rounded-full font-semibold"
             >

@@ -35,13 +35,15 @@ code {
         --popover: 222 47% 11%;
         --popover-foreground: 210 40% 98%;
         --primary: 217 91% 60%;
-        --primary-foreground: 222 47% 11%;
+        --primary-foreground: 0 0% 100%;
+        /* ← was dark navy, fixed to white so text is readable on blue */
         --secondary: 217 33% 17%;
         --secondary-foreground: 210 40% 98%;
         --muted: 217 33% 17%;
         --muted-foreground: 215 20% 65%;
         --accent: 217 91% 60%;
-        --accent-foreground: 210 40% 98%;
+        --accent-foreground: 0 0% 100%;
+        /* ← always white on accent blue */
         --destructive: 0 84% 60%;
         --destructive-foreground: 210 40% 98%;
         --border: 217 33% 17%;
@@ -68,7 +70,63 @@ code {
     body {
         @apply bg-background text-foreground;
     }
+
+    /* ─── Global Button Hover Text Protection ─── */
+    /* Ensure buttons never lose their text color on hover */
+    button,
+    [role="button"],
+    a[class*="btn"],
+    .button {
+        color: inherit;
+    }
 }
+
+/* Global hover-text protection for Tailwind button patterns.
+   Ensures text stays visible when background changes on hover. */
+@layer utilities {
+
+    /* Any element with a blue hover background should have white text */
+    .hover\:bg-blue-500:hover,
+    .hover\:bg-blue-600:hover,
+    .hover\:bg-blue-700:hover,
+    .hover\:bg-blue-800:hover,
+    .hover\:bg-indigo-600:hover,
+    .hover\:bg-indigo-700:hover,
+    .hover\:bg-violet-600:hover {
+        color: #ffffff !important;
+    }
+
+    /* Slate/dark hover backgrounds need white text */
+    .hover\:bg-slate-700:hover,
+    .hover\:bg-slate-800:hover,
+    .hover\:bg-slate-900:hover,
+    .hover\:bg-gray-700:hover,
+    .hover\:bg-gray-800:hover,
+    .hover\:bg-gray-900:hover {
+        color: #f1f5f9 !important;
+    }
+
+    /* Light hover backgrounds need dark text */
+    .hover\:bg-blue-50:hover,
+    .hover\:bg-blue-100:hover,
+    .hover\:bg-gray-50:hover,
+    .hover\:bg-gray-100:hover,
+    .hover\:bg-slate-50:hover,
+    .hover\:bg-slate-100:hover,
+    .hover\:bg-white:hover {
+        color: #0f172a !important;
+    }
+
+    /* Safety utility class for any button that needs guaranteed contrast */
+    .btn-safe-hover {
+        @apply transition-colors;
+    }
+
+    .btn-safe-hover:hover {
+        color: inherit !important;
+    }
+}
+
 
 .dark {
     --background: 0 0% 0%;
@@ -130,6 +188,28 @@ code {
         /* IE and Edge */
         scrollbar-width: none;
         /* Firefox */
+    }
+
+    /* Horizontal scroll container - works with touchpad and touch */
+    .scroll-touch {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        overscroll-behavior-x: contain;
+    }
+
+    /* Horizontal scroll - convert vertical wheel to horizontal */
+    .h-scroll-wheel {
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .h-scroll-wheel::-webkit-scrollbar {
+        display: none;
     }
 }
 
@@ -319,4 +399,204 @@ html {
     100% {
         background: radial-gradient(ellipse at 30% 20%, #60a5fa 0%, #2563eb 30%, #1d4ed8 55%, #1e3a8a 80%, #0f172a 100%);
     }
+}
+
+@keyframes fadeSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Page transition: subtle fade + slide-up on every route change */
+@keyframes pageEnter {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Opacity-only fade — safe for pages with position:fixed children */
+@keyframes pageEnterFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   GLOBAL SMOOTHNESS LAYER
+   ══════════════════════════════════════════════════════════ */
+
+html {
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a,
+button,
+input,
+select,
+textarea,
+[role="button"] {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform, filter;
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.will-change-transform {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 99px;
+    transition: background 200ms ease;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.65);
+}
+
+:focus-visible {
+    outline: 2px solid rgba(96, 165, 250, 0.7);
+    outline-offset: 2px;
+    border-radius: 4px;
+    transition: outline-color 150ms ease;
+}
+
+::selection {
+    background: rgba(59, 130, 246, 0.28);
+    color: inherit;
+}
+
+/* ══════════════════════════════════════════════════════════
+   GLOBAL SMOOTHNESS LAYER
+   Applied on top of everything — never overrides specifics.
+   ══════════════════════════════════════════════════════════ */
+
+/* Native smooth scroll fallback (Lenis overrides this in JS) */
+html {
+    scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* GPU-composite default transitions on interactive elements */
+a,
+button,
+input,
+select,
+textarea,
+[role="button"] {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform, filter;
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Ensure animated elements are composited on GPU */
+.will-change-transform {
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* Smooth image rendering */
+img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+/* Thin, smooth custom scrollbar */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.35);
+    border-radius: 99px;
+    transition: background 200ms ease;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.65);
+}
+
+/* Smoother focus outlines */
+:focus-visible {
+    outline: 2px solid rgba(96, 165, 250, 0.7);
+    outline-offset: 2px;
+    border-radius: 4px;
+    transition: outline-color 150ms ease;
+}
+
+/* Selection color */
+::selection {
+    background: rgba(59, 130, 246, 0.28);
+    color: inherit;
+}
+
+/* ══════════════════════════════════════════════════════════
+   GLOBAL MOBILE LAYER
+   Prevents common mobile issues site-wide.
+   ══════════════════════════════════════════════════════════ */
+
+/* Prevent horizontal scroll on every page */
+html, body {
+    overflow-x: hidden;
+    max-width: 100vw;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+/* Prevent iOS input zoom (must be ≥16px) */
+@media (max-width: 768px) {
+    input, select, textarea {
+        font-size: 16px !important;
+    }
+    /* Ensure touch targets are ≥44px tall */
+    button, a, [role="button"] {
+        min-height: 44px;
+    }
+    /* Hide scrollbars on mobile (they appear behind content) */
+    ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+}
+
+/* Smooth momentum scrolling on iOS for scrollable containers */
+.overflow-y-auto,
+.overflow-y-scroll,
+.overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Safe area support for iPhones with notch / Dynamic Island */
+.safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-top {
+    padding-top: env(safe-area-inset-top);
 }

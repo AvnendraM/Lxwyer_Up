@@ -6,6 +6,7 @@ import { GradientOrbs } from '../components/GradientOrbs';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import { Footer } from '../components/Footer';
+import { useLang } from '../context/LanguageContext';
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
@@ -38,7 +39,7 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 relative overflow-hidden font-['Outfit']">
+    <div className="min-h-screen bg-black text-white relative overflow-hidden font-['Outfit']">
       <GradientOrbs />
       <NavbarWave />
 
@@ -67,6 +68,7 @@ const ContactPage = () => {
 
 // Contact Hero Component
 const ContactHero = ({ fadeInUp }) => {
+  const { t } = useLang();
   return (
     <section className="relative min-h-[60vh] flex items-center justify-center overflow-hidden pt-16">
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -81,7 +83,7 @@ const ContactHero = ({ fadeInUp }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
           >
-            Let's Connect
+            {t('contact_title')}
           </motion.h1>
 
           <motion.p
@@ -90,7 +92,7 @@ const ContactHero = ({ fadeInUp }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Have questions? Need legal assistance? We're here to help you navigate your legal journey
+            {t('contact_sub')}
           </motion.p>
         </motion.div>
       </div>
@@ -102,6 +104,7 @@ const ContactHero = ({ fadeInUp }) => {
 const ContactFormSection = ({ formData, handleChange, handleSubmit, isSubmitting, fadeInUp }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const { t } = useLang();
 
   const contactInfo = [
     {
@@ -127,7 +130,7 @@ const ContactFormSection = ({ formData, handleChange, handleSubmit, isSubmitting
   return (
     <section ref={ref} className="py-24 px-4 sm:px-6 lg:px-8 bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-sm relative z-10">
       <div className="max-w-7xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-16">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
           {/* Contact Form */}
           <motion.div
             initial="hidden"
@@ -135,15 +138,15 @@ const ContactFormSection = ({ formData, handleChange, handleSubmit, isSubmitting
             variants={fadeInUp}
             className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md p-8 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-xl animate-float"
           >
-            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Send Us a Message</h2>
+            <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">{t('contact_title')}</h2>
             <p className="text-slate-600 dark:text-slate-300 mb-8">
-              Fill out the form below and we'll get back to you within 24 hours
+              {t('contact_sub')}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Full Name
+                  {t('contact_name')}
                 </label>
                 <motion.input
                   whileFocus={{ scale: 1.01 }}
@@ -159,7 +162,7 @@ const ContactFormSection = ({ formData, handleChange, handleSubmit, isSubmitting
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Email Address
+                  {t('contact_email')}
                 </label>
                 <motion.input
                   whileFocus={{ scale: 1.01 }}
@@ -191,7 +194,7 @@ const ContactFormSection = ({ formData, handleChange, handleSubmit, isSubmitting
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Message
+                  {t('contact_message')}
                 </label>
                 <motion.textarea
                   whileFocus={{ scale: 1.01 }}
@@ -212,10 +215,10 @@ const ContactFormSection = ({ formData, handleChange, handleSubmit, isSubmitting
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-blue-600/30 transition-all duration-300 group"
                 >
                   {isSubmitting ? (
-                    'Sending...'
+                    '...'
                   ) : (
                     <>
-                      Send Message
+                      {t('contact_send')}
                       <Send className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
@@ -320,7 +323,7 @@ const FinalCTA = ({ fadeInUp }) => {
             Book a free consultation and let our experts guide you through your legal options
           </p>
           <Button
-            onClick={() => window.location.href = '/role-selection'}
+            onClick={() => window.location.href = '/register'}
             className="bg-white text-slate-900 hover:bg-slate-100 text-lg px-10 py-6 rounded-full font-semibold shadow-lg hover:scale-105 transition-all duration-300 relative z-10"
           >
             Book Free Consultation

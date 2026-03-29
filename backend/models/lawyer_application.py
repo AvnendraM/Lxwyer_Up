@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime, timezone
 import uuid
 
 
 class LawyerApplicationCreate(BaseModel):
-    office_address: Optional[str] = None
+    office_address: Optional[Union[str, List[str]]] = None
     name: str
     email: EmailStr
     phone: str
@@ -17,7 +17,9 @@ class LawyerApplicationCreate(BaseModel):
     cases_won: int = 0
     state: str
     city: str
-    court: str
+    court: Union[str, List[str]]
+    detailed_court_experience: Optional[List[dict]] = None
+    primary_court: Optional[str] = None
     education: str
     languages: List[str]
     fee_range: str
@@ -27,6 +29,17 @@ class LawyerApplicationCreate(BaseModel):
     law_firm_name: Optional[str] = None
     practice_start_date: Optional[str] = None
     education_details: Optional[dict] = None
+    bar_council_photo: Optional[str] = None
+    college_degree_photo: Optional[str] = None
+    office_address_photo: Optional[str] = None
+    aadhar_card_photo: Optional[str] = None
+    aadhar_card_front: Optional[str] = None
+    aadhar_card_back: Optional[str] = None
+    pan_card: Optional[str] = None
+    application_type: List[str] = Field(default_factory=lambda: ["normal"]) # normal, sos
+    sos_locations: Optional[List[str]] = None
+    sos_matters: Optional[List[str]] = None
+    sos_terms_accepted: Optional[bool] = None
 
 
 class LawyerApplication(BaseModel):
@@ -36,7 +49,7 @@ class LawyerApplication(BaseModel):
     email: EmailStr
     phone: str
     password_hash: str
-    office_address: Optional[str] = None
+    office_address: Optional[Union[str, List[str]]] = None
     photo: Optional[str] = None
     bar_council_number: str
     specialization: str
@@ -44,7 +57,9 @@ class LawyerApplication(BaseModel):
     cases_won: int = 0
     state: str
     city: str
-    court: str
+    court: Union[str, List[str]]
+    detailed_court_experience: Optional[List[dict]] = None
+    primary_court: Optional[str] = None
     education: str
     languages: List[str]
     fee_range: str
@@ -55,8 +70,18 @@ class LawyerApplication(BaseModel):
     law_firm_name: Optional[str] = None
     practice_start_date: Optional[str] = None
     education_details: Optional[dict] = None
+    bar_council_photo: Optional[str] = None
+    college_degree_photo: Optional[str] = None
+    office_address_photo: Optional[str] = None
+    aadhar_card_photo: Optional[str] = None
+    aadhar_card_front: Optional[str] = None
+    aadhar_card_back: Optional[str] = None
+    pan_card: Optional[str] = None
+    application_type: List[str] = Field(default_factory=lambda: ["normal"])
+    sos_locations: Optional[List[str]] = None
+    sos_matters: Optional[List[str]] = None
+    sos_terms_accepted: Optional[bool] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
 
 class AdminLogin(BaseModel):
     email: EmailStr

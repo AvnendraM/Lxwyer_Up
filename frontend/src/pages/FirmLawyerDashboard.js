@@ -1,714 +1,468 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Button } from '../components/ui/button';
-import { Scale, LogOut, LayoutDashboard, FileText, Calendar, MessageSquare, CheckCircle, Clock, AlertCircle, TrendingUp, Users, Target, Award } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Input } from '../components/ui/input';
+import {
+  Briefcase, LogOut, LayoutDashboard, Users, FileText, TrendingUp,
+  MessageSquare, Settings, User, Scale, Clock, CheckCircle, AlertCircle,
+  Star, Phone, Mail, Menu, X, RefreshCw, Send, Plus, Edit,
+  CheckSquare, Square, Timer, Award, BarChart3
+} from 'lucide-react';
 import { toast } from 'sonner';
+import axios from 'axios';
+import { API } from '../App';
+
+const cardBase = 'bg-slate-900 border border-slate-800 rounded-2xl p-6';
+const labelCls = 'block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider';
+const inputCls = 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-teal-500 rounded-xl';
+
+const priorityColors = {
+  urgent: 'bg-rose-900/40 text-rose-300 border-rose-700',
+  high: 'bg-amber-900/40 text-amber-300 border-amber-700',
+  medium: 'bg-blue-900/40 text-blue-300 border-blue-700',
+  low: 'bg-teal-900/40 text-teal-300 border-teal-700',
+};
+
+const statusColors = {
+  pending: 'bg-amber-900/40 text-amber-300 border-amber-700',
+  in_progress: 'bg-blue-900/40 text-blue-300 border-blue-700',
+  completed: 'bg-teal-900/40 text-teal-300 border-teal-700',
+};
+
+function Badge({ label, color }) {
+  return <span className={`px-2.5 py-0.5 text-xs font-semibold border rounded-full capitalize ${color}`}>{label}</span>;
+}
+
+function TaskCard({ task, onStatusChange }) {
+  const next = { pending: 'in_progress', in_progress: 'completed', completed: 'pending' };
+  const nextLabel = { pending: 'Start', in_progress: 'Complete', completed: 'Reopen' };
+  return (
+    <div className={`p-4 bg-slate-800/50 rounded-xl border transition-all ${task.status === 'completed' ? 'border-teal-800/40 opacity-70' : 'border-slate-700/50 hover:border-teal-700/30'}`}>
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className={`font-semibold text-sm ${task.status === 'completed' ? 'line-through text-slate-500' : 'text-white'}`}>{task.title}</p>
+        <Badge label={task.priority} color={priorityColors[task.priority] || priorityColors.medium} />
+      </div>
+      {task.description && <p className="text-xs text-slate-400 mb-3 line-clamp-2">{task.description}</p>}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex gap-2 items-center">
+          <Badge label={task.status?.replace('_', ' ')} color={statusColors[task.status] || statusColors.pending} />
+          {task.due_date && <span className="text-xs text-slate-500 flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(task.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
+        </div>
+        <button onClick={() => onStatusChange(task.id, next[task.status] || 'pending')}
+          className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${task.status === 'completed' ? 'bg-slate-700 text-slate-400 hover:bg-slate-600' : 'bg-teal-600 hover:bg-teal-500 text-white'}`}>
+          {nextLabel[task.status] || 'Update'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function FirmLawyerDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tasks, setTasks] = useState([]);
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [taskFilter, setTaskFilter] = useState('all');
+  const [message, setMessage] = useState('');
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [caseUpdateForm, setCaseUpdateForm] = useState({ title: '', description: '', update_type: 'progress_update' });
 
-  // Dummy data for firm lawyer
-  const lawyerStats = {
-    tasksCompleted: 28,
-    tasksPending: 5,
-    casesActive: 8,
-    casesWon: 45,
-    monthlyTarget: 85
-  };
-
-  const pendingTasks = [
-    { id: 1, title: 'Review contract for Sharma Industries', deadline: 'Today', priority: 'high', case: 'Corporate Law' },
-    { id: 2, title: 'Prepare witness statement - Kumar case', deadline: 'Tomorrow', priority: 'high', case: 'Criminal Law' },
-    { id: 3, title: 'Submit bail application documents', deadline: 'Jan 22', priority: 'medium', case: 'Criminal Law' },
-    { id: 4, title: 'Client meeting preparation - Gupta divorce', deadline: 'Jan 23', priority: 'medium', case: 'Family Law' },
-    { id: 5, title: 'File property title verification report', deadline: 'Jan 25', priority: 'low', case: 'Property Law' }
-  ];
-
-  const recentCases = [
-    { id: 1, title: 'Sharma vs Builder Corp', status: 'Active', type: 'Property', progress: 65 },
-    { id: 2, title: 'Kumar Criminal Defense', status: 'Active', type: 'Criminal', progress: 40 },
-    { id: 3, title: 'Gupta Divorce Settlement', status: 'Active', type: 'Family', progress: 80 },
-    { id: 4, title: 'Tech Corp Tax Appeal', status: 'Pending', type: 'Tax', progress: 25 }
-  ];
-
-  const upcomingHearings = [
-    { date: 'Jan 22', case: 'Kumar Criminal Defense', court: 'Sessions Court', time: '10:30 AM' },
-    { date: 'Jan 25', case: 'Sharma vs Builder Corp', court: 'High Court', time: '11:00 AM' },
-    { date: 'Jan 28', case: 'Gupta Divorce', court: 'Family Court', time: '09:30 AM' }
-  ];
-
-  const performanceMetrics = [
-    { label: 'Cases Won', value: '92%', trend: '+5%' },
-    { label: 'Client Satisfaction', value: '4.8/5', trend: '+0.2' },
-    { label: 'Task Completion', value: '95%', trend: '+3%' },
-    { label: 'Response Time', value: '2.5 hrs', trend: '-30min' }
-  ];
-
-  // Calendar data
-  const calendarEvents = [
-    {
-      id: 1,
-      date: '2026-01-22',
-      time: '10:30 AM',
-      title: 'Kumar Criminal Defense - Court Hearing',
-      location: 'Sessions Court, Delhi',
-      type: 'hearing',
-      color: 'red'
-    },
-    {
-      id: 2,
-      date: '2026-01-22',
-      time: '3:00 PM',
-      title: 'Client Meeting - Sharma Industries',
-      location: 'Office',
-      type: 'meeting',
-      color: 'blue'
-    },
-    {
-      id: 3,
-      date: '2026-01-23',
-      time: '11:00 AM',
-      title: 'Document Review - Gupta Divorce Case',
-      location: 'Office',
-      type: 'task',
-      color: 'green'
-    },
-    {
-      id: 4,
-      date: '2026-01-25',
-      time: '11:00 AM',
-      title: 'Sharma vs Builder Corp - High Court Hearing',
-      location: 'Delhi High Court',
-      type: 'hearing',
-      color: 'red'
-    },
-    {
-      id: 5,
-      date: '2026-01-26',
-      time: '2:00 PM',
-      title: 'Consultation - New Client',
-      location: 'Office',
-      type: 'meeting',
-      color: 'blue'
-    },
-    {
-      id: 6,
-      date: '2026-01-28',
-      time: '9:30 AM',
-      title: 'Gupta Divorce Settlement - Family Court',
-      location: 'Family Court, Delhi',
-      type: 'hearing',
-      color: 'red'
-    },
-    {
-      id: 7,
-      date: '2026-01-29',
-      time: '4:00 PM',
-      title: 'Team Meeting - Case Strategy Discussion',
-      location: 'Conference Room',
-      type: 'meeting',
-      color: 'blue'
-    }
-  ];
-
-  // Messages data
-  const messages = [
-    {
-      id: 1,
-      sender: 'Mr. Rajesh Kumar',
-      role: 'Client',
-      message: 'Hello Advocate, I wanted to know the status of my criminal case. When is the next hearing scheduled?',
-      time: '10 mins ago',
-      unread: true,
-      avatar: 'RK'
-    },
-    {
-      id: 2,
-      sender: 'Adv. Priya Sharma',
-      role: 'Senior Partner',
-      message: 'Please review the contract documents for Sharma Industries and send me your feedback by EOD.',
-      time: '1 hour ago',
-      unread: true,
-      avatar: 'PS'
-    },
-    {
-      id: 3,
-      sender: 'Ms. Sunita Gupta',
-      role: 'Client',
-      message: 'Thank you for the update on my divorce case. I have signed the documents and will courier them today.',
-      time: '3 hours ago',
-      unread: false,
-      avatar: 'SG'
-    },
-    {
-      id: 4,
-      sender: 'Court Clerk',
-      role: 'Court Official',
-      message: 'Your hearing for Case No. CR/123/2025 has been scheduled for 22nd January at 10:30 AM.',
-      time: '5 hours ago',
-      unread: false,
-      avatar: 'CC'
-    },
-    {
-      id: 5,
-      sender: 'Mr. Vikram Singh',
-      role: 'Client',
-      message: 'I need to discuss some urgent matters regarding my property case. Can we schedule a call today?',
-      time: 'Yesterday',
-      unread: false,
-      avatar: 'VS'
-    },
-    {
-      id: 6,
-      sender: 'Firm Manager',
-      role: 'Manager',
-      message: 'Please submit your monthly performance report by Friday. Great work on the Kumar case!',
-      time: 'Yesterday',
-      unread: false,
-      avatar: 'FM'
-    }
-  ];
-
-  // Enhanced performance data
-  const monthlyPerformance = {
-    casesHandled: 12,
-    casesWon: 11,
-    casesOngoing: 8,
-    clientsMet: 24,
-    hoursWorked: 186,
-    revenue: '₹8,50,000',
-    targetAchievement: 94
-  };
-
-  const performanceChart = [
-    { month: 'Aug', cases: 8, wins: 7 },
-    { month: 'Sep', cases: 10, wins: 9 },
-    { month: 'Oct', cases: 12, wins: 11 },
-    { month: 'Nov', cases: 11, wins: 10 },
-    { month: 'Dec', cases: 13, wins: 12 },
-    { month: 'Jan', cases: 12, wins: 11 }
+  const nav = [
+    { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
+    { id: 'tasks', icon: CheckSquare, label: 'My Tasks' },
+    { id: 'clients', icon: Users, label: 'My Clients' },
+    { id: 'messages', icon: MessageSquare, label: 'Messages' },
+    { id: 'performance', icon: TrendingUp, label: 'Performance' },
+    { id: 'profile', icon: User, label: 'My Profile' },
   ];
 
   useEffect(() => {
-    const storedUser = sessionStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    const token = sessionStorage.getItem('token');
+    const stored = sessionStorage.getItem('user');
+    if (!token || !stored) { navigate('/firm-lawyer-login'); return; }
+    const u = JSON.parse(stored);
+    setUser(u);
+    fetchAll(u.id, u.firm_id, token);
+  }, [navigate]);
+
+  const fetchAll = async (lawyerId, firmId, token) => {
+    setLoading(true);
+    const headers = { Authorization: `Bearer ${token}` };
+    const [tRes, cRes] = await Promise.allSettled([
+      axios.get(`${API}/firm-lawyers/tasks/by-lawyer/${lawyerId}`, { headers }),
+      axios.get(`${API}/firm-clients/firm/${firmId}/list`, { headers })
+    ]);
+    if (tRes.status === 'fulfilled') setTasks(tRes.value.data || []);
+    if (cRes.status === 'fulfilled') {
+      const myClients = (cRes.value.data || []).filter(c => c.assigned_lawyer_id === lawyerId);
+      setClients(myClients);
     }
-  }, []);
+    setLoading(false);
+  };
+
+  const refetch = () => {
+    const u = user;
+    const token = sessionStorage.getItem('token');
+    if (u) fetchAll(u.id, u.firm_id, token);
+  };
+
+  const updateTaskStatus = async (taskId, status) => {
+    try {
+      await axios.put(`${API}/firm-lawyers/tasks/${taskId}/status?status=${status}`);
+      toast.success(`Task marked as ${status.replace('_', ' ')}`);
+      refetch();
+    } catch (e) { toast.error('Failed to update task'); }
+  };
+
+  const submitCaseUpdate = async () => {
+    if (!caseUpdateForm.title || !selectedClient) return;
+    try {
+      await axios.post(`${API}/firm-clients/case-updates`, {
+        client_id: selectedClient.id,
+        law_firm_id: user.firm_id,
+        update_type: caseUpdateForm.update_type,
+        title: caseUpdateForm.title,
+        description: caseUpdateForm.description,
+        created_by: user.email,
+      });
+      toast.success('Case update posted!');
+      setCaseUpdateForm({ title: '', description: '', update_type: 'progress_update' });
+    } catch (e) { toast.error('Failed to post update'); }
+  };
 
   const handleLogout = () => {
-    sessionStorage.removeItem('token'); // Changed localStorage.removeItem to sessionStorage.removeItem
-    sessionStorage.removeItem('user'); // Changed localStorage.removeItem to sessionStorage.removeItem
-    toast.success('Logged out successfully');
+    sessionStorage.clear();
+    toast.success('Logged out');
     navigate('/');
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col shadow-sm">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-[#0F2944] rounded-xl flex items-center justify-center shadow-lg">
-              <Scale className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <span className="text-lg font-bold block text-[#0F2944]">Lxwyer Up</span>
-              <span className="text-xs text-purple-600">FIRM LAWYER</span>
-            </div>
-          </div>
-        </div>
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+  const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length;
+  const completionRate = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
+  const filteredTasks = taskFilter === 'all' ? tasks : tasks.filter(t => t.status === taskFilter);
 
-        <nav className="flex-1 px-4 py-6 space-y-1">
-          {[
-            { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-            { id: 'tasks', icon: CheckCircle, label: 'My Tasks', badge: 5 },
-            { id: 'cases', icon: FileText, label: 'My Cases' },
-            { id: 'calendar', icon: Calendar, label: 'Calendar' },
-            { id: 'messages', icon: MessageSquare, label: 'Messages' },
-            { id: 'performance', icon: TrendingUp, label: 'Performance' }
-          ].map(item => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all ${activeTab === item.id
-                ? 'bg-[#0F2944] text-white shadow-lg'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-[#0F2944]'
-                }`}
-            >
-              <item.icon className="w-5 h-5" />
-              <span className="font-medium">{item.label}</span>
-              {item.badge && (
-                <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{item.badge}</span>
-              )}
+  if (!user) return null;
+
+  return (
+    <div className="min-h-screen bg-black text-white flex overflow-x-hidden" style={{ height: '100dvh' }}>
+      {sidebarOpen && <div className="fixed inset-0 bg-black/70 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />}
+
+      {/* Sidebar */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-950 border-r border-slate-800 flex flex-col transition-transform duration-300
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:static md:translate-x-0 md:z-auto shrink-0`}>
+        <div className="p-5 border-b border-slate-800 flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-500 rounded-xl flex items-center justify-center shadow-lg">
+            <Scale className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <span className="text-sm font-bold text-white block">LxwyerUp</span>
+            <span className="text-xs text-indigo-400 font-semibold">LAWYER PORTAL</span>
+          </div>
+          <button onClick={() => setSidebarOpen(false)} className="ml-auto md:hidden text-slate-400 hover:text-white"><X className="w-5 h-5" /></button>
+        </div>
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {nav.map(item => (
+            <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all
+                ${activeTab === item.id ? 'bg-gradient-to-r from-indigo-600/30 to-violet-500/10 text-indigo-300 border border-indigo-700/50' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}>
+              <item.icon className="w-4 h-4 shrink-0" /><span>{item.label}</span>
+              {item.id === 'tasks' && pendingTasks > 0 && <span className="ml-auto bg-amber-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">{pendingTasks}</span>}
             </button>
           ))}
         </nav>
-
-        <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-700 rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold">A</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-[#0F2944]">{user?.full_name || 'Adv. Amit Sharma'}</p>
-              <p className="text-xs text-gray-500">{user?.firm_name || 'Sharma & Associates'}</p>
-            </div>
-            <button onClick={handleLogout} className="text-gray-400 hover:text-red-500 transition-colors">
-              <LogOut className="w-5 h-5" />
-            </button>
+        <div className="p-4 border-t border-slate-800 flex items-center gap-3">
+          <div className="w-9 h-9 bg-gradient-to-br from-indigo-600 to-violet-500 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">{user.full_name?.[0]?.toUpperCase()}</span>
           </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-bold text-white truncate">{user.full_name}</p>
+            <p className="text-xs text-indigo-400">{user.firm_name || 'Law Firm'}</p>
+          </div>
+          <button onClick={handleLogout} className="text-slate-500 hover:text-rose-400 transition-colors"><LogOut className="w-4 h-4" /></button>
         </div>
-      </div>
+      </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-8">
-        {/* Dashboard Tab */}
-        {activeTab === 'dashboard' && (
-          <div>
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-[#0F2944] mb-2">Welcome back, {user?.full_name || 'Advocate'}</h1>
-              <p className="text-gray-500">Here's your work summary for today</p>
+      {/* Main */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="h-16 bg-slate-950 border-b border-slate-800 flex items-center px-4 sm:px-6 gap-4 shrink-0">
+          <button onClick={() => setSidebarOpen(true)} className="md:hidden text-slate-400 hover:text-white p-2 -ml-2"><Menu className="w-5 h-5" /></button>
+          <h1 className="text-base font-bold text-white">{nav.find(n => n.id === activeTab)?.label}</h1>
+          <div className="ml-auto flex items-center gap-3">
+            <button onClick={refetch} className="p-2 text-slate-400 hover:text-indigo-400 transition-colors"><RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /></button>
+            <div className="w-8 h-8 bg-indigo-600/20 border border-indigo-700 rounded-lg flex items-center justify-center">
+              <Scale className="w-4 h-4 text-indigo-400" />
             </div>
+          </div>
+        </header>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                  </div>
-                  <span className="text-green-600 text-sm font-medium">+5 today</span>
-                </div>
-                <p className="text-3xl font-bold text-[#0F2944]">{lawyerStats.tasksCompleted}</p>
-                <p className="text-gray-500 text-sm">Tasks Completed</p>
-              </div>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <AnimatePresence mode="wait">
 
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-amber-600" />
-                  </div>
-                  <span className="text-amber-600 text-sm font-medium">2 urgent</span>
+            {/* OVERVIEW */}
+            {activeTab === 'overview' && (
+              <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Good day, <span className="text-indigo-400">{user.full_name?.split(' ')[0]}</span></h2>
+                  <p className="text-slate-400 text-sm mt-1">{user.specialization || 'Lawyer'} at {user.firm_name}</p>
                 </div>
-                <p className="text-3xl font-bold text-[#0F2944]">{lawyerStats.tasksPending}</p>
-                <p className="text-gray-500 text-sm">Tasks Pending</p>
-              </div>
 
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <FileText className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-[#0F2944]">{lawyerStats.casesActive}</p>
-                <p className="text-gray-500 text-sm">Active Cases</p>
-              </div>
-
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <Target className="w-6 h-6 text-purple-600" />
-                  </div>
-                </div>
-                <p className="text-3xl font-bold text-[#0F2944]">{lawyerStats.monthlyTarget}%</p>
-                <p className="text-gray-500 text-sm">Monthly Target</p>
-              </div>
-            </div>
-
-            {/* Main Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Pending Tasks */}
-              <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-bold text-[#0F2944]">Pending Tasks</h2>
-                  <Button variant="ghost" className="text-gray-500 hover:text-[#0F2944]">View All</Button>
-                </div>
-                <div className="space-y-3">
-                  {pendingTasks.map(task => (
-                    <div key={task.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-2 h-2 rounded-full ${task.priority === 'high' ? 'bg-red-500' :
-                          task.priority === 'medium' ? 'bg-amber-500' : 'bg-green-500'
-                          }`} />
-                        <div>
-                          <p className="font-medium text-[#0F2944]">{task.title}</p>
-                          <p className="text-xs text-gray-500">{task.case}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={`text-sm font-medium ${task.deadline === 'Today' ? 'text-red-600' :
-                          task.deadline === 'Tomorrow' ? 'text-amber-600' : 'text-gray-500'
-                          }`}>{task.deadline}</p>
-                      </div>
+                {/* Stats */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Tasks', value: tasks.length, icon: FileText, color: 'from-indigo-600/20 to-indigo-500/10 border-indigo-800 text-indigo-400' },
+                    { label: 'My Clients', value: clients.length, icon: Users, color: 'from-teal-600/20 to-teal-500/10 border-teal-800 text-teal-400' },
+                    { label: 'Pending', value: pendingTasks, icon: Clock, color: 'from-amber-600/20 to-amber-500/10 border-amber-800 text-amber-400' },
+                    { label: 'Completion Rate', value: `${completionRate}%`, icon: TrendingUp, color: 'from-blue-600/20 to-blue-500/10 border-blue-800 text-blue-400' },
+                  ].map((s, i) => (
+                    <div key={i} className={`bg-gradient-to-br ${s.color} border rounded-2xl p-5`}>
+                      <s.icon className="w-6 h-6 mb-3" />
+                      <p className="text-3xl font-bold text-white mb-1">{s.value}</p>
+                      <p className="text-sm text-slate-400">{s.label}</p>
                     </div>
                   ))}
                 </div>
-              </div>
 
-              {/* Upcoming Hearings */}
-              <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <h2 className="text-xl font-bold text-[#0F2944] mb-6">Upcoming Hearings</h2>
-                <div className="space-y-4">
-                  {upcomingHearings.map((hearing, idx) => (
-                    <div key={idx} className="p-4 bg-purple-50 border border-purple-100 rounded-xl">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-purple-600 font-semibold text-sm">{hearing.date}</span>
-                        <span className="text-gray-500 text-xs">{hearing.time}</span>
-                      </div>
-                      <p className="font-medium text-[#0F2944] text-sm">{hearing.case}</p>
-                      <p className="text-xs text-gray-500">📍 {hearing.court}</p>
+                {/* Pending Tasks Quick View */}
+                {pendingTasks > 0 && (
+                  <div className={cardBase}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-white flex items-center gap-2"><AlertCircle className="w-5 h-5 text-amber-400" />Urgent / Pending Tasks</h3>
+                      <button onClick={() => setActiveTab('tasks')} className="text-xs text-indigo-400 hover:text-indigo-300">View all →</button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Performance Overview */}
-            <div className="mt-6 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-              <h2 className="text-xl font-bold text-[#0F2944] mb-6">Performance Overview</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {performanceMetrics.map((metric, idx) => (
-                  <div key={idx} className="text-center p-4 bg-gray-50 rounded-xl">
-                    <p className="text-2xl font-bold text-[#0F2944]">{metric.value}</p>
-                    <p className="text-gray-500 text-sm">{metric.label}</p>
-                    <p className="text-green-600 text-xs mt-1">{metric.trend}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Tasks Tab */}
-        {activeTab === 'tasks' && (
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-8">My Tasks</h1>
-            <div className="space-y-4">
-              {pendingTasks.map(task => (
-                <div key={task.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <input type="checkbox" className="w-5 h-5 rounded border-zinc-700" />
-                    <div>
-                      <p className="font-semibold text-white">{task.title}</p>
-                      <p className="text-sm text-zinc-500">{task.case} • Due: {task.deadline}</p>
+                    <div className="space-y-3">
+                      {tasks.filter(t => t.status !== 'completed').slice(0, 3).map(task => (
+                        <TaskCard key={task.id} task={task} onStatusChange={updateTaskStatus} />
+                      ))}
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${task.priority === 'high' ? 'bg-red-500/20 text-red-400' :
-                    task.priority === 'medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-green-500/20 text-green-400'
-                    }`}>{task.priority}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                )}
 
-        {/* Cases Tab */}
-        {activeTab === 'cases' && (
-          <div>
-            <h1 className="text-3xl font-bold text-white mb-8">My Cases</h1>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {recentCases.map(caseItem => (
-                <div key={caseItem.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-white">{caseItem.title}</h3>
-                    <span className={`px-3 py-1 rounded-full text-xs ${caseItem.status === 'Active' ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
-                      }`}>{caseItem.status}</span>
-                  </div>
-                  <p className="text-zinc-500 text-sm mb-4">{caseItem.type} Law</p>
-                  <div className="w-full bg-zinc-800 rounded-full h-2">
-                    <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${caseItem.progress}%` }}></div>
-                  </div>
-                  <p className="text-xs text-zinc-500 mt-2">{caseItem.progress}% complete</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Calendar Tab */}
-        {activeTab === 'calendar' && (
-          <div>
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Calendar</h1>
-              <p className="text-zinc-400">Your schedule and upcoming events</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Today's Schedule */}
-              <div className="lg:col-span-2 space-y-6">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                  <h2 className="text-xl font-bold text-white mb-4">Today's Schedule</h2>
-                  <div className="space-y-3">
-                    {calendarEvents
-                      .filter(event => event.date === '2026-01-22')
-                      .map(event => (
-                        <div key={event.id} className={`p-4 rounded-xl border-l-4 ${event.color === 'red' ? 'bg-red-500/10 border-red-500' :
-                          event.color === 'blue' ? 'bg-blue-500/10 border-blue-500' :
-                            'bg-green-500/10 border-green-500'
-                          }`}>
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className={`font-semibold ${event.color === 'red' ? 'text-red-400' :
-                                  event.color === 'blue' ? 'text-blue-400' :
-                                    'text-green-400'
-                                  }`}>{event.time}</span>
-                                <span className={`px-2 py-0.5 text-xs rounded-full ${event.type === 'hearing' ? 'bg-red-500/20 text-red-300' :
-                                  event.type === 'meeting' ? 'bg-blue-500/20 text-blue-300' :
-                                    'bg-green-500/20 text-green-300'
-                                  }`}>{event.type}</span>
-                              </div>
-                              <p className="font-medium text-white mb-1">{event.title}</p>
-                              <p className="text-sm text-zinc-500">📍 {event.location}</p>
-                            </div>
+                {/* My Clients Quick View */}
+                {clients.length > 0 && (
+                  <div className={cardBase}>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-white flex items-center gap-2"><Users className="w-5 h-5 text-teal-400" />My Clients</h3>
+                      <button onClick={() => setActiveTab('clients')} className="text-xs text-indigo-400 hover:text-indigo-300">View all →</button>
+                    </div>
+                    <div className="space-y-3">
+                      {clients.slice(0, 3).map(c => (
+                        <div key={c.id} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-xl">
+                          <div className="w-9 h-9 bg-teal-600/20 border border-teal-700/50 rounded-lg flex items-center justify-center text-teal-300 font-bold text-sm">{c.full_name?.[0]}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-white truncate">{c.full_name}</p>
+                            <p className="text-xs text-slate-400">{c.case_type}</p>
                           </div>
+                          <span className={`px-2 py-0.5 text-xs font-semibold border rounded-full capitalize ${c.status === 'active' ? 'bg-teal-900/50 text-teal-300 border-teal-700' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>{c.status}</span>
                         </div>
                       ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Upcoming Events */}
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                  <h2 className="text-xl font-bold text-white mb-4">Upcoming This Week</h2>
-                  <div className="space-y-3">
-                    {calendarEvents
-                      .filter(event => event.date !== '2026-01-22')
-                      .map(event => (
-                        <div key={event.id} className="p-4 bg-zinc-800/50 rounded-xl hover:bg-zinc-800 transition-colors">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-purple-400 font-semibold text-sm">{new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                            <span className="text-zinc-500 text-xs">{event.time}</span>
-                          </div>
-                          <p className="font-medium text-white text-sm mb-1">{event.title}</p>
-                          <p className="text-xs text-zinc-500">{event.location}</p>
-                        </div>
-                      ))}
+                {!loading && tasks.length === 0 && clients.length === 0 && (
+                  <div className="text-center py-16">
+                    <Scale className="w-16 h-16 text-slate-700 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-slate-400 mb-2">No work assigned yet</h3>
+                    <p className="text-slate-500">Your firm manager will assign tasks and clients to you soon.</p>
                   </div>
-                </div>
-              </div>
+                )}
+              </motion.div>
+            )}
 
-              {/* Mini Calendar & Stats */}
-              <div className="space-y-6">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                  <h3 className="font-bold text-white mb-4">January 2026</h3>
-                  <div className="grid grid-cols-7 gap-2 mb-4">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(day => (
-                      <div key={day} className="text-center text-xs text-zinc-500 font-semibold">{day}</div>
+            {/* TASKS */}
+            {activeTab === 'tasks' && (
+              <motion.div key="tasks" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-white">My Tasks <span className="text-slate-500 text-sm font-normal">({tasks.length})</span></h2>
+                  <div className="flex gap-1">
+                    {['all', 'pending', 'in_progress', 'completed'].map(f => (
+                      <button key={f} onClick={() => setTaskFilter(f)} className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize ${taskFilter === f ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>{f.replace('_', ' ')}</button>
                     ))}
                   </div>
-                  <div className="grid grid-cols-7 gap-2">
-                    {[...Array(31)].map((_, i) => {
-                      const day = i + 1;
-                      const hasEvent = calendarEvents.some(e => parseInt(e.date.split('-')[2]) === day);
-                      const isToday = day === 22;
-                      return (
-                        <div key={i} className={`text-center p-2 text-sm rounded-lg ${isToday ? 'bg-purple-600 text-white font-bold' :
-                          hasEvent ? 'bg-blue-500/20 text-blue-400' :
-                            'text-zinc-400 hover:bg-zinc-800'
-                          }`}>
-                          {day}
-                        </div>
-                      );
-                    })}
-                  </div>
                 </div>
-
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                  <h3 className="font-bold text-white mb-4">This Week</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-zinc-400 text-sm">Total Events</span>
-                      <span className="text-white font-bold">{calendarEvents.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-zinc-400 text-sm">Court Hearings</span>
-                      <span className="text-red-400 font-bold">{calendarEvents.filter(e => e.type === 'hearing').length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-zinc-400 text-sm">Meetings</span>
-                      <span className="text-blue-400 font-bold">{calendarEvents.filter(e => e.type === 'meeting').length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-zinc-400 text-sm">Tasks</span>
-                      <span className="text-green-400 font-bold">{calendarEvents.filter(e => e.type === 'task').length}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Messages Tab */}
-        {activeTab === 'messages' && (
-          <div>
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Messages</h1>
-              <p className="text-zinc-400">Your conversations and notifications</p>
-            </div>
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-zinc-800 bg-zinc-900/50">
-                <input
-                  type="text"
-                  placeholder="Search messages..."
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
-
-              <div className="divide-y divide-zinc-800">
-                {messages.map(msg => (
-                  <div key={msg.id} className={`p-6 hover:bg-zinc-800/50 transition-colors cursor-pointer ${msg.unread ? 'bg-purple-500/5' : ''}`}>
-                    <div className="flex items-start gap-4">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 ${msg.unread ? 'bg-purple-600' : 'bg-zinc-700'
-                        }`}>
-                        {msg.avatar}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-white">{msg.sender}</h3>
-                            {msg.unread && (
-                              <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                            )}
-                          </div>
-                          <span className="text-xs text-zinc-500">{msg.time}</span>
-                        </div>
-                        <p className="text-sm text-zinc-500 mb-1">{msg.role}</p>
-                        <p className={`text-sm ${msg.unread ? 'text-white font-medium' : 'text-zinc-400'} line-clamp-2`}>
-                          {msg.message}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Performance Tab */}
-        {activeTab === 'performance' && (
-          <div>
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-white mb-2">Performance Analytics</h1>
-              <p className="text-zinc-400">Your detailed performance metrics and insights</p>
-            </div>
-
-            {/* Monthly Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl p-6">
-                <p className="text-purple-200 text-sm mb-2">Cases Handled</p>
-                <p className="text-4xl font-bold text-white mb-1">{monthlyPerformance.casesHandled}</p>
-                <p className="text-purple-200 text-xs">This month</p>
-              </div>
-              <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-xl p-6">
-                <p className="text-green-200 text-sm mb-2">Cases Won</p>
-                <p className="text-4xl font-bold text-white mb-1">{monthlyPerformance.casesWon}</p>
-                <p className="text-green-200 text-xs">92% Success Rate</p>
-              </div>
-              <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl p-6">
-                <p className="text-blue-200 text-sm mb-2">Hours Worked</p>
-                <p className="text-4xl font-bold text-white mb-1">{monthlyPerformance.hoursWorked}</p>
-                <p className="text-blue-200 text-xs">This month</p>
-              </div>
-              <div className="bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl p-6">
-                <p className="text-amber-200 text-sm mb-2">Revenue Generated</p>
-                <p className="text-4xl font-bold text-white mb-1">{monthlyPerformance.revenue}</p>
-                <p className="text-amber-200 text-xs">This month</p>
-              </div>
-            </div>
-
-            {/* Performance Chart */}
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-6">
-              <h2 className="text-xl font-bold text-white mb-6">6-Month Performance Trend</h2>
-              <div className="flex items-end justify-between gap-4 h-64">
-                {performanceChart.map((data, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-                    <div className="w-full flex gap-1">
-                      <div
-                        className="flex-1 bg-purple-600 rounded-t transition-all hover:bg-purple-500"
-                        style={{ height: `${(data.cases / 15) * 200}px` }}
-                        title={`${data.cases} cases`}
-                      ></div>
-                      <div
-                        className="flex-1 bg-green-600 rounded-t transition-all hover:bg-green-500"
-                        style={{ height: `${(data.wins / 15) * 200}px` }}
-                        title={`${data.wins} wins`}
-                      ></div>
-                    </div>
-                    <span className="text-zinc-400 text-sm font-medium">{data.month}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-center gap-6 mt-6">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-purple-600 rounded"></div>
-                  <span className="text-zinc-400 text-sm">Cases Handled</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-green-600 rounded"></div>
-                  <span className="text-zinc-400 text-sm">Cases Won</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Detailed Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-white mb-4">Key Metrics</h3>
-                <div className="space-y-4">
-                  {performanceMetrics.map((metric, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-4 bg-zinc-800/50 rounded-xl">
-                      <div>
-                        <p className="text-zinc-400 text-sm">{metric.label}</p>
-                        <p className="text-2xl font-bold text-white">{metric.value}</p>
-                      </div>
-                      <span className="text-green-400 font-semibold">{metric.trend}</span>
+                {/* Task stats bars */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[['Pending', pendingTasks, 'amber'], ['In Progress', inProgressTasks, 'blue'], ['Completed', completedTasks, 'teal']].map(([label, count, c]) => (
+                    <div key={label} className={`bg-${c}-900/20 border border-${c}-800/40 rounded-xl p-4 text-center`}>
+                      <p className="text-2xl font-bold text-white">{count}</p>
+                      <p className="text-xs text-slate-400 mt-1">{label}</p>
                     </div>
                   ))}
                 </div>
-              </div>
+                {loading ? <div className="text-center py-8 text-slate-500">Loading tasks...</div>
+                : filteredTasks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <CheckSquare className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+                    <p className="text-slate-400">No {taskFilter !== 'all' ? taskFilter.replace('_', ' ') : ''} tasks</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredTasks.map(task => <TaskCard key={task.id} task={task} onStatusChange={updateTaskStatus} />)}
+                  </div>
+                )}
+              </motion.div>
+            )}
 
-              <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                <h3 className="text-lg font-bold text-white mb-4">Monthly Breakdown</h3>
-                <div className="space-y-4">
-                  <div className="p-4 bg-zinc-800/50 rounded-xl">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-zinc-400 text-sm">Cases Ongoing</span>
-                      <span className="text-white font-bold">{monthlyPerformance.casesOngoing}</span>
-                    </div>
-                    <div className="w-full bg-zinc-700 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: '67%' }}></div>
-                    </div>
+            {/* MY CLIENTS */}
+            {activeTab === 'clients' && (
+              <motion.div key="clients" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+                <h2 className="text-xl font-bold text-white">My Clients <span className="text-slate-500 text-sm font-normal">({clients.length})</span></h2>
+                {loading ? <div className="text-center py-8 text-slate-500">Loading...</div>
+                : clients.length === 0 ? (
+                  <div className="text-center py-16">
+                    <Users className="w-12 h-12 text-slate-700 mx-auto mb-3" />
+                    <p className="text-slate-400">No clients assigned to you yet</p>
                   </div>
-                  <div className="p-4 bg-zinc-800/50 rounded-xl">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-zinc-400 text-sm">Clients Met</span>
-                      <span className="text-white font-bold">{monthlyPerformance.clientsMet}</span>
-                    </div>
-                    <div className="w-full bg-zinc-700 rounded-full h-2">
-                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: '80%' }}></div>
-                    </div>
+                ) : (
+                  <div className="space-y-4">
+                    {clients.map(c => (
+                      <div key={c.id} className="bg-slate-900 border border-slate-800 hover:border-indigo-700/50 rounded-2xl p-5 transition-all">
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="w-12 h-12 bg-gradient-to-br from-teal-600/30 to-teal-400/10 border border-teal-700/40 rounded-xl flex items-center justify-center text-lg font-bold text-teal-300 shrink-0">{c.full_name?.[0]}</div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-white">{c.full_name}</p>
+                            <p className="text-sm text-slate-400">{c.email}</p>
+                            <p className="text-xs text-slate-500 mt-1">{c.case_type}</p>
+                          </div>
+                          <span className={`px-2.5 py-0.5 text-xs font-semibold border rounded-full capitalize shrink-0 ${c.status === 'active' ? 'bg-teal-900/50 text-teal-300 border-teal-700' : 'bg-slate-800 text-slate-400 border-slate-700'}`}>{c.status}</span>
+                        </div>
+                        {c.case_description && <p className="text-sm text-slate-400 line-clamp-2 mb-4 bg-slate-800/50 rounded-lg p-3">{c.case_description}</p>}
+                        {/* Post Case Update */}
+                        {selectedClient?.id === c.id ? (
+                          <div className="space-y-3 bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                            <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Post Case Update</p>
+                            <select value={caseUpdateForm.update_type} onChange={e => setCaseUpdateForm(p => ({ ...p, update_type: e.target.value }))} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                              {[['progress_update','Progress Update'],['meeting_scheduled','Meeting Scheduled'],['document_submitted','Document Submitted'],['hearing_date','Hearing Date']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                            <input value={caseUpdateForm.title} onChange={e => setCaseUpdateForm(p => ({ ...p, title: e.target.value }))} placeholder="Update title *" className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-indigo-500" />
+                            <textarea value={caseUpdateForm.description} onChange={e => setCaseUpdateForm(p => ({ ...p, description: e.target.value }))} placeholder="Details..." rows={2} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 resize-none" />
+                            <div className="flex gap-2">
+                              <button onClick={() => setSelectedClient(null)} className="flex-1 py-1.5 text-xs font-semibold bg-slate-700 text-slate-300 rounded-lg hover:bg-slate-600 transition-all">Cancel</button>
+                              <button onClick={submitCaseUpdate} className="flex-1 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-all">Post Update</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button onClick={() => setSelectedClient(c)} className="w-full py-2 text-xs font-semibold bg-indigo-600/20 text-indigo-300 border border-indigo-700/40 rounded-xl hover:bg-indigo-600/40 transition-all flex items-center gap-2 justify-center">
+                            <Plus className="w-3.5 h-3.5" />Post Case Update
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div className="p-4 bg-zinc-800/50 rounded-xl">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-zinc-400 text-sm">Target Achievement</span>
-                      <span className="text-white font-bold">{monthlyPerformance.targetAchievement}%</span>
-                    </div>
-                    <div className="w-full bg-zinc-700 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: `${monthlyPerformance.targetAchievement}%` }}></div>
-                    </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* MESSAGES */}
+            {activeTab === 'messages' && (
+              <motion.div key="messages" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
+                <h2 className="text-xl font-bold text-white">Messages</h2>
+                <div className={`${cardBase} flex flex-col`} style={{ minHeight: '420px' }}>
+                  <div className="flex items-center gap-2 pb-4 mb-4 border-b border-slate-800">
+                    <div className="w-9 h-9 bg-indigo-600/20 border border-indigo-700/50 rounded-lg flex items-center justify-center"><Users className="w-4 h-4 text-indigo-400" /></div>
+                    <div><p className="font-bold text-white text-sm">{user.firm_name}</p><p className="text-xs text-slate-400">Firm Manager Channel</p></div>
+                  </div>
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center"><MessageSquare className="w-10 h-10 text-slate-700 mx-auto mb-3" /><p className="text-slate-500 text-sm">No messages yet</p></div>
+                  </div>
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-slate-800">
+                    <input value={message} onChange={e => setMessage(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && message.trim()) { toast.success('Message sent!'); setMessage(''); } }} placeholder="Message your firm manager..." className="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-indigo-500" />
+                    <button onClick={() => { if (message.trim()) { toast.success('Message sent!'); setMessage(''); } }} className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all"><Send className="w-4 h-4" /></button>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
+              </motion.div>
+            )}
+
+            {/* PERFORMANCE */}
+            {activeTab === 'performance' && (
+              <motion.div key="performance" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+                <h2 className="text-xl font-bold text-white">My Performance</h2>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[['Tasks Total', tasks.length],['Completed', completedTasks],['In Progress', inProgressTasks],['Clients', clients.length]].map(([label, val]) => (
+                    <div key={label} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-center">
+                      <p className="text-3xl font-bold text-white mb-1">{val}</p>
+                      <p className="text-sm text-slate-400">{label}</p>
+                    </div>
+                  ))}
+                </div>
+                <div className={cardBase}>
+                  <h3 className="font-bold text-white mb-5 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-indigo-400" />Task Completion Overview</h3>
+                  <div className="space-y-4">
+                    {[['Completed', completedTasks, tasks.length, 'teal'], ['In Progress', inProgressTasks, tasks.length, 'blue'], ['Pending', pendingTasks, tasks.length, 'amber']].map(([label, val, total, color]) => (
+                      <div key={label}>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-slate-300 font-medium">{label}</span>
+                          <span className="text-slate-400">{val} / {total}</span>
+                        </div>
+                        <div className="w-full bg-slate-800 rounded-full h-2.5">
+                          <div className={`bg-${color}-500 h-2.5 rounded-full transition-all duration-700`} style={{ width: `${total ? (val / total) * 100 : 0}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 flex items-center justify-between bg-slate-800/60 rounded-xl p-4">
+                    <div><p className="text-xs text-slate-500">Overall Completion Rate</p><p className="text-2xl font-bold text-white mt-1">{completionRate}%</p></div>
+                    <div className="text-right"><p className="text-xs text-slate-500">Firm Rating</p><div className="flex items-center gap-1 justify-end mt-1"><Star className="w-4 h-4 fill-amber-400 text-amber-400" /><span className="text-lg font-bold text-white">{user.rating || '4.5'}</span></div></div>
+                  </div>
+                </div>
+                <div className={cardBase}>
+                  <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Award className="w-5 h-5 text-amber-400" />Credentials</h3>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {[['Specialization', user.specialization],['Experience', user.experience_years ? `${user.experience_years} years` : '—'],['Bar Council No.', user.bar_council_number || '—'],['Languages', user.languages?.join(', ') || '—']].map(([label, val]) => (
+                      <div key={label} className="bg-slate-800/60 rounded-xl p-3">
+                        <p className="text-xs text-slate-500 mb-1">{label}</p>
+                        <p className="text-sm font-semibold text-white">{val || '—'}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* PROFILE */}
+            {activeTab === 'profile' && (
+              <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
+                <h2 className="text-xl font-bold text-white">My Profile</h2>
+                <div className={cardBase}>
+                  <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-800">
+                    <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-violet-500 rounded-2xl flex items-center justify-center text-2xl font-bold text-white">{user.full_name?.[0]?.toUpperCase()}</div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">{user.full_name}</h3>
+                      <p className="text-indigo-400 text-sm">{user.specialization} · {user.firm_name}</p>
+                      <div className="flex items-center gap-1 mt-1"><Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /><span className="text-sm text-amber-400 font-semibold">{user.rating || 4.5}</span><span className="text-xs text-slate-500 ml-1">APEX Verified</span></div>
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {[['Email', user.email],['Phone', user.phone],['Firm', user.firm_name],['Specialization', user.specialization],['Experience', user.experience_years ? `${user.experience_years} years` : '—'],['Bar Council No.', user.bar_council_number || '—'],['Education', user.education || '—'],['Tasks Done', completedTasks]].map(([label, val]) => (
+                      <div key={label} className="bg-slate-800/60 rounded-xl p-4">
+                        <p className="text-xs text-slate-500 mb-1">{label}</p>
+                        <p className="text-sm font-semibold text-white">{val ?? '—'}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {user.languages?.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-xs text-slate-500 mb-2">Languages</p>
+                      <div className="flex flex-wrap gap-2">{user.languages.map(l => <span key={l} className="px-2.5 py-1 bg-indigo-600/20 text-indigo-300 border border-indigo-700/40 text-xs rounded-lg">{l}</span>)}</div>
+                    </div>
+                  )}
+                  {user.bio && <div className="mt-4 bg-slate-800/50 rounded-xl p-4"><p className="text-xs text-slate-500 mb-2">Bio</p><p className="text-sm text-slate-300 leading-relaxed">{user.bio}</p></div>}
+                </div>
+                <div className={cardBase}>
+                  <h3 className="font-bold text-white mb-4">Account Actions</h3>
+                  <button onClick={handleLogout} className="flex items-center gap-2 px-5 py-2.5 bg-rose-900/30 hover:bg-rose-900/60 text-rose-400 border border-rose-800 rounded-xl text-sm font-semibold transition-all">
+                    <LogOut className="w-4 h-4" />Sign Out
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+          </AnimatePresence>
+        </main>
       </div>
     </div>
   );

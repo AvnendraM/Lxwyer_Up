@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Scale, LogOut, LayoutDashboard, Calendar, MessageSquare, FileText, Send, User, Clock, MapPin, Shield, FileCheck, Mic, CheckCircle, Search, Gavel, AlertTriangle, ListChecks, BookOpen, TrendingUp, Video, Moon, Sun } from 'lucide-react';
+import { Scale, LogOut, LayoutDashboard, Calendar, MessageSquare, FileText, Send, User, Clock, MapPin, Shield, FileCheck, Mic, CheckCircle, Search, Gavel, AlertTriangle, ListChecks, BookOpen, TrendingUp, Video, Moon, Sun, Sparkles, Bell, X, Briefcase, RefreshCw, Camera, HelpCircle, Zap, Filter, ChevronDown, ChevronUp, ExternalLink, PhoneCall, Star, Download, Share2, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
+import UserHowToUseModal from '../components/dashboard/user/HowToUseModal';
 
 // Legal Analysis Card Component
 const LegalAnalysisCard = ({ icon: Icon, title, content, borderColor, bgColor, darkMode }) => (
@@ -22,7 +23,7 @@ const LegalAnalysisCard = ({ icon: Icon, title, content, borderColor, bgColor, d
 const LawyerCard = ({ name, specialization, experience, successRate, location, hourlyRate, onBook, darkMode }) => (
   <div className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} rounded-xl p-5 border shadow-md hover:shadow-lg transition-all`}>
     <div className="flex items-center space-x-3 mb-4">
-      <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
+      <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-900 rounded-full flex items-center justify-center shadow-md">
         <User className="w-7 h-7 text-white" />
       </div>
       <div>
@@ -194,10 +195,6 @@ const parseLegalResponse = (response) => {
   };
 };
 
-// Dummy lawyers data
-const dummyLawyers = [
-  { id: 1, name: 'Dummy Recommended Lawyer', specialization: 'Criminal Defense', experience: 15, successRate: 95, location: 'Delhi', hourlyRate: 2500 }
-];
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -211,47 +208,192 @@ export default function UserDashboard() {
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [msgPermission, setMsgPermission] = useState(null); // { allowed, reason, quota_left }
   const [dashboardData, setDashboardData] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
+  const [lawyerSearch, setLawyerSearch] = useState('');
+  const [lawyerFilter, setLawyerFilter] = useState('');
+  const [expandedCaseId, setExpandedCaseId] = useState(null);
+  const [msgSearch, setMsgSearch] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showHowToUse, setShowHowToUse] = useState(false);
+  const [readNotifIds, setReadNotifIds] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
+  const fileInputRef = useRef(null);
+  const docInputRef = useRef(null);
+  // Booking modal
+  const [bookingLawyer, setBookingLawyer] = useState(null);
+  const [bookingDate, setBookingDate] = useState('');
+  const [bookingTime, setBookingTime] = useState('');
+  const [bookingNote, setBookingNote] = useState('');
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingType, setBookingType] = useState('video');
+  // Cancel booking confirm
+  const [cancelBookingId, setCancelBookingId] = useState(null);
+  // Reschedule response state (user responding to lawyer's reschedule)
+  const [rescheduleResponse, setRescheduleResponse] = useState(null); // { bookingId, proposedDate, proposedTime, deadline }
+  const [counterDate, setCounterDate] = useState('');
+  const [counterTime, setCounterTime] = useState('');
+  const [showCounterForm, setShowCounterForm] = useState(null); // bookingId
+  // Case creation
+  const [showCaseForm, setShowCaseForm] = useState(false);
+  const [newCaseTitle, setNewCaseTitle] = useState('');
+  const [newCaseType, setNewCaseType] = useState('');
+  const [newCaseDesc, setNewCaseDesc] = useState('');
+  const [caseLoading, setCaseLoading] = useState(false);
+  // Profile editing
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({ full_name: '', email: '', phone: '' });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileExpandedCard, setProfileExpandedCard] = useState(null);
+  // Doc upload
+  const [docUploading, setDocUploading] = useState(false);
+  const [docToDelete, setDocToDelete] = useState(null);
+  // Folder state (client-side)
+  const [folders, setFolders] = useState([
+    { id: 'general', name: 'General', icon: '📁', color: '#2563eb', docIds: [] },
+  ]);
+  const [activeFolderId, setActiveFolderId] = useState(null);
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  // Share modal
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [selectedDocForShare, setSelectedDocForShare] = useState(null);
+  const [shareSearchQuery, setShareSearchQuery] = useState('');
+  // Rating modal
+  const [ratingModal, setRatingModal] = useState(null); // { bookingId, lawyerName }
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingComment, setRatingComment] = useState('');
+  const [ratingSaving, setRatingSaving] = useState(false);
+
+  // Storage stats for Document Vault
+  const { totalStorageBytes, storagePercent, isStorageFull, totalStorageDisplay, recentUploadsCount, STORAGE_LIMIT_BYTES } = useMemo(() => {
+    const LIMIT = 1024 * 1024 * 1024; // 1 GB
+    const bytes = documents.reduce((sum, d) => sum + (d.file_size || 0), 0);
+    const pct = Math.min(100, (bytes / LIMIT) * 100);
+    const full = pct >= 100;
+    let display = bytes < 1024 * 1024 ? (bytes / 1024).toFixed(1) + ' KB' : (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    const recent = documents.filter(d => {
+      if (!d.uploaded_at) return false;
+      const diff = Date.now() - new Date(d.uploaded_at).getTime();
+      return diff < 7 * 24 * 60 * 60 * 1000; // 7 days
+    }).length;
+    return { totalStorageBytes: bytes, storagePercent: pct, isStorageFull: full, totalStorageDisplay: display, recentUploadsCount: recent, STORAGE_LIMIT_BYTES: LIMIT };
+  }, [documents]);
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const token = localStorage.getItem('token');
 
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-      fetchData();
+  const handleProfileImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    // Show preview immediately
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      setProfileImage(ev.target.result);
+      sessionStorage.setItem('profileImage', ev.target.result);
+    };
+    reader.readAsDataURL(file);
+    // Upload to API
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const tok = getToken();
+      const res = await axios.post(`${API}/auth/upload-image`, fd, {
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'multipart/form-data' }
+      });
+      const updated = { ...user, photo: res.data.url };
+      setUser(updated);
+      sessionStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem('user', JSON.stringify(updated));
+      toast.success('Profile photo updated!');
+    } catch {
+      toast.error('Photo preview saved locally. API upload failed.');
     }
-  }, [fetchData]);
+  };
+
+  const buildNotifications = () => {
+    const notifs = [];
+    if (bookings.filter(b => b.status === 'pending').length > 0)
+      notifs.push({ id: 'pending-bookings', icon: Calendar, text: `${bookings.filter(b => b.status === 'pending').length} appointment(s) awaiting confirmation`, tab: 'consultation' });
+    if (cases.filter(c => c.status === 'active').length > 0)
+      notifs.push({ id: 'active-cases', icon: Briefcase, text: `${cases.filter(c => c.status === 'active').length} active case(s) need attention`, tab: 'cases' });
+    if (documents.length > 0)
+      notifs.push({ id: 'docs', icon: FileText, text: `${documents.length} document(s) in your vault`, tab: 'documents' });
+    return notifs;
+  };
+
+  const markOneRead = (id) => setReadNotifIds(prev => [...prev, id]);
+
+  const getToken = () => sessionStorage.getItem('token') || localStorage.getItem('token');
+  const token = getToken(); // kept for compatibility in places that still use it directly
+
 
   const fetchData = useCallback(async () => {
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const [casesRes, docsRes, bookingsRes, lawyersRes, dashboardRes, messagesRes] = await Promise.all([
+    const tok = localStorage.getItem('token') || sessionStorage.getItem('token');
+    if (!tok) return;
+    const headers = { Authorization: `Bearer ${tok}` };
+
+    const [casesRes, docsRes, bookingsRes, lawyersRes, dashboardRes, messagesRes, eligibleRes] =
+      await Promise.allSettled([
         axios.get(`${API}/cases`, { headers }),
         axios.get(`${API}/documents`, { headers }),
         axios.get(`${API}/bookings`, { headers }),
         axios.get(`${API}/lawyers`),
         axios.get(`${API}/dashboard/user`, { headers }),
-        axios.get(`${API}/messages/recents`, { headers })
+        axios.get(`${API}/messages/recents`, { headers }),
+        axios.get(`${API}/messages/eligible-contacts`, { headers }),
       ]);
-      setCases(casesRes.data);
-      setDocuments(docsRes.data);
-      setBookings(bookingsRes.data);
-      setLawyers(lawyersRes.data);
-      setDashboardData(dashboardRes.data);
-      setMessages(messagesRes.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+
+    // Smart extract: handles both [] and {cases:[]} / {bookings:[]} / {documents:[]}
+    const extract = (res, keys) => {
+      if (res.status !== 'fulfilled') return null;
+      const d = res.value.data;
+      if (Array.isArray(d)) return d;
+      for (const k of keys) if (d && Array.isArray(d[k])) return d[k];
+      return d;
+    };
+
+    const casesData = extract(casesRes, ['cases']);
+    const docsData = extract(docsRes, ['documents', 'docs']);
+    const bookingsData = extract(bookingsRes, ['bookings']);
+    const lawyersData = extract(lawyersRes, ['lawyers', 'data']);
+    const messagesData = extract(messagesRes, ['conversations', 'messages', 'recents']);
+    const eligibleData = eligibleRes.status === 'fulfilled' && Array.isArray(eligibleRes.value.data) ? eligibleRes.value.data : [];
+
+    if (casesData) setCases(casesData);
+    if (docsData) setDocuments(docsData);
+    if (bookingsData) setBookings(bookingsData);
+    if (lawyersData) setLawyers(Array.isArray(lawyersData) ? lawyersData : []);
+    if (dashboardRes.status === 'fulfilled') setDashboardData(dashboardRes.value.data);
+
+    // Merge eligible contacts with actual message history (eligible-first, then fill in last msg from recents)
+    const recents = Array.isArray(messagesData) ? messagesData : [];
+    const recentIds = new Set(recents.map(r => r.other_user_id || r.id));
+    const merged = [...recents];
+    for (const ec of eligibleData) {
+      if (!recentIds.has(ec.other_user_id)) merged.push(ec);
     }
-  }, [token]);
+    setMessages(merged);
+  }, []);
+
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (storedUser) {
+      try { setUser(JSON.parse(storedUser)); } catch { }
+    }
+    fetchData();
+  }, [fetchData]);
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('userRole');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('userRole');
@@ -259,69 +401,79 @@ export default function UserDashboard() {
     navigate('/');
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchData();
+    setTimeout(() => setIsRefreshing(false), 600);
+  };
+
   const handleChat = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
-
     const userMsg = { role: 'user', content: chatInput, isStructured: false };
     setChatMessages(prev => [...prev, userMsg]);
+    const q = chatInput;
     setChatInput('');
     setLoading(true);
-
+    const tok = getToken();
     try {
-      const response = await axios.post(`${API}/chat`, { message: chatInput }, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await axios.post(`${API}/chat/legal`, { message: q }, {
+        headers: { Authorization: `Bearer ${tok}` }
       });
-
-      const aiResponse = response.data.response;
+      const aiResponse = response.data.response || response.data.reply || response.data.message || JSON.stringify(response.data);
       const legalData = parseLegalResponse(aiResponse);
-
-      setChatMessages(prev => [...prev, {
-        role: 'assistant',
-        content: aiResponse,
-        isStructured: !!legalData,
-        legalData: legalData
-      }]);
-    } catch (error) {
-      toast.error('Chat error');
-      setChatMessages(prev => prev.slice(0, -1));
-    } finally {
-      setLoading(false);
-    }
+      setChatMessages(prev => [...prev, { role: 'assistant', content: aiResponse, isStructured: !!legalData, legalData }]);
+    } catch {
+      try {
+        const fallback = await axios.post(`${API}/chat/legal`, { message: q });
+        const aiResponse = fallback.data.response || fallback.data.reply || fallback.data.message || 'I could not process that request.';
+        const legalData = parseLegalResponse(aiResponse);
+        setChatMessages(prev => [...prev, { role: 'assistant', content: aiResponse, isStructured: !!legalData, legalData }]);
+      } catch {
+        toast.error('AI service unavailable. Please try again.');
+        setChatMessages(prev => prev.slice(0, -1));
+      }
+    } finally { setLoading(false); }
   };
 
   const handleSelectChat = async (chat) => {
     setSelectedChat(chat);
+    setMsgPermission(null);
+    const tok = getToken();
     try {
-      const res = await axios.get(`${API}/messages/${chat.other_user_id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setChatHistory(res.data);
-    } catch (error) {
-      toast.error('Failed to load chat history');
-    }
+      const otherId = chat.other_user_id || chat.id;
+      const [historyRes, permRes] = await Promise.allSettled([
+        axios.get(`${API}/messages/${otherId}`, { headers: { Authorization: `Bearer ${tok}` } }),
+        axios.get(`${API}/messages/can-message/${otherId}`, { headers: { Authorization: `Bearer ${tok}` } }),
+      ]);
+      if (historyRes.status === 'fulfilled') setChatHistory(historyRes.value.data);
+      if (permRes.status === 'fulfilled') setMsgPermission(permRes.value.data);
+    } catch { toast.error('Failed to load chat'); }
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedChat) return;
-
+    if (msgPermission && !msgPermission.allowed) {
+      toast.error(msgPermission.reason || 'Messaging not allowed');
+      return;
+    }
+    const tok = getToken();
+    const otherId = selectedChat.other_user_id || selectedChat.id;
     try {
       await axios.post(`${API}/messages`, {
-        receiver_id: selectedChat.other_user_id,
-        content: newMessage
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+        receiver_id: otherId, content: newMessage
+      }, { headers: { Authorization: `Bearer ${tok}` } });
       setNewMessage('');
-      // Refresh chat (optimistic update or re-fetch)
-      const res = await axios.get(`${API}/messages/${selectedChat.other_user_id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setChatHistory(res.data);
-    } catch (error) {
-      toast.error('Failed to send message');
+      const [histRes, permRes] = await Promise.allSettled([
+        axios.get(`${API}/messages/${otherId}`, { headers: { Authorization: `Bearer ${tok}` } }),
+        axios.get(`${API}/messages/can-message/${otherId}`, { headers: { Authorization: `Bearer ${tok}` } }),
+      ]);
+      if (histRes.status === 'fulfilled') setChatHistory(histRes.value.data);
+      if (permRes.status === 'fulfilled') setMsgPermission(permRes.value.data);
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      toast.error(detail || 'Failed to send message');
     }
   };
 
@@ -332,101 +484,350 @@ export default function UserDashboard() {
     "Consumer complaint process"
   ];
 
+  // ── Book Appointment ─────────────────────────────────────────────────────
+  const handleBookAppointment = async (e) => {
+    e.preventDefault();
+    if (!bookingLawyer || !bookingDate || !bookingTime) {
+      toast.error('Please fill all required fields'); return;
+    }
+    setBookingLoading(true);
+    try {
+      await axios.post(`${API}/bookings`, {
+        lawyer_id: bookingLawyer._id || bookingLawyer.id,
+        lawyer_name: bookingLawyer.full_name || bookingLawyer.name,
+        date: bookingDate, time: bookingTime, notes: bookingNote,
+        consultation_type: bookingType,
+      }, { headers: { Authorization: `Bearer ${getToken()}` } });
+      toast.success('Appointment booked successfully!');
+      setBookingLawyer(null);
+      setBookingDate(''); setBookingTime(''); setBookingNote(''); setBookingType('video');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to book appointment');
+    } finally { setBookingLoading(false); }
+  };
+
+  // ── Cancel Booking ────────────────────────────────────────────────────────
+  const handleCancelBooking = async () => {
+    if (!cancelBookingId) return;
+    try {
+      await axios.patch(`${API}/bookings/${cancelBookingId}/cancel`, {}, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      toast.success('Appointment cancelled');
+      setBookings(prev => prev.map(b => (b._id || b.id) === cancelBookingId ? { ...b, status: 'cancelled' } : b));
+    } catch { toast.error('Failed to cancel appointment'); }
+    finally { setCancelBookingId(null); }
+  };
+
+  // ── Reschedule Response (User) ────────────────────────────────────────────
+  const handleAcceptReschedule = async (bookingId, proposedDate, proposedTime) => {
+    try {
+      await axios.post(`${API}/bookings/${bookingId}/reschedule-response`,
+        { action: 'accept' },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+      toast.success('✅ Reschedule accepted! Appointment confirmed.');
+      setBookings(prev => prev.map(b =>
+        (b._id || b.id) === bookingId
+          ? { ...b, status: 'confirmed', date: proposedDate, time: proposedTime, proposed_date: null, proposed_time: null, reschedule_deadline: null }
+          : b
+      ));
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to accept reschedule');
+    }
+  };
+
+  const handleCounterReschedule = async (bookingId) => {
+    if (!counterDate || !counterTime) { toast.error('Please pick a date and time'); return; }
+    try {
+      await axios.post(`${API}/bookings/${bookingId}/reschedule-response`,
+        { action: 'counter', date: counterDate, time: counterTime },
+        { headers: { Authorization: `Bearer ${getToken()}` } }
+      );
+      toast.success('🔄 Counter-proposal sent! Waiting for lawyer to respond.');
+      setBookings(prev => prev.map(b =>
+        (b._id || b.id) === bookingId
+          ? { ...b, status: 'rescheduled_by_user', proposed_date: counterDate, proposed_time: counterTime }
+          : b
+      ));
+      setShowCounterForm(null); setCounterDate(''); setCounterTime('');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to send counter-proposal');
+    }
+  };
+
+  // ── Create Case ──────────────────────────────────────────────────────────
+  const handleCreateCase = async (e) => {
+    e.preventDefault();
+    if (!newCaseTitle || !newCaseType) { toast.error('Title and type are required'); return; }
+    setCaseLoading(true);
+    try {
+      const res = await axios.post(`${API}/cases`, {
+        title: newCaseTitle, case_type: newCaseType, description: newCaseDesc,
+      }, { headers: { Authorization: `Bearer ${getToken()}` } });
+      setCases(prev => [res.data, ...prev]);
+      toast.success('Case created successfully!');
+      setShowCaseForm(false);
+      setNewCaseTitle(''); setNewCaseType(''); setNewCaseDesc('');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to create case');
+    } finally { setCaseLoading(false); }
+  };
+
+  // ── Save Profile ─────────────────────────────────────────────────────────
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    try {
+      const res = await axios.put(`${API}/auth/me`, profileForm, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      const updated = { ...user, ...res.data };
+      setUser(updated);
+      sessionStorage.setItem('user', JSON.stringify(updated));
+      localStorage.setItem('user', JSON.stringify(updated));
+      toast.success('Profile updated!');
+      setEditingProfile(false);
+    } catch { toast.error('Failed to update profile'); }
+    finally { setProfileSaving(false); }
+  };
+
+  // ── Upload Document ───────────────────────────────────────────────────────
+  const handleDocUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setDocUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('title', file.name);
+      const res = await axios.post(`${API}/documents/upload`, fd, {
+        headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'multipart/form-data' }
+      });
+      setDocuments(prev => [res.data, ...prev]);
+      toast.success('Document uploaded!');
+    } catch {
+      toast.error('Failed to upload document');
+    } finally {
+      setDocUploading(false);
+    }
+  };
+
+  // ── Rate Lawyer ───────────────────────────────────────────────────────────
+  const handleRateLawyer = async () => {
+    if (!ratingModal || ratingValue === 0) { toast.error('Please select a star rating'); return; }
+    setRatingSaving(true);
+    try {
+      await axios.post(`${API}/bookings/${ratingModal.bookingId}/review`, {
+        rating: ratingValue, comment: ratingComment
+      }, { headers: { Authorization: `Bearer ${getToken()}` } });
+      toast.success('Thank you for your review!');
+      setRatingModal(null); setRatingValue(0); setRatingComment('');
+      fetchData();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to submit review');
+    } finally { setRatingSaving(false); }
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!docToDelete) return;
+    try {
+      await axios.delete(`${API}/documents/${docToDelete._id || docToDelete.id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      setDocuments(prev => prev.filter(d => (d._id || d.id) !== (docToDelete._id || docToDelete.id)));
+      toast.success('Document deleted');
+    } catch {
+      toast.error('Failed to delete document');
+    } finally {
+      setDocToDelete(null);
+    }
+  };
+
+  // Load saved profile image
+  useEffect(() => {
+    const saved = sessionStorage.getItem('profileImage');
+    if (saved) setProfileImage(saved);
+  }, []);
+
+  // Sync profileForm when user loads
+  useEffect(() => {
+    if (user) setProfileForm({ full_name: user.full_name || user.name || '', email: user.email || '', phone: user.phone || '' });
+  }, [user]);
+
   return (
-    <div className={`h-screen ${darkMode ? 'bg-slate-950' : 'bg-[#ecf5ff]'} flex overflow-hidden font-sans transition-colors duration-300`}>
-      {/* Sidebar */}
-      {/* Floating Sidebar */}
-      <div className={`w-24 m-4 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-white/50'} rounded-[2.5rem] flex flex-col items-center py-4 shadow-[0_8px_30px_rgba(0,0,0,0.12)] border backdrop-blur-sm z-20 h-[calc(100vh-2rem)] transition-all duration-300`}>
+    <div className={`bg-[#ecf5ff] ${darkMode ? '!bg-black' : ''} flex overflow-hidden font-sans transition-colors duration-300`}
+      style={{ height: '100dvh' }}
+    >
+      {showHowToUse && (
+        <UserHowToUseModal darkMode={darkMode} onClose={() => setShowHowToUse(false)} />
+      )}
+      {/* Floating Sidebar — hidden on mobile, visible on md+ */}
+      <div className={`hidden md:flex w-44 m-3 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-white/50'} rounded-2xl flex-col py-3 shadow-[0_4px_20px_rgba(0,0,0,0.10)] border backdrop-blur-sm z-20 h-[calc(100dvh-1.5rem)] transition-all duration-300 shrink-0`}>
         {/* Logo */}
-        {/* Logo Icon Only */}
-        <div className="p-6 flex justify-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-            <span className="text-white font-bold text-xl">L</span>
+        <div className="px-4 py-3 flex items-center gap-2.5 mb-1">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow shadow-blue-500/30 shrink-0">
+            <span className="text-white font-bold text-sm">L</span>
           </div>
+          <span className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-slate-800'}`}>LxwyerUp</span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-4 flex flex-col items-center">
+        <nav className="flex-1 px-2 py-2 flex flex-col gap-0.5">
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-            { id: 'consultation', icon: Calendar, label: 'Consultation' },
+            { id: 'consultation', icon: Calendar, label: 'Book a Lawyer' },
+            { id: 'cases', icon: Briefcase, label: 'My Cases' },
             { id: 'messages', icon: MessageSquare, label: 'Messages' },
-            { id: 'chatbot', icon: Scale, label: 'AI Assistant' },
-            { id: 'documents', icon: FileText, label: 'Documents' }
+            { id: 'documents', icon: FileText, label: 'Documents' },
+            { id: 'profile', icon: User, label: 'My Profile' },
           ].map((item) => (
             <button
               key={item.id}
               data-testid={`${item.id}-nav-btn`}
               onClick={() => setActiveTab(item.id)}
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${activeTab === item.id
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/40 scale-110'
+              className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all ${activeTab === item.id
+                ? 'bg-blue-600 text-white shadow shadow-blue-500/20'
                 : `${darkMode ? 'text-slate-500 hover:bg-slate-800 hover:text-blue-400' : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'}`
                 }`}
-              title={item.label}
             >
-              <item.icon className="w-6 h-6" />
+              <item.icon className="w-[14px] h-[14px] shrink-0" />
+              <span className="text-[11px] font-semibold truncate">{item.label}</span>
             </button>
           ))}
+          {/* AI Lawyer — external navigation */}
+          <button
+            data-testid="chatbot-nav-btn"
+            onClick={() => navigate('/lxwyerai-premium')}
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all ${darkMode ? 'text-slate-500 hover:bg-slate-800 hover:text-blue-400' : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'}`}
+          >
+            <Sparkles className="w-[14px] h-[14px] shrink-0" />
+            <span className="text-[11px] font-semibold truncate">LxwyerAI ✨</span>
+          </button>
         </nav>
 
-        {/* User Profile - Bottom Sidebar */}
-        <div className={`p-4 border-t ${darkMode ? 'border-slate-800' : 'border-gray-100'} flex flex-col items-center gap-4`}>
+        {/* Bottom buttons */}
+        <div className={`px-2 pb-2 pt-2 border-t ${darkMode ? 'border-slate-800' : 'border-gray-100'} flex flex-col gap-0.5`}>
+          {/* SOS Emergency */}
+          <button
+            onClick={() => navigate('/emergency')}
+            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold"
+          >
+            <PhoneCall className="w-[14px] h-[14px] shrink-0" />
+            <span className="text-[11px] font-semibold">SOS / Emergency</span>
+          </button>
           <button
             onClick={toggleDarkMode}
-            className={`w-10 h-10 rounded-full border ${darkMode ? 'border-slate-700 bg-slate-800 text-yellow-400' : 'border-gray-200 text-gray-400 hover:text-blue-600'} flex items-center justify-center transition-all`}
-            title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all ${darkMode ? 'text-blue-300 hover:bg-slate-800' : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'}`}
           >
-            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {darkMode ? <Sun className="w-[14px] h-[14px] shrink-0" /> : <Moon className="w-[14px] h-[14px] shrink-0" />}
+            <span className="text-[11px] font-semibold">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
           </button>
           <button
             data-testid="logout-btn"
             onClick={handleLogout}
-            className={`text-gray-400 hover:text-red-500 transition-colors ${darkMode ? 'hover:bg-slate-800 p-2 rounded-full' : ''}`}
-            title="Logout"
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all text-red-400 ${darkMode ? 'hover:bg-red-900/20' : 'hover:bg-red-50'}`}
           >
-            <LogOut className="w-6 h-6" />
+            <LogOut className="w-[14px] h-[14px] shrink-0" />
+            <span className="text-[11px] font-semibold">Sign Out</span>
           </button>
         </div>
       </div>
 
-      {/* Main Content Area - Floating Glassmorphic Container */}
-      <div className={`flex-1 m-4 ml-0 ${darkMode ? 'bg-slate-900/50 border-slate-700' : 'bg-white/40 border-white/60'} backdrop-blur-xl rounded-[2.5rem] shadow-2xl border overflow-hidden flex flex-col relative transition-all duration-300`}>
+      {/* Main Content Area */}
+      <div className={`flex-1 m-2 md:m-4 md:ml-0 mb-0 ${darkMode ? 'bg-slate-900/50 border-slate-700' : 'bg-white/40 border-white/60'} backdrop-blur-xl rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border overflow-hidden flex flex-col relative transition-all duration-300`}>
 
         {/* Top Header Bar */}
-        <div className={`px-8 py-6 flex items-center justify-between ${darkMode ? 'bg-slate-900/30 border-slate-700/50' : 'bg-white/30 border-white/40'} backdrop-blur-md border-b sticky top-0 z-10 transition-colors`}>
+        <div className={`px-6 py-4 flex items-center justify-between ${darkMode ? 'bg-slate-900/30 border-slate-700/50' : 'bg-white/30 border-white/40'} backdrop-blur-md border-b sticky top-0 z-50 transition-colors`}>
           <div>
-            <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Good Morning, {user?.full_name?.split(' ')[0] || 'User'}</h1>
-            <p className="text-sm text-gray-500 font-medium">Your weekly legal update <span className="text-blue-500">▼</span></p>
+            <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+              Hi, {(user?.full_name || user?.name || 'User').split(' ')[0]} 👋
+            </h1>
+            <p className="text-sm text-gray-500 font-medium">Your weekly legal update</p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* How-to-Use */}
+            <button
+              onClick={() => setShowHowToUse(true)}
+              className={`w-10 h-10 ${darkMode ? 'bg-slate-800 text-blue-400 hover:text-blue-300' : 'bg-white text-blue-500 hover:text-blue-600'} rounded-full flex items-center justify-center shadow-sm transition-colors`}
+              title="How to use this dashboard"
+            >
+              <HelpCircle className="w-5 h-5" />
+            </button>
+
+            {/* Refresh */}
+            <button
+              onClick={handleRefresh}
+              className={`w-10 h-10 ${darkMode ? 'bg-slate-800 text-slate-400 hover:text-blue-400' : 'bg-white text-gray-500 hover:text-blue-600'} rounded-full flex items-center justify-center shadow-sm transition-all`}
+              title="Refresh dashboard"
+            >
+              <RefreshCw className={`w-5 h-5 transition-transform ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+
+            {/* Notifications */}
             <div className="relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search here"
-                className={`pl-10 pr-4 py-2.5 ${darkMode ? 'bg-slate-800 text-white placeholder:text-slate-500' : 'bg-white text-gray-900'} rounded-full text-sm border-none shadow-[0_2px_10px_rgba(0,0,0,0.05)] focus:ring-2 focus:ring-blue-500 w-64 transition-all`}
-              />
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className={`relative w-10 h-10 ${darkMode ? 'bg-slate-800 text-slate-400 hover:text-blue-400' : 'bg-white text-gray-500 hover:text-blue-600'} rounded-full flex items-center justify-center shadow-sm transition-colors`}
+              >
+                <Bell className="w-5 h-5" />
+                {(() => {
+                  const unreadCount = buildNotifications().filter(n => !readNotifIds.includes(n.id)).length;
+                  if (unreadCount === 0) return null;
+                  return (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  );
+                })()}
+              </button>
+              {showNotifications && (() => {
+                const allNotifs = buildNotifications();
+                return (
+                  <div className={`absolute right-0 top-12 w-80 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-100'} rounded-2xl shadow-2xl border z-50 overflow-hidden`}>
+                    <div className={`flex items-center justify-between px-4 py-3 border-b ${darkMode ? 'border-slate-700' : 'border-gray-100'}`}>
+                      <h3 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Notifications</h3>
+                      <button onClick={() => setShowNotifications(false)} className="text-gray-400 hover:text-red-500 transition-colors"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {allNotifs.length === 0 ? (
+                        <p className={`text-sm text-center py-6 ${darkMode ? 'text-slate-400' : 'text-gray-400'}`}>No new notifications</p>
+                      ) : allNotifs.map(n => (
+                        <button key={n.id} onClick={() => { markOneRead(n.id); setActiveTab(n.tab); setShowNotifications(false); }}
+                          className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors ${!readNotifIds.includes(n.id) ? (darkMode ? 'bg-blue-900/10' : 'bg-blue-50') : ''} ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`}>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${darkMode ? 'bg-slate-800' : 'bg-blue-100'}`}>
+                            <n.icon className={`w-4 h-4 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                          </div>
+                          <p className={`text-xs leading-relaxed ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>{n.text}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
-            <button className={`w-10 h-10 ${darkMode ? 'bg-slate-800 text-slate-400 hover:text-blue-400' : 'bg-white text-gray-500 hover:text-blue-600'} rounded-full flex items-center justify-center shadow-sm transition-colors`}>
-              <AlertTriangle className="w-5 h-5" />
-            </button>
-            <button className={`w-10 h-10 ${darkMode ? 'bg-slate-800 text-slate-400 hover:text-blue-400' : 'bg-white text-gray-500 hover:text-blue-600'} rounded-full flex items-center justify-center shadow-sm transition-colors`}>
-              <MessageSquare className="w-5 h-5" />
-            </button>
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 p-[2px]">
+
+            {/* Profile avatar */}
+            <button
+              onClick={() => setActiveTab('profile')}
+              title="My Profile"
+              className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-blue-900 p-[2px] hover:scale-105 transition-transform"
+            >
               <div className={`w-full h-full rounded-full ${darkMode ? 'bg-slate-900' : 'bg-white'} flex items-center justify-center overflow-hidden`}>
-                {/* Placeholder Avatar if no image */}
-                <User className="w-5 h-5 text-gray-400" />
+                {profileImage
+                  ? <img src={profileImage} alt="Profile" className="w-full h-full object-cover rounded-full" />
+                  : <User className="w-5 h-5 text-gray-400" />}
               </div>
-            </div>
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-0">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-0 pb-16 md:pb-0">
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
-            <div className="p-8 space-y-8">
+            <div className="p-4 md:p-8 space-y-8">
 
               {/* Stats Section with Horizontal Scroll/Grid */}
               <div>
@@ -440,180 +841,251 @@ export default function UserDashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                   {/* Card 1 - Active Cases */}
-                  <div className={`${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white border-gray-50 shadow-sm'} rounded-[1.5rem] p-5 hover:shadow-md transition-all border relative overflow-hidden group`}>
-                    <div className={`absolute top-0 right-0 w-20 h-20 ${darkMode ? 'bg-blue-900/20' : 'bg-blue-50'} rounded-bl-[2.5rem] transition-colors group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30`}></div>
+                  <div className={`${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white border-gray-50 shadow-sm'} rounded-[1.5rem] p-5 hover:shadow-md transition-all border relative overflow-hidden group cursor-pointer`} onClick={() => setActiveTab('cases')}>
+                    <div className={`absolute top-0 right-0 w-20 h-20 ${darkMode ? 'bg-blue-900/20' : 'bg-blue-50'} rounded-bl-[2.5rem] transition-colors group-hover:bg-blue-100`}></div>
                     <div className="relative z-10">
                       <div className={`w-10 h-10 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                         <Gavel className="w-5 h-5" />
                       </div>
                       <h3 className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} text-sm font-medium mb-1`}>Active Cases</h3>
                       <div className="flex items-end gap-2">
-                        <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{cases.length}</span>
-                        <span className={`text-xs ${darkMode ? 'text-green-400 bg-green-900/30' : 'text-green-500 bg-green-50'} font-bold mb-1.5 px-2 py-0.5 rounded-full`}>+2 new</span>
+                        <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{cases.filter(c => c.status === 'active' || c.status === 'open').length}</span>
+                        {cases.filter(c => c.status === 'active' || c.status === 'open').length > 0 && (
+                          <span className={`text-xs ${darkMode ? 'text-blue-400 bg-blue-900/30' : 'text-blue-500 bg-blue-50'} font-bold mb-1.5 px-2 py-0.5 rounded-full`}>In progress</span>
+                        )}
                       </div>
-                      <p className="text-xs text-gray-400 mt-2">Updated just now</p>
+                      <p className="text-xs text-gray-400 mt-2">{cases.length === 0 ? 'No cases yet' : `${cases.length} total case${cases.length !== 1 ? 's' : ''}`}</p>
                     </div>
                   </div>
 
                   {/* Card 2 - Pending Docs */}
-                  <div className={`${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white border-gray-50 shadow-sm'} rounded-[1.5rem] p-5 hover:shadow-md transition-all border relative overflow-hidden group`}>
-                    <div className={`absolute top-0 right-0 w-20 h-20 ${darkMode ? 'bg-indigo-900/20' : 'bg-indigo-50'} rounded-bl-[2.5rem] transition-colors group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30`}></div>
+                  <div className={`${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white border-gray-50 shadow-sm'} rounded-[1.5rem] p-5 hover:shadow-md transition-all border relative overflow-hidden group cursor-pointer`} onClick={() => setActiveTab('documents')}>
+                    <div className={`absolute top-0 right-0 w-20 h-20 ${darkMode ? 'bg-blue-900/20' : 'bg-blue-50'} rounded-bl-[2.5rem] transition-colors group-hover:bg-blue-100`}></div>
                     <div className="relative z-10">
-                      <div className={`w-10 h-10 ${darkMode ? 'bg-indigo-900/30 text-indigo-400' : 'bg-indigo-50 text-indigo-600'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                      <div className={`w-10 h-10 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                         <FileText className="w-5 h-5" />
                       </div>
-                      <h3 className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} text-sm font-medium mb-1`}>Pending Docs</h3>
+                      <h3 className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} text-sm font-medium mb-1`}>Documents</h3>
                       <div className="flex items-end gap-2">
                         <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{documents.length}</span>
-                        <span className={`text-xs ${darkMode ? 'text-orange-400 bg-orange-900/30' : 'text-orange-500 bg-orange-50'} font-bold mb-1.5 px-2 py-0.5 rounded-full`}>Action needed</span>
+                        {documents.length > 0 && <span className={`text-xs ${darkMode ? 'text-blue-400 bg-blue-900/30' : 'text-blue-500 bg-blue-50'} font-bold mb-1.5 px-2 py-0.5 rounded-full`}>In vault</span>}
                       </div>
-                      <p className="text-xs text-gray-400 mt-2">Requires review</p>
+                      <p className="text-xs text-gray-400 mt-2">{documents.length === 0 ? 'No documents yet' : 'Click to manage'}</p>
                     </div>
                   </div>
 
-                  {/* Card 3 - Hearings */}
-                  <div className={`${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white border-gray-50 shadow-sm'} rounded-[1.5rem] p-5 hover:shadow-md transition-all border relative overflow-hidden group`}>
-                    <div className={`absolute top-0 right-0 w-20 h-20 ${darkMode ? 'bg-orange-900/20' : 'bg-orange-50'} rounded-bl-[2.5rem] transition-colors group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30`}></div>
+                  {/* Card 3 - Appointments */}
+                  <div className={`${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white border-gray-50 shadow-sm'} rounded-[1.5rem] p-5 hover:shadow-md transition-all border relative overflow-hidden group cursor-pointer`} onClick={() => setActiveTab('consultation')}>
+                    <div className={`absolute top-0 right-0 w-20 h-20 ${darkMode ? 'bg-blue-900/20' : 'bg-blue-50'} rounded-bl-[2.5rem] transition-colors group-hover:bg-blue-100`}></div>
                     <div className="relative z-10">
-                      <div className={`w-10 h-10 ${darkMode ? 'bg-orange-900/30 text-orange-400' : 'bg-orange-50 text-orange-600'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                      <div className={`w-10 h-10 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                         <Clock className="w-5 h-5" />
                       </div>
-                      <h3 className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} text-sm font-medium mb-1`}>Next Hearing</h3>
+                      <h3 className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} text-sm font-medium mb-1`}>Appointments</h3>
                       <div className="flex items-end gap-2">
-                        <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{bookings.length}</span>
-                        <span className={`text-xs ${darkMode ? 'text-blue-400 bg-blue-900/30' : 'text-blue-500 bg-blue-50'} font-bold mb-1.5 px-2 py-0.5 rounded-full`}>Upcoming</span>
+                        <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{bookings.filter(b => b.status === 'confirmed' || b.status === 'pending').length}</span>
+                        {bookings.filter(b => b.status === 'confirmed').length > 0 && (
+                          <span className={`text-xs ${darkMode ? 'text-blue-400 bg-blue-900/30' : 'text-blue-500 bg-blue-50'} font-bold mb-1.5 px-2 py-0.5 rounded-full`}>Upcoming</span>
+                        )}
                       </div>
-                      <p className="text-xs text-gray-400 mt-2">Check schedule</p>
+                      <p className="text-xs text-gray-400 mt-2">{bookings.length === 0 ? 'No bookings yet' : `${bookings.length} total`}</p>
                     </div>
                   </div>
 
                   {/* Card 4 - Messages */}
-                  <div className={`${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white border-gray-50 shadow-sm'} rounded-[1.5rem] p-5 hover:shadow-md transition-all border relative overflow-hidden group`}>
-                    <div className={`absolute top-0 right-0 w-20 h-20 ${darkMode ? 'bg-green-900/20' : 'bg-green-50'} rounded-bl-[2.5rem] transition-colors group-hover:bg-green-100 dark:group-hover:bg-green-900/30`}></div>
+                  <div className={`${darkMode ? 'bg-slate-900 border-slate-800 shadow-[0_4px_20px_rgba(0,0,0,0.2)]' : 'bg-white border-gray-50 shadow-sm'} rounded-[1.5rem] p-5 hover:shadow-md transition-all border relative overflow-hidden group cursor-pointer`} onClick={() => setActiveTab('messages')}>
+                    <div className={`absolute top-0 right-0 w-20 h-20 ${darkMode ? 'bg-blue-900/20' : 'bg-blue-50'} rounded-bl-[2.5rem] transition-colors group-hover:bg-blue-100`}></div>
                     <div className="relative z-10">
-                      <div className={`w-10 h-10 ${darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-600'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
+                      <div className={`w-10 h-10 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                         <MessageSquare className="w-5 h-5" />
                       </div>
-                      <h3 className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} text-sm font-medium mb-1`}>New Messages</h3>
+                      <h3 className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} text-sm font-medium mb-1`}>Messages</h3>
                       <div className="flex items-end gap-2">
-                        <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>3</span>
-                        <span className={`text-xs ${darkMode ? 'text-green-400 bg-green-900/30' : 'text-green-500 bg-green-50'} font-bold mb-1.5 px-2 py-0.5 rounded-full`}>Active</span>
+                        <span className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>{messages.length}</span>
+                        {messages.length > 0 && <span className={`text-xs ${darkMode ? 'text-blue-400 bg-blue-900/30' : 'text-blue-500 bg-blue-50'} font-bold mb-1.5 px-2 py-0.5 rounded-full`}>Active</span>}
                       </div>
-                      <p className="text-xs text-gray-400 mt-2">Response needed</p>
+                      <p className="text-xs text-gray-400 mt-2">{messages.length === 0 ? 'No messages yet' : 'Click to view'}</p>
                     </div>
                   </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Featured Section - My Legal Status */}
-                <div className="lg:col-span-1 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-xl"></div>
-
-                  <div className="relative z-10 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-6">
-                        <h3 className="text-lg font-bold">Case<br />Status</h3>
-                        <button className="text-white/70 hover:text-white">
-                          <span className="text-xl">⋮</span>
-                        </button>
-                      </div>
-
-                      {/* Radial Progress Placeholder */}
-                      <div className="flex justify-center mb-6">
-                        <div className="relative w-40 h-24 overflow-hidden">
-                          <div className="absolute top-0 left-0 w-40 h-40 border-[12px] border-white/20 rounded-full"></div>
-                          <div className="absolute top-0 left-0 w-40 h-40 border-[12px] border-t-white border-r-white border-b-transparent border-l-transparent rounded-full rotate-[-45deg]"></div>
-                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 text-center mb-2">
-                            <span className="text-3xl font-bold">75%</span>
+                {/* My Account Summary Card */}
+                {(() => {
+                  const totalItems = cases.length + documents.length + bookings.length;
+                  const activeItems = cases.filter(c => c.status === 'active' || c.status === 'open').length
+                    + bookings.filter(b => b.status === 'confirmed').length;
+                  const pct = totalItems === 0 ? 0 : Math.round((activeItems / Math.max(totalItems, 1)) * 100);
+                  const nextBooking = bookings
+                    .filter(b => b.status === 'confirmed' || b.status === 'pending')
+                    .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+                  return (
+                    <div className="lg:col-span-1 bg-gradient-to-br from-blue-800 to-black rounded-[2rem] p-6 text-white shadow-xl relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+                      <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full translate-y-1/2 -translate-x-1/2 blur-xl"></div>
+                      <div className="relative z-10 h-full flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-lg font-bold mb-4">Account Summary</h3>
+                          <div className="space-y-3">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-blue-100">Cases</span>
+                              <span className="font-bold">{cases.length}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-blue-100">Appointments</span>
+                              <span className="font-bold">{bookings.length}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-blue-100">Documents</span>
+                              <span className="font-bold">{documents.length}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-blue-100">Messages</span>
+                              <span className="font-bold">{messages.length}</span>
+                            </div>
                           </div>
+                        </div>
+                        <div className="mt-4">
+                          {nextBooking ? (
+                            <>
+                              <h4 className="font-semibold mb-1 text-sm">Next Appointment</h4>
+                              <p className="text-blue-100 text-xs mb-3">{nextBooking.date} {nextBooking.time ? `at ${nextBooking.time}` : ''}</p>
+                            </>
+                          ) : (
+                            <p className="text-blue-100 text-xs mb-3">No upcoming appointments</p>
+                          )}
+                          <button onClick={() => setActiveTab('consultation')} className="w-full py-2.5 bg-white text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors">
+                            Book a Lawyer
+                          </button>
                         </div>
                       </div>
                     </div>
-
-                    <div>
-                      <h4 className="font-semibold mb-1">Ongoing Analysis</h4>
-                      <p className="text-blue-100 text-sm mb-4">Your case documentation is 75% complete. Review pending items.</p>
-                      <button className="w-full py-3 bg-white text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors">
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  );
+                })()}
 
                 {/* Upcoming List */}
                 <div className="lg:col-span-2 space-y-4">
                   <div className="flex items-center justify-between px-2">
                     <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Timeline & Activity</h2>
-                    <span className={`text-xs font-semibold px-3 py-1 ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-white text-gray-500'} rounded-full shadow-sm cursor-pointer`}>View History</span>
+                    <span onClick={() => setActiveTab('consultation')} className={`text-xs font-semibold px-3 py-1 ${darkMode ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-white text-gray-500 hover:bg-blue-50 hover:text-blue-600'} rounded-full shadow-sm cursor-pointer transition-colors`}>View History →</span>
                   </div>
 
                   <div className={`${darkMode ? 'bg-slate-900/40 border-slate-700' : 'bg-white/60 border-white/60'} backdrop-blur-md rounded-[2rem] p-6 shadow-sm border`}>
-                    <div className="space-y-4">
-                      {/* Activity Item 1 */}
-                      <div className={`flex items-center justify-between p-4 ${darkMode ? 'bg-slate-800 border-slate-700 shadow-none' : 'bg-white border-gray-50/50 shadow-[0_2px_8px_rgba(0,0,0,0.02)]'} rounded-2xl border hover:shadow-md transition-all`}>
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'} rounded-xl flex items-center justify-center`}>
-                            <Gavel className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <h4 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>New Evidence Submitted</h4>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Case #4829 • Property Dispute</p>
-                          </div>
+                    <div className="space-y-3">
+                      {/* Real bookings as timeline items */}
+                      {bookings.length === 0 && cases.length === 0 ? (
+                        <div className={`flex flex-col items-center justify-center py-8 ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                          <Calendar className="w-10 h-10 mb-2 opacity-40" />
+                          <p className="text-sm">No activity yet. Book a lawyer to get started.</p>
                         </div>
-                        <div className="text-right">
-                          <span className={`text-xs font-bold ${darkMode ? 'text-gray-300' : 'text-gray-800'} block`}>Today</span>
-                          <span className={`text-[10px] ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>10:42 AM</span>
-                        </div>
-                      </div>
+                      ) : (
+                        [...bookings.slice(0, 3).map(b => ({ type: 'booking', data: b })),
+                        ...cases.slice(0, 2).map(c => ({ type: 'case', data: c }))]
+                          .slice(0, 4)
+                          .map((item, idx) => {
+                            if (item.type === 'booking') {
+                              const b = item.data;
+                              const isCancelled = b.status === 'cancelled';
+                              return (
+                                <div key={`b-${idx}`} className={`flex items-center justify-between p-4 ${isCancelled
+                                  ? (darkMode ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-100')
+                                  : (darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-50/50 shadow-[0_2px_8px_rgba(0,0,0,0.02)]')
+                                  } rounded-2xl border hover:shadow-md transition-all`}>
+                                  <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 ${isCancelled ? 'bg-red-100 text-red-500' : (darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600')} rounded-xl flex items-center justify-center`}>
+                                      <Calendar className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                      <h4 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                        Appointment {isCancelled ? '(Cancelled)' : `— ${b.status}`}
+                                      </h4>
+                                      <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                                        {b.lawyer_name || 'Lawyer'} • {b.date || 'Date TBD'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className={`text-xs font-bold ${isCancelled ? 'text-red-500' : (darkMode ? 'text-gray-300' : 'text-gray-800')} block capitalize`}>{b.status}</span>
+                                    <span className={`text-[10px] ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{b.time || ''}</span>
+                                  </div>
+                                </div>
+                              );
+                            } else {
+                              const c = item.data;
+                              return (
+                                <div key={`c-${idx}`} className={`flex items-center justify-between p-4 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-50/50 shadow-[0_2px_8px_rgba(0,0,0,0.02)]'} rounded-2xl border hover:shadow-md transition-all`}>
+                                  <div className="flex items-center gap-4">
+                                    <div className={`w-10 h-10 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'} rounded-xl flex items-center justify-center`}>
+                                      <Gavel className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                      <h4 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-800'}`}>{c.title || 'Case'}</h4>
+                                      <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{c.case_type || c.type || 'Legal Matter'} • {c.status}</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className={`text-xs font-bold capitalize ${darkMode ? 'text-gray-300' : 'text-gray-800'} block`}>{c.status}</span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                          })
+                      )}
 
-                      {/* Activity Item 2 */}
-                      <div className={`flex items-center justify-between p-4 ${darkMode ? 'bg-slate-800 border-slate-700 shadow-none' : 'bg-white border-gray-50/50 shadow-[0_2px_8px_rgba(0,0,0,0.02)]'} rounded-2xl border hover:shadow-md transition-all`}>
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 ${darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-600'} rounded-xl flex items-center justify-center`}>
-                            <User className="w-5 h-5" />
+                      {/* Upcoming Appointments List */}
+                      {(() => {
+                        const upcoming = bookings
+                          .filter(b => b.status === 'confirmed' || b.status === 'pending')
+                          .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0))
+                          .slice(0, 4);
+                        return (
+                          <div className="mt-4 p-4">
+                            <p className={`text-xs font-semibold mb-3 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>📅 Upcoming Appointments</p>
+                            {upcoming.length === 0 ? (
+                              <p className={`text-xs ${darkMode ? 'text-slate-600' : 'text-gray-400'} text-center py-4`}>No upcoming appointments</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {upcoming.map((b, i) => (
+                                  <div key={i} className={`flex items-center justify-between rounded-xl px-3 py-2 ${darkMode ? 'bg-slate-800' : 'bg-blue-50'}`}>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${b.status === 'confirmed' ? 'bg-blue-400' : 'bg-slate-400'}`} />
+                                      <span className={`text-xs font-medium truncate ${darkMode ? 'text-slate-200' : 'text-gray-800'}`}>
+                                        {b.lawyer_name || 'Lawyer'}
+                                      </span>
+                                    </div>
+                                    <span className={`text-xs flex-shrink-0 ml-2 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                                      {b.date}{b.time ? ` ${b.time}` : ''}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <div>
-                            <h4 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Meeting Confirmed</h4>
-                            <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Adv. Sharma • Consultation</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className={`text-xs font-bold ${darkMode ? 'text-gray-300' : 'text-gray-800'} block`}>Tomorrow</span>
-                          <span className={`text-[10px] ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>2:00 PM</span>
-                        </div>
-                      </div>
-
-                      {/* Chart Placeholder Area */}
-                      <div className="mt-4 p-4">
-                        <div className="flex items-end justify-between h-32 gap-2">
-                          {[40, 65, 30, 85, 50, 60, 90].map((h, i) => (
-                            <div key={i} className={`flex-1 ${darkMode ? 'bg-slate-800' : 'bg-blue-100'} rounded-t-lg relative group overflow-hidden`}>
-                              <div
-                                className="absolute bottom-0 left-0 w-full bg-blue-500 rounded-t-lg transition-all duration-500 group-hover:bg-blue-600"
-                                style={{ height: `${h}%` }}
-                              ></div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className={`flex justify-between mt-2 text-xs ${darkMode ? 'text-slate-500' : 'text-gray-400'} font-medium px-1`}>
-                          <span>Mon</span>
-                          <span>Tue</span>
-                          <span>Wed</span>
-                          <span>Thu</span>
-                          <span>Fri</span>
-                          <span>Sat</span>
-                          <span>Sun</span>
-                        </div>
-                      </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
-                {/* Last section for Dashboard Tab */}
+              {/* Quick Actions */}
+              <div className="pb-6">
+                <h2 className={`text-lg font-bold mb-4 px-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Quick Actions</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Book a Lawyer', icon: Calendar, color: 'from-blue-500 to-blue-600', tab: 'consultation' },
+                    { label: 'AI Legal Help', icon: Sparkles, color: 'from-blue-600 to-blue-800', action: () => navigate('/lxwyerai-premium') },
+                    { label: 'Upload Doc', icon: FileText, color: 'from-slate-700 to-slate-900', tab: 'documents' },
+                    { label: 'Open Case', icon: Gavel, color: 'from-blue-900 to-black', tab: 'cases' },
+                  ].map(({ label, icon: Icon, color, tab, action }) => (
+                    <button key={label} onClick={action || (() => setActiveTab(tab))}
+                      className={`flex flex-col items-center justify-center gap-2 p-5 rounded-2xl bg-gradient-to-br ${color} text-white shadow-lg hover:scale-105 active:scale-95 transition-all`}>
+                      <Icon className="w-6 h-6" />
+                      <span className="text-xs font-bold">{label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
 
             </div>
@@ -622,91 +1094,184 @@ export default function UserDashboard() {
           {/* Consultation Tab */}
           {activeTab === 'consultation' && (
             <div className={`p-8 ${darkMode ? 'bg-slate-950' : 'bg-white'} min-h-full transition-colors`}>
-              <h1 className={`text-3xl font-bold mb-8 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Find Your Legal Expert</h1>
+              <div className="flex items-center justify-between mb-8">
+                <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Find Your Legal Expert</h1>
+                <button onClick={() => navigate('/find-lawyer/manual')}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow-lg transition-colors">
+                  <ExternalLink className="w-4 h-4" /> Browse All Lawyers
+                </button>
+              </div>
 
               {/* Consultation Options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-                <div className="relative overflow-hidden rounded-3xl shadow-xl">
-                  <img
-                    src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600"
-                    alt="Consultation"
-                    className="w-full h-64 object-cover"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                <div className="relative overflow-hidden rounded-3xl shadow-xl cursor-pointer" onClick={() => navigate('/find-lawyer/manual')}>
+                  <img src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600" alt="Consultation" className="w-full h-56 object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent p-6 flex flex-col justify-end">
-                    <div className="flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full mb-4">
-                      <Search className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold mb-2 text-white">Direct Consultation</h3>
-                    <p className="text-gray-200 text-sm mb-4">Browse our directory of vetted lawyers. Filter by specialization, experience, and location to find your perfect match.</p>
-                    <Button className="bg-white hover:bg-gray-100 text-gray-900 rounded-xl shadow-lg">
-                      Find a Lawyer →
-                    </Button>
+                    <div className="flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full mb-3"><Search className="w-5 h-5 text-white" /></div>
+                    <h3 className="text-xl font-bold mb-1 text-white">Browse Lawyers</h3>
+                    <p className="text-gray-200 text-sm mb-3">Filter by specialization, experience and location.</p>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 rounded-xl font-semibold text-sm w-fit hover:bg-gray-100 transition-colors">Browse Directory →</div>
                   </div>
                 </div>
-
-                <div className={`relative overflow-hidden rounded-3xl ${darkMode ? 'bg-gradient-to-br from-blue-900 to-indigo-900 border-blue-800' : 'bg-gradient-to-br from-blue-600 to-indigo-700 border-blue-500'} border p-6 flex flex-col shadow-xl`}>
-                  <div className="flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full mb-4">
-                    <Mic className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2 text-white">AI-Powered Recommendation</h3>
-                  <p className="text-blue-100 text-sm mb-4 flex-1">Answer a few questions and let our advanced AI match you with the best lawyer for your specific case instantly.</p>
-                  <Button className="bg-white hover:bg-gray-100 text-blue-700 rounded-xl shadow-lg">
-                    Start Matching 🔒
-                  </Button>
+                <div className={`relative overflow-hidden rounded-3xl ${darkMode ? 'bg-gradient-to-br from-blue-900 to-black border-blue-900' : 'bg-gradient-to-br from-blue-700 to-black'} p-6 flex flex-col shadow-xl cursor-pointer`} onClick={() => navigate('/find-lawyer/manual')}>
+                  <div className="flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full mb-3"><Sparkles className="w-5 h-5 text-white" /></div>
+                  <h3 className="text-xl font-bold mb-1 text-white">AI Lawyer Match</h3>
+                  <p className="text-blue-100 text-sm mb-4 flex-1">Let our AI find the best lawyer match for your specific situation.</p>
+                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-xl font-semibold text-sm w-fit hover:bg-blue-50 transition-colors">Start Matching →</div>
                 </div>
               </div>
 
-              {/* Features */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <div className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} rounded-2xl p-6 border text-center shadow-sm hover:shadow-md transition-shadow`}>
-                  <div className={`w-14 h-14 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600'} rounded-xl flex items-center justify-center mx-auto mb-4`}>
-                    <Shield className="w-7 h-7" />
+              {/* My Appointments */}
+              <div className="mb-10">
+                <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>My Appointments</h2>
+                {bookings.length === 0 ? (
+                  <div className={`text-center py-10 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
+                    <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No appointments yet. Book a lawyer to get started.</p>
                   </div>
-                  <h4 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>End-to-End Encrypted</h4>
-                  <p className={`${darkMode ? 'text-slate-400' : 'text-gray-600'} text-sm`}>Your privacy is guaranteed. No recordings, ever.</p>
-                </div>
-
-                <div className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} rounded-2xl p-6 border text-center shadow-sm hover:shadow-md transition-shadow`}>
-                  <div className={`w-14 h-14 ${darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-100 text-green-600'} rounded-xl flex items-center justify-center mx-auto mb-4`}>
-                    <FileCheck className="w-7 h-7" />
+                ) : (
+                  <div className="space-y-3">
+                    {bookings.map(b => {
+                      const bid = b._id || b.id;
+                      const isRescheduledByLawyer = b.status === 'rescheduled_by_lawyer';
+                      const isRescheduledByUser = b.status === 'rescheduled_by_user';
+                      // Deadline countdown
+                      let deadlineLabel = '';
+                      if ((isRescheduledByLawyer || isRescheduledByUser) && b.reschedule_deadline) {
+                        const dl = new Date(b.reschedule_deadline);
+                        const minsLeft = Math.max(0, Math.round((dl - new Date()) / 60000));
+                        deadlineLabel = minsLeft > 60 ? `${Math.floor(minsLeft/60)}h ${minsLeft%60}m left` : minsLeft > 0 ? `${minsLeft}m left` : 'Expired';
+                      }
+                      const statusColor = b.status === 'confirmed' ? 'bg-green-100 text-green-700' : b.status === 'cancelled' ? 'bg-red-100 text-red-700' : b.status === 'completed' ? 'bg-blue-100 text-blue-700' : isRescheduledByLawyer ? 'bg-amber-100 text-amber-700' : isRescheduledByUser ? 'bg-violet-100 text-violet-700' : 'bg-yellow-100 text-yellow-700';
+                      // Join meet button logic
+                      let canJoin = false, meetingEnded = false;
+                      if (b.status === 'confirmed' && b.meet_link && b.date && b.time) {
+                        try {
+                          const [h, mRest] = (b.time || '00:00 AM').split(':');
+                          const [m, period] = (mRest || '00 AM').split(' ');
+                          let hours = parseInt(h, 10); const mins = parseInt(m || 0, 10);
+                          if (period === 'PM' && hours !== 12) hours += 12;
+                          if (period === 'AM' && hours === 12) hours = 0;
+                          const meetDate = new Date(`${b.date}T00:00:00`);
+                          meetDate.setHours(hours, mins, 0, 0);
+                          const now = new Date();
+                          const fiveMinBefore = new Date(meetDate.getTime() - 5 * 60 * 1000);
+                          meetingEnded = now > new Date(meetDate.getTime() + 60 * 60 * 1000);
+                          canJoin = now >= fiveMinBefore && !meetingEnded;
+                        } catch {}
+                      }
+                      return (
+                        <div key={bid} className={`p-4 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'}`}><Calendar className="w-5 h-5" /></div>
+                              <div>
+                                <h4 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{b.lawyer_name || 'Lawyer'}</h4>
+                                <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                                  {b.date}{b.time ? ` at ${b.time}` : ''}
+                                  {b.consultation_type ? ` • ${b.consultation_type === 'video' ? '🎥 Video' : b.consultation_type === 'audio' ? '📞 Audio' : '🏛️ In-Person'}` : ''}
+                                </p>
+                                {b.notes && <p className={`text-xs mt-0.5 italic ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{b.notes}</p>}
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${statusColor}`}>{b.status}</span>
+                              {/* Join Meet button */}
+                              {b.status === 'confirmed' && b.meet_link && !meetingEnded && (
+                                canJoin
+                                  ? <a href={b.meet_link} target="_blank" rel="noreferrer" className="px-3 py-1 text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors animate-pulse">🎥 Join Meet</a>
+                                  : <span className={`px-3 py-1 text-xs font-semibold rounded-lg opacity-50 cursor-not-allowed ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`} title="Opens 5 min before meeting">🎥 Join Meet</span>
+                              )}
+                              {/* Rate Lawyer for completed bookings */}
+                              {b.status === 'completed' && !b.rating && (
+                                <button onClick={() => setRatingModal({ bookingId: bid, lawyerName: b.lawyer_name || 'Lawyer' })}
+                                  className="px-3 py-1 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1">
+                                  <Star className="w-3 h-3" /> Rate
+                                </button>
+                              )}
+                              {b.status === 'completed' && b.rating && (
+                                <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 flex items-center gap-1">
+                                  <Star className="w-2.5 h-2.5 fill-blue-500 text-blue-500" /> {b.rating}/5
+                                </span>
+                              )}
+                              {/* Message button for confirmed/completed bookings */}
+                               {(b.status === 'confirmed' || b.status === 'completed') && b.lawyer_id && (
+                                <button
+                                  onClick={() => {
+                                    const lawyerId = b.lawyer_id;
+                                    const lawyerName = b.lawyer_name || 'Lawyer';
+                                    setActiveTab('messages');
+                                    setTimeout(() => {
+                                      handleSelectChat({ other_user_id: lawyerId, id: lawyerId, name: lawyerName, avatar: lawyerName[0]?.toUpperCase() || 'L' });
+                                    }, 100);
+                                  }}
+                                  className="px-3 py-1 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1"
+                                >
+                                  <MessageSquare className="w-3 h-3" /> Message
+                                </button>
+                              )}
+                              {/* Cancel button for pending/confirmed */}
+                              {(b.status === 'pending' || b.status === 'confirmed') && (
+                                <button onClick={() => setCancelBookingId(bid)}
+                                  className="px-3 py-1 text-xs font-semibold text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">Cancel</button>
+                              )}
+                            </div>
+                          </div>
+                          {/* ── Lawyer proposed a new time — user must respond ── */}
+                          {isRescheduledByLawyer && (
+                            <div className={`mt-3 rounded-xl p-3 border ${darkMode ? 'bg-blue-900/20 border-blue-700/40' : 'bg-blue-50 border-blue-200'}`}>
+                              <p className={`text-xs font-bold ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>📅 Lawyer Proposed New Time</p>
+                              <p className={`text-sm font-semibold mt-0.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{b.proposed_date} at {b.proposed_time}</p>
+                              {deadlineLabel && <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>⏱ {deadlineLabel} to respond · auto-cancels after deadline</p>}
+                              {showCounterForm === bid ? (
+                                <div className="mt-2 space-y-2">
+                                  <p className={`text-[11px] font-semibold ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>Your preferred time:</p>
+                                  <div className="flex gap-2">
+                                    <input type="date" value={counterDate} onChange={e => setCounterDate(e.target.value)}
+                                      min={new Date().toISOString().split('T')[0]}
+                                      className={`flex-1 text-xs px-2 py-1.5 rounded-lg border outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
+                                    <input type="time" value={counterTime} onChange={e => setCounterTime(e.target.value)}
+                                      className={`flex-1 text-xs px-2 py-1.5 rounded-lg border outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button onClick={() => handleCounterReschedule(bid)}
+                                      className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-700 hover:bg-blue-800 text-white transition-colors">Send Proposal</button>
+                                    <button onClick={() => setShowCounterForm(null)}
+                                      className={`px-3 py-1.5 text-xs rounded-lg border ${darkMode ? 'border-slate-600 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Back</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="flex gap-2 mt-2">
+                                  <button onClick={() => handleAcceptReschedule(bid, b.proposed_date, b.proposed_time)}
+                                    className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors">✅ Accept</button>
+                                  <button onClick={() => setShowCounterForm(bid)}
+                                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg border ${darkMode ? 'border-blue-500 text-blue-400 hover:bg-blue-900/20' : 'border-blue-500 text-blue-600 hover:bg-blue-50'} transition-colors`}>🗓 Propose New Time</button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {/* ── Counter-proposal sent — waiting for lawyer ── */}
+                          {isRescheduledByUser && (
+                            <div className={`mt-3 rounded-xl p-3 border ${darkMode ? 'bg-slate-900/40 border-slate-700/40' : 'bg-slate-50 border-slate-200'}`}>
+                              <p className={`text-xs font-bold ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>🔄 Counter-Proposal Sent</p>
+                              <p className={`text-sm mt-0.5 ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>You proposed: <strong>{b.proposed_date} at {b.proposed_time}</strong></p>
+                              {deadlineLabel && <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>⏱ Lawyer has {deadlineLabel} to respond — auto-cancels if no reply</p>}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <h4 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>PDF Transcripts</h4>
-                  <p className={`${darkMode ? 'text-slate-400' : 'text-gray-600'} text-sm`}>Receive a searchable PDF transcript of your call.</p>
-                </div>
-
-                <div className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} rounded-2xl p-6 border text-center shadow-sm hover:shadow-md transition-shadow`}>
-                  <div className={`w-14 h-14 ${darkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-600'} rounded-xl flex items-center justify-center mx-auto mb-4`}>
-                    <Mic className="w-7 h-7" />
-                  </div>
-                  <h4 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Voice Assistant</h4>
-                  <p className={`${darkMode ? 'text-slate-400' : 'text-gray-600'} text-sm`}>Easily navigate and control your call with voice.</p>
-                </div>
+                )}
               </div>
 
-              {/* Recommended Lawyers */}
-              <h2 className={`text-2xl font-bold mb-6 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Recommended Lawyers</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {dummyLawyers.map((lawyer) => (
-                  <LawyerCard
-                    key={lawyer.id}
-                    name={lawyer.name}
-                    specialization={lawyer.specialization}
-                    experience={lawyer.experience}
-                    successRate={lawyer.successRate}
-                    location={lawyer.location}
-                    hourlyRate={lawyer.hourlyRate}
-                    onBook={() => toast.success(`Booking request sent to ${lawyer.name}`)}
-                    darkMode={darkMode}
-                  />
-                ))}
-              </div>
             </div>
           )}
 
           {/* ChatBot Tab - Enhanced with Legal Analysis Cards */}
           {activeTab === 'chatbot' && (
             <div className={`h-full flex flex-col ${darkMode ? 'bg-slate-950' : 'bg-gray-50'} transition-colors`}>
-              <div className={`p-6 border-b ${darkMode ? 'border-slate-800 bg-gradient-to-r from-blue-900 to-indigo-900' : 'border-gray-200 bg-gradient-to-r from-blue-600 to-indigo-600'}`}>
+              <div className={`p-6 border-b ${darkMode ? 'border-slate-800 bg-gradient-to-r from-blue-900 to-black' : 'border-gray-200 bg-gradient-to-r from-blue-700 to-blue-900'}`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h1 className="text-2xl font-bold mb-1 text-white">Legal AI Assistant</h1>
@@ -729,7 +1294,7 @@ export default function UserDashboard() {
                       <div className="space-y-4">
                         {/* AI Avatar and basic response */}
                         <div className="flex justify-start">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-lg">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-900 rounded-full flex items-center justify-center mr-3 flex-shrink-0 shadow-lg">
                             <Scale className="w-5 h-5 text-white" />
                           </div>
                           <div className="max-w-3xl">
@@ -752,24 +1317,24 @@ export default function UserDashboard() {
                                     icon={Gavel}
                                     title="Bail Information"
                                     content={msg.legalData.analysis.bailInfo}
-                                    borderColor="border-red-500"
-                                    bgColor="bg-red-500"
+                                    borderColor="border-blue-700"
+                                    bgColor="bg-blue-700"
                                     darkMode={darkMode}
                                   />
                                   <LegalAnalysisCard
                                     icon={Clock}
                                     title="Trial Timeline"
                                     content={msg.legalData.analysis.timeline}
-                                    borderColor="border-green-500"
-                                    bgColor="bg-green-500"
+                                    borderColor="border-blue-500"
+                                    bgColor="bg-blue-500"
                                     darkMode={darkMode}
                                   />
                                   <LegalAnalysisCard
                                     icon={AlertTriangle}
                                     title="Punishment"
                                     content={msg.legalData.analysis.punishment}
-                                    borderColor="border-orange-500"
-                                    bgColor="bg-orange-500"
+                                    borderColor="border-blue-600"
+                                    bgColor="bg-blue-600"
                                     darkMode={darkMode}
                                   />
                                   <LegalAnalysisCard
@@ -783,35 +1348,38 @@ export default function UserDashboard() {
                                     icon={Shield}
                                     title="Crime Type"
                                     content={msg.legalData.analysis.crimeType}
-                                    borderColor="border-purple-500"
-                                    bgColor="bg-purple-500"
+                                    borderColor="border-slate-600"
+                                    bgColor="bg-slate-600"
                                   />
                                   <LegalAnalysisCard
                                     icon={TrendingUp}
                                     title="Severity"
                                     content={msg.legalData.analysis.severity}
-                                    borderColor="border-amber-500"
-                                    bgColor="bg-amber-500"
+                                    borderColor="border-blue-400"
+                                    bgColor="bg-blue-400"
                                   />
                                 </div>
 
                                 {/* Recommended Lawyers */}
                                 <div>
-                                  <h3 className="text-lg font-bold text-gray-900 mb-4">Recommended Legal Experts</h3>
+                                  <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Recommended Legal Experts</h3>
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    {dummyLawyers.map((lawyer) => (
+                                    {(lawyers.length > 0 ? lawyers.slice(0, 3) : []).map((lawyer) => (
                                       <LawyerCard
-                                        key={lawyer.id}
-                                        name={lawyer.name}
-                                        specialization={lawyer.specialization}
-                                        experience={lawyer.experience}
-                                        successRate={lawyer.successRate}
-                                        location={lawyer.location}
-                                        hourlyRate={lawyer.hourlyRate}
-                                        onBook={() => toast.success(`Booking request sent to ${lawyer.name}`)}
+                                        key={lawyer._id || lawyer.id}
+                                        name={lawyer.full_name || lawyer.name}
+                                        specialization={lawyer.specialization || lawyer.practice_area || 'General Practice'}
+                                        experience={lawyer.experience_years || lawyer.experience || 0}
+                                        successRate={lawyer.success_rate || lawyer.successRate || 90}
+                                        location={lawyer.city || lawyer.location || 'India'}
+                                        hourlyRate={lawyer.hourly_rate || lawyer.hourlyRate || 0}
+                                        onBook={() => setBookingLawyer(lawyer)}
                                         darkMode={darkMode}
                                       />
                                     ))}
+                                    {lawyers.length === 0 && (
+                                      <p className={`text-sm col-span-3 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>No lawyers available right now.</p>
+                                    )}
                                   </div>
                                 </div>
 
@@ -832,7 +1400,7 @@ export default function UserDashboard() {
 
                 {loading && (
                   <div className="flex justify-start">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center mr-3 shadow-lg">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-900 rounded-full flex items-center justify-center mr-3 shadow-lg">
                       <Scale className="w-5 h-5 text-white" />
                     </div>
                     <div className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} rounded-2xl p-4 border shadow-sm flex items-center gap-2`}>
@@ -864,7 +1432,7 @@ export default function UserDashboard() {
                   </div>
                   <button
                     type="submit"
-                    className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-4 bg-gradient-to-r from-blue-700 to-blue-900 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={loading || !chatInput.trim()}
                   >
                     <Send className="w-6 h-6" />
@@ -886,189 +1454,870 @@ export default function UserDashboard() {
           )}
 
           {/* Messages Tab */}
-          {
-            activeTab === 'messages' && (
-              <div className="p-8">
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-                      <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold border border-green-200 flex items-center">
-                        <Shield className="w-3 h-3 mr-1" />
-                        End-to-End Encrypted
-                      </span>
-                    </div>
-                    <p className="text-gray-500">Secure communication with your lawyers</p>
+          {activeTab === 'messages' && (
+            <div className={`p-8 ${darkMode ? 'bg-slate-950' : 'bg-white'} min-h-full`}>
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <div className="flex items-center space-x-3 mb-1">
+                    <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Messages</h1>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1 ${darkMode ? 'bg-blue-900/20 text-blue-400 border-blue-800' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                      <Shield className="w-3 h-3" /> End-to-End Encrypted
+                    </span>
                   </div>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 shadow-lg shadow-blue-200">
-                    + New Message
-                  </Button>
+                  <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Secure communication with your lawyers</p>
                 </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
-                  {/* Conversations List */}
-                  <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col shadow-sm">
-                    <div className="p-4 border-b border-gray-100">
-                      <div className="relative">
-                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <Input placeholder="Search conversations..." className="pl-10 bg-gray-50 border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20" />
-                      </div>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto">
-                      {messages.length > 0 ? (
-                        messages.map((chat, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => handleSelectChat(chat)}
-                            className={`flex items-center space-x-3 p-4 cursor-pointer transition-all ${selectedChat?.other_user_id === chat.other_user_id ? 'bg-blue-50 border-l-4 border-blue-500' : 'hover:bg-gray-50 border-l-4 border-transparent'
-                              }`}>
-                            <div className="relative flex-shrink-0">
-                              <div className={`w-12 h-12 ${chat.avatar ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'} rounded-full flex items-center justify-center shadow-sm`}>
-                                <span className="font-bold">{chat.avatar || '?'}</span>
-                              </div>
-                              {chat.online && (
-                                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-bold text-gray-900 truncate">{chat.name}</h4>
-                                <span className="text-xs text-gray-400 whitespace-nowrap">{new Date(chat.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                              </div>
-                              <p className="text-sm text-gray-500 truncate">{chat.message}</p>
-                            </div>
-                            {chat.unread > 0 && (
-                              <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                <span className="text-[10px] font-bold text-white">{chat.unread}</span>
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <div className="p-8 text-center text-gray-500">
-                          No messages yet.
-                        </div>
-                      )}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ height: 'calc(100vh - 260px)' }}>
+                {/* Conversations List */}
+                <div className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} rounded-2xl border overflow-hidden flex flex-col shadow-sm`}>
+                  <div className={`p-4 border-b ${darkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input value={msgSearch} onChange={e => setMsgSearch(e.target.value)}
+                        placeholder="Search conversations..."
+                        className={`w-full pl-9 pr-4 py-2 text-sm rounded-xl border outline-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`} />
                     </div>
                   </div>
-
-                  {/* Chat Window */}
-                  <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-200 overflow-hidden flex flex-col shadow-sm">
-                    {selectedChat ? (
-                      <>
-                        {/* Chat Header */}
-                        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                          <div className="flex items-center space-x-3">
-                            <div className="relative">
-                              <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
-                                <span className="font-bold">{selectedChat.avatar || '?'}</span>
-                              </div>
-                              {selectedChat.online && (
-                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
-                              )}
+                  <div className="flex-1 overflow-y-auto">
+                    {messages.filter(c => !msgSearch || (c.name || '').toLowerCase().includes(msgSearch.toLowerCase())).length > 0 ? (
+                      messages.filter(c => !msgSearch || (c.name || '').toLowerCase().includes(msgSearch.toLowerCase())).map((chat, idx) => (
+                        <div key={idx} onClick={() => handleSelectChat(chat)}
+                          className={`flex items-center space-x-3 p-4 cursor-pointer transition-all border-l-4 ${selectedChat?.other_user_id === chat.other_user_id
+                            ? (darkMode ? 'bg-blue-900/20 border-blue-500' : 'bg-blue-50 border-blue-500')
+                            : (darkMode ? 'border-transparent hover:bg-slate-800' : 'border-transparent hover:bg-gray-50')
+                          }`}>
+                          <div className="relative flex-shrink-0">
+                            <div className={`w-11 h-11 ${darkMode ? 'bg-slate-700 text-slate-200' : 'bg-blue-100 text-blue-600'} rounded-full flex items-center justify-center font-bold shadow-sm`}>
+                              {(chat.avatar || (chat.name || '?')[0]).toUpperCase()}
                             </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">{selectedChat.name}</p>
-                              <p className="text-xs text-green-600">Online • Your Legal Counsel</p>
+                            {chat.online && <span className="absolute bottom-0 right-0 w-3 h-3 bg-blue-500 rounded-full border-2 border-white" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <h4 className={`font-bold text-sm truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>{chat.name}</h4>
+                              <span className={`text-xs whitespace-nowrap ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{new Date(chat.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
+                            <p className={`text-xs truncate ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{chat.message}</p>
                           </div>
-                          <div className="flex items-center space-x-2">
-                            <button className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm">
-                              <ListChecks className="w-5 h-5 text-gray-500" />
-                            </button>
-                          </div>
+                          {chat.unread > 0 && <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0"><span className="text-[10px] font-bold text-white">{chat.unread}</span></div>}
                         </div>
-
-                        {/* Messages */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/30">
-                          <div className="flex items-center justify-center">
-                            <span className="px-3 py-1 bg-gray-200 rounded-full text-xs text-gray-600">Today</span>
-                          </div>
-
-                          {chatHistory.map((msg, idx) => (
-                            <div key={idx} className={`flex items-start space-x-3 ${msg.sender_id === user.id ? 'justify-end' : ''}`}>
-                              {msg.sender_id !== user.id && (
-                                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <span className="text-sm font-bold">{selectedChat.avatar || '?'}</span>
-                                </div>
-                              )}
-                              <div className={`max-w-[70%] ${msg.sender_id === user.id ? 'text-right' : ''}`}>
-                                <div className={`p-4 shadow-sm rounded-2xl ${msg.sender_id === user.id
-                                  ? 'bg-blue-600 text-white rounded-tr-none'
-                                  : 'bg-white border border-gray-200 text-gray-900 rounded-tl-none'
-                                  }`}>
-                                  <p className="text-sm">{msg.content}</p>
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Message Input */}
-                        <div className="p-4 border-t border-gray-200 bg-white">
-                          <form onSubmit={handleSendMessage} className="flex items-center space-x-3">
-                            <button type="button" className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center hover:bg-gray-100 transition-colors pointer shadow-sm">
-                              <span className="text-xl">📎</span>
-                            </button>
-                            <Input
-                              value={newMessage}
-                              onChange={(e) => setNewMessage(e.target.value)}
-                              placeholder="Type your message..."
-                              className="flex-1 bg-gray-100 border-gray-200 rounded-full px-5 text-gray-900"
-                            />
-                            <Button type="submit" className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 flex items-center justify-center">
-                              <Send className="w-4 h-4 text-white" />
-                            </Button>
-                          </form>
-                        </div>
-                      </>
+                      ))
                     ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center text-gray-500 bg-gray-50/50">
-                        <MessageSquare className="w-16 h-16 mb-4 text-gray-300" />
-                        <p className="text-lg font-medium">Select a conversation</p>
-                        <p className="text-sm">Choose a chat from the list to start messaging</p>
+                      <div className={`p-8 text-center text-sm ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                        {messages.length === 0 ? 'No conversations yet.' : 'No results.'}
                       </div>
                     )}
                   </div>
                 </div>
+                {/* Chat Window */}
+                <div className={`lg:col-span-2 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} rounded-2xl border overflow-hidden flex flex-col shadow-sm`}>
+                  {selectedChat ? (
+                    <>
+                      <div className={`p-4 border-b ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-gray-100 bg-gray-50/50'} flex items-center justify-between`}>
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-10 h-10 ${darkMode ? 'bg-slate-700 text-slate-200' : 'bg-blue-100 text-blue-600'} rounded-full flex items-center justify-center font-bold`}>
+                            {(selectedChat.avatar || (selectedChat.name || '?')[0]).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className={`font-semibold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{selectedChat.name}</p>
+                            <p className="text-xs text-blue-400">Your Legal Counsel</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={`flex-1 overflow-y-auto p-4 space-y-4 ${darkMode ? 'bg-slate-950/50' : 'bg-gray-50/30'}`}>
+                        <div className="flex items-center justify-center">
+                          <span className={`px-3 py-1 rounded-full text-xs ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-200 text-gray-600'}`}>Today</span>
+                        </div>
+                        {chatHistory.map((msg, idx) => (
+                          <div key={idx} className={`flex items-start space-x-3 ${msg.sender_id === user?.id ? 'justify-end' : ''}`}>
+                            {msg.sender_id !== user?.id && (
+                              <div className={`w-8 h-8 ${darkMode ? 'bg-slate-700 text-slate-200' : 'bg-blue-100 text-blue-600'} rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold`}>
+                                {(selectedChat.avatar || '?')[0]?.toUpperCase()}
+                              </div>
+                            )}
+                            <div className={`max-w-[70%] ${msg.sender_id === user?.id ? 'text-right' : ''}`}>
+                              <div className={`p-3 rounded-2xl text-sm ${
+                                msg.sender_id === user?.id
+                                  ? 'bg-blue-600 text-white rounded-tr-none'
+                                  : (darkMode ? 'bg-slate-800 border-slate-700 text-slate-200 border' : 'bg-white border border-gray-200 text-gray-900') + ' rounded-tl-none'
+                              }`}>
+                                {msg.content}
+                              </div>
+                              <p className={`text-[10px] mt-1 ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Permission Banner */}
+                      {msgPermission && (
+                        <div className={`px-4 py-2.5 text-xs font-medium flex items-center gap-2 border-b
+                          ${ !msgPermission.allowed
+                            ? (darkMode ? 'bg-slate-900/20 border-slate-800/40 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-700')
+                            : msgPermission.quota_left === 1
+                            ? (darkMode ? 'bg-blue-900/20 border-blue-800/40 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700')
+                            : msgPermission.quota_left === 0 && msgPermission.allowed === false
+                            ? (darkMode ? 'bg-slate-900/20 border-slate-800/40 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-700')
+                            : (darkMode ? 'bg-blue-900/20 border-blue-800/40 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700')
+                          }`}>
+                          <span>
+                            { !msgPermission.allowed ? '🔒'
+                              : msgPermission.quota_left === -1 ? '✅'
+                              : msgPermission.quota_left >= 1 ? '⏳'
+                              : '🔒' }
+                          </span>
+                          <span>
+                            { !msgPermission.allowed
+                              ? msgPermission.reason
+                              : msgPermission.quota_left === -1
+                              ? 'Full messaging enabled — case approved'
+                              : `Pre-appointment: ${msgPermission.quota_left} message${msgPermission.quota_left !== 1 ? 's' : ''} remaining` }
+                          </span>
+                        </div>
+                      )}
+                      <div className={`p-4 border-t ${darkMode ? 'border-slate-800 bg-slate-900' : 'border-gray-200 bg-white'}`}>
+                        <form onSubmit={handleSendMessage} className="flex items-center gap-3">
+                          <input value={newMessage} onChange={e => setNewMessage(e.target.value)}
+                            placeholder={msgPermission && !msgPermission.allowed ? 'Messaging locked — book & confirm an appointment first' : 'Type your message...'}
+                            disabled={msgPermission && !msgPermission.allowed}
+                            className={`flex-1 px-5 py-2.5 text-sm rounded-full border outline-none transition-colors
+                              ${msgPermission && !msgPermission.allowed
+                                ? (darkMode ? 'bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed')
+                                : (darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-100 border-gray-200 text-gray-900')
+                              }`} />
+                          <button type="submit"
+                            disabled={msgPermission && !msgPermission.allowed}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors
+                              ${msgPermission && !msgPermission.allowed
+                                ? 'bg-gray-300 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-700'
+                              }`}>
+                            <Send className="w-4 h-4 text-white" />
+                          </button>
+                        </form>
+                      </div>
+                    </>
+                  ) : (
+                  <div className={`flex-1 flex flex-col items-center justify-center ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                      <MessageSquare className="w-14 h-14 mb-4 opacity-30" />
+                      <p className="text-base font-medium">Select a conversation</p>
+                      <p className="text-sm mt-1">Choose a chat from the list, or confirm an appointment to start messaging</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            )
-          }
+            </div>
+          )}
 
           {/* Documents Tab */}
-          {activeTab === 'documents' && (
-            <div className="p-8 bg-white min-h-full">
-              <h1 className="text-3xl font-bold mb-8 text-gray-900">My Documents</h1>
+          {activeTab === 'documents' && (() => {
+            const personalDocs = documents.filter(d =>
+              d.source === 'personal' || (!d.source && !d.network_message_id)
+            );
+            const activeFolderObj = folders.find(f => f.id === activeFolderId);
+            const displayedDocs = activeFolderId
+              ? personalDocs.filter(d => activeFolderObj?.docIds.includes(d.id || d._id))
+              : personalDocs;
 
-              {documents.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-2xl border border-gray-200">
-                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 text-lg mb-2">No documents uploaded yet.</p>
-                  <p className="text-gray-500 text-sm">Upload your first document to get started.</p>
-                  <Button className="mt-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-xl shadow-lg shadow-blue-200">
-                    Upload Document
-                  </Button>
+            const handleCreateFolder = () => {
+              if (!newFolderName.trim()) return;
+              const folderColors = ['#2563eb', '#7c3aed', '#db2777', '#d97706', '#16a34a', '#0891b2'];
+              const id = 'folder_' + Date.now();
+              setFolders(prev => [...prev, {
+                id,
+                name: newFolderName.trim(),
+                icon: '📁',
+                color: folderColors[folders.length % folderColors.length],
+                docIds: [],
+              }]);
+              setNewFolderName('');
+              setShowNewFolderModal(false);
+              toast.success(`Folder "${newFolderName.trim()}" created!`);
+            };
+
+            const moveDocToFolder = (docId, folderId) => {
+              setFolders(prev => prev.map(f => ({
+                ...f,
+                docIds: folderId === f.id
+                  ? [...new Set([...f.docIds, docId])]
+                  : f.docIds.filter(id => id !== docId),
+              })));
+            };
+
+            return (
+              <div className={`p-8 ${darkMode ? 'bg-slate-950' : 'bg-gray-50'} min-h-full`}>
+                <input ref={docInputRef} type="file" className="hidden" onChange={handleDocUpload}
+                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png" />
+
+                {/* Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <div className="flex items-center space-x-3 mb-1">
+                      <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                        Document Vault
+                      </h1>
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center ${darkMode ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                        <Shield className="w-3 h-3 mr-1" />End-to-End Encrypted
+                      </span>
+                    </div>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Your personal documents · {personalDocs.length} file{personalDocs.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowNewFolderModal(true)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all ${darkMode ? 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
+                    >
+                      <span className="text-base">📁</span> New Folder
+                    </button>
+                    <button
+                      onClick={() => docInputRef.current?.click()}
+                      disabled={docUploading}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow-lg transition-colors disabled:opacity-60"
+                    >
+                      <FileText className="w-4 h-4" />
+                      {docUploading ? 'Uploading...' : 'Upload File'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats Row */}
+                <div className="grid grid-cols-3 gap-4 mb-7">
+                  <div className={`rounded-2xl border p-5 flex items-center gap-4 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} shadow-sm`}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-500"><FileText className="w-5 h-5" /></div>
+                    <div>
+                      <p className={`text-xs uppercase tracking-wider font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>My Documents</p>
+                      <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{personalDocs.length}</p>
+                    </div>
+                  </div>
+                  <div className={`rounded-2xl border p-5 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} shadow-sm`}>
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${isStorageFull ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'}`}><span className="text-lg">💾</span></div>
+                      <div>
+                        <p className={`text-xs uppercase tracking-wider font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Storage Used</p>
+                        <p className={`text-lg font-bold ${isStorageFull ? 'text-red-500' : darkMode ? 'text-white' : 'text-gray-900'}`}>{totalStorageDisplay} <span className={`text-xs font-normal ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>/ 1 GB</span></p>
+                      </div>
+                    </div>
+                    <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-slate-700' : 'bg-gray-200'}`}>
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${storagePercent > 90 ? 'bg-red-600' : storagePercent > 70 ? 'bg-blue-500' : 'bg-blue-600'}`}
+                        style={{ width: `${Math.max(storagePercent, 1)}%` }}
+                      />
+                    </div>
+                    {isStorageFull && <p className="text-red-500 text-[10px] font-medium mt-1">Storage full — delete files to upload more</p>}
+                  </div>
+                  <div className={`rounded-2xl border p-5 flex items-center gap-4 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} shadow-sm`}>
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-blue-500/10 text-blue-500"><Clock className="w-5 h-5" /></div>
+                    <div>
+                      <p className={`text-xs uppercase tracking-wider font-medium ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>Recent Uploads</p>
+                      <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{recentUploadsCount}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Folders Row */}
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className={`text-sm font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Folders</h2>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => setActiveFolderId(null)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${activeFolderId === null
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-md'
+                        : darkMode ? 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      🗂️ All Files <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeFolderId === null ? 'bg-white/20' : darkMode ? 'bg-white/10' : 'bg-gray-200'}`}>{personalDocs.length}</span>
+                    </button>
+                    {folders.map(folder => (
+                      <button
+                        key={folder.id}
+                        onClick={() => setActiveFolderId(folder.id === activeFolderId ? null : folder.id)}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all ${activeFolderId === folder.id
+                          ? 'text-white shadow-md'
+                          : darkMode ? 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                        style={activeFolderId === folder.id ? { background: folder.color, borderColor: folder.color } : {}}
+                      >
+                        {folder.icon} {folder.name}
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${activeFolderId === folder.id ? 'bg-white/20' : darkMode ? 'bg-white/10' : 'bg-gray-200'}`}>{folder.docIds.length}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Documents Table */}
+                <div className={`rounded-2xl border overflow-hidden shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'}`}>
+                  <table className="w-full">
+                    <thead className={`border-b ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
+                      <tr>
+                        {['Document Name', 'Folder', 'Type', 'Date', 'Size', 'Actions'].map(h => (
+                          <th key={h} className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayedDocs.length > 0 ? (
+                        displayedDocs.map((doc, idx) => {
+                          const docId = doc.id || doc._id;
+                          return (
+                            <tr key={idx} className={`border-b transition-all duration-200 ${darkMode ? 'border-slate-800 hover:bg-slate-800' : 'border-gray-100 hover:bg-gray-50'}`}>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center space-x-2">
+                                  <FileText className={`w-5 h-5 flex-shrink-0 ${doc.file_type?.includes('pdf') ? 'text-red-500' : 'text-blue-500'}`} />
+                                  {doc.file_url ? (
+                                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer"
+                                      className={`font-medium transition-colors truncate max-w-[180px] ${darkMode ? 'text-gray-200 hover:text-blue-400' : 'text-gray-900 hover:text-blue-600'}`}>
+                                      {doc.title || doc.file_name}
+                                    </a>
+                                  ) : (
+                                    <span className={`font-medium truncate max-w-[180px] ${darkMode ? 'text-gray-200' : 'text-gray-900'}`}>{doc.title || doc.file_name}</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <select
+                                  value={folders.find(f => f.docIds.includes(docId))?.id || ''}
+                                  onChange={e => moveDocToFolder(docId, e.target.value)}
+                                  className={`text-xs rounded-lg px-2 py-1 border outline-none cursor-pointer ${darkMode ? 'bg-slate-700 border-slate-600 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}
+                                >
+                                  <option value="">No folder</option>
+                                  {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                                </select>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${darkMode ? 'bg-slate-800 text-gray-300 border-slate-700' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                                  {doc.file_type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                                </span>
+                              </td>
+                              <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
+                              </td>
+                              <td className={`px-6 py-4 text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                {doc.file_size ? (doc.file_size / 1024).toFixed(1) + ' KB' : '---'}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center space-x-2">
+                                  <button
+                                    onClick={() => { setSelectedDocForShare(doc); setShowShareModal(true); }}
+                                    className="text-blue-400 hover:text-blue-600 transition-colors p-1" title="Share"
+                                  ><Share2 className="w-4 h-4" /></button>
+                                  {doc.file_url && (
+                                    <a href={doc.file_url} download={doc.file_name || doc.title}
+                                      className="text-gray-400 hover:text-gray-600 transition-colors p-1" title="Download">
+                                      <Download className="w-4 h-4" /></a>
+                                  )}
+                                  <button
+                                    onClick={() => setDocToDelete(doc)}
+                                    className="text-red-400 hover:text-red-600 transition-colors p-1" title="Delete"
+                                  ><Archive className="w-4 h-4" /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="6" className={`px-6 py-20 text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                            <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                            <p className="text-sm mb-4">{activeFolderId ? 'No documents in this folder yet.' : 'No documents uploaded yet. Upload your first file above.'}</p>
+                            {!activeFolderId && (
+                              <button onClick={() => docInputRef.current?.click()}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg transition-all">
+                                <FileText className="w-4 h-4" /> Upload First Document
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* New Folder Modal */}
+                {showNewFolderModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowNewFolderModal(false)}>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+                    <div
+                      className={`relative z-10 w-96 rounded-2xl p-6 shadow-2xl ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-gray-200'}`}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Create New Folder</h3>
+                      <input
+                        type="text"
+                        placeholder="Folder name…"
+                        value={newFolderName}
+                        onChange={e => setNewFolderName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleCreateFolder()}
+                        autoFocus
+                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none mb-4 ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-gray-500 focus:border-blue-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400 focus:border-blue-500'}`}
+                      />
+                      <div className="flex gap-3">
+                        <button onClick={handleCreateFolder}
+                          className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors">
+                          Create Folder
+                        </button>
+                        <button onClick={() => setShowNewFolderModal(false)}
+                          className={`flex-1 py-2.5 rounded-xl text-sm font-medium border ${darkMode ? 'bg-slate-800 border-slate-700 text-gray-300 hover:bg-slate-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Share Modal */}
+                {showShareModal && selectedDocForShare && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={() => setShowShareModal(false)}>
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+                    <div
+                      className={`relative z-10 w-[480px] rounded-2xl p-6 shadow-2xl ${darkMode ? 'bg-slate-900 border border-slate-700' : 'bg-white border border-gray-200'}`}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Share Document</h3>
+                        <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-gray-600">
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className={`flex items-center gap-3 p-3 rounded-xl mb-4 ${darkMode ? 'bg-slate-800' : 'bg-gray-50'}`}>
+                        <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                        <span className={`text-sm font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{selectedDocForShare.title || selectedDocForShare.file_name}</span>
+                      </div>
+                      {selectedDocForShare.file_url && (
+                        <div className="mb-4">
+                          <p className={`text-xs font-semibold uppercase tracking-wider mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Shareable Link</p>
+                          <div className={`flex items-center gap-2 p-3 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
+                            <span className={`text-xs flex-1 truncate ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>{selectedDocForShare.file_url}</span>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(selectedDocForShare.file_url); toast.success('Link copied!'); }}
+                              className="text-xs font-semibold text-blue-600 hover:text-blue-700 whitespace-nowrap"
+                            >Copy Link</button>
+                          </div>
+                        </div>
+                      )}
+                      <button onClick={() => setShowShareModal(false)}
+                        className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors">
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+
+          {/* My Cases Tab */}
+          {activeTab === 'cases' && (
+            <div className={`p-8 ${darkMode ? 'bg-slate-950' : 'bg-white'} min-h-full`}>
+              <div className="flex items-center justify-between mb-8">
+                <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>My Cases</h1>
+                <button onClick={() => setShowCaseForm(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow-lg transition-colors">
+                  + New Case
+                </button>
+              </div>
+
+              {/* Case creation form */}
+              {showCaseForm && (
+                <form onSubmit={handleCreateCase} className={`mb-8 p-6 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-blue-50 border-blue-100'} space-y-4`}>
+                  <h3 className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>Create New Case</h3>
+                  <input value={newCaseTitle} onChange={e => setNewCaseTitle(e.target.value)} required
+                    placeholder="Case Title *" className={`w-full px-4 py-2.5 rounded-xl border text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900'} outline-none`} />
+                  <select value={newCaseType} onChange={e => setNewCaseType(e.target.value)} required
+                    className={`w-full px-4 py-2.5 rounded-xl border text-sm ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-200 text-gray-900'} outline-none`}>
+                    <option value="">Select Case Type *</option>
+                    <option>Criminal</option><option>Family</option><option>Property</option>
+                    <option>Consumer</option><option>Corporate</option><option>Civil</option><option>Other</option>
+                  </select>
+                  <textarea value={newCaseDesc} onChange={e => setNewCaseDesc(e.target.value)} rows={3}
+                    placeholder="Brief description (optional)" className={`w-full px-4 py-2.5 rounded-xl border text-sm resize-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900'} outline-none`} />
+                  <div className="flex gap-3">
+                    <button type="button" onClick={() => setShowCaseForm(false)}
+                      className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={caseLoading}
+                      className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-60">
+                      {caseLoading ? 'Creating...' : 'Create Case'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {cases.length === 0 ? (
+                <div className={`text-center py-16 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-200'}`}>
+                  <Gavel className="w-14 h-14 mx-auto mb-4 opacity-30 text-gray-400" />
+                  <p className={`text-lg mb-1 ${darkMode ? 'text-slate-300' : 'text-gray-600'}`}>No cases yet</p>
+                  <p className="text-gray-500 text-sm">Create your first case to start tracking it.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {documents.map(doc => (
-                    <div key={doc.id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-                        <FileText className="w-6 h-6 text-blue-600" />
+                <div className="space-y-3">
+                  {cases.map(c => {
+                    const cid = c._id || c.id;
+                    const isExpanded = expandedCaseId === cid;
+                    const statusStyle = c.status === 'active' || c.status === 'open'
+                      ? 'bg-blue-100 text-blue-700'
+                      : c.status === 'closed'
+                        ? 'bg-gray-100 text-gray-600'
+                        : 'bg-blue-100 text-blue-700';
+                    return (
+                      <div key={cid} className={`rounded-2xl border transition-all ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200 shadow-sm'} ${isExpanded ? 'shadow-md' : 'hover:shadow-md'}`}>
+                        <div className="flex items-center justify-between p-5 cursor-pointer" onClick={() => setExpandedCaseId(isExpanded ? null : cid)}>
+                          <div className="flex items-center gap-4">
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${c.status === 'active' || c.status === 'open' ? (darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600') : (darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-400')}`}>
+                              <Gavel className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <h4 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{c.title}</h4>
+                              <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{c.case_type || c.type} • {new Date(c.created_at || c.createdAt || Date.now()).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold capitalize ${statusStyle}`}>{c.status || 'pending'}</span>
+                            {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                          </div>
+                        </div>
+                        {isExpanded && (
+                            <div className={`px-5 pb-5 space-y-3 border-t ${darkMode ? 'border-slate-800' : 'border-gray-100'} pt-4`}>
+                              {c.description && <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>{c.description}</p>}
+                              <div className="flex gap-3">
+                                <button onClick={() => { setActiveTab('consultation'); }}
+                                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                                  Book Lawyer for This Case
+                                </button>
+                                <button onClick={() => navigate('/lxwyerai-premium')}
+                                  className={`flex-1 py-2 border text-sm font-semibold rounded-xl transition-colors ${darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                  Get AI Advice ✨
+                                </button>
+                              </div>
+                            </div>
+                        )}
                       </div>
-                      <h4 className="font-bold mb-2 text-gray-900">{doc.title}</h4>
-                      <p className="text-sm text-gray-600 mb-1">Type: {doc.file_type}</p>
-                      <p className="text-xs text-gray-500">
-                        Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
+
+          {activeTab === 'profile' && (
+            <div className={`p-8 ${darkMode ? 'bg-black' : 'bg-white'} min-h-full`}>
+              <h1 className={`text-2xl font-bold mb-8 tracking-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>My Profile</h1>
+
+              <div className="flex flex-col xl:flex-row gap-8 items-start">
+
+                {/* ── LEFT: Profile Card + Form ─────────────────────────── */}
+                <div className="w-full xl:max-w-2xl space-y-6 flex-shrink-0">
+
+                  {/* Avatar + quick stats */}
+                  <div className={`rounded-2xl p-6 border flex flex-col sm:flex-row items-center gap-6 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-200'}`}>
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center shadow-lg ring-4 ring-blue-500/20">
+                        {profileImage
+                          ? <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                          : <span className="text-3xl font-bold text-white">{user?.full_name?.[0]?.toUpperCase() || 'U'}</span>}
+                      </div>
+                      <label htmlFor="profileImageUpload" className="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <input id="profileImageUpload" type="file" accept="image/*" className="hidden" onChange={handleProfileImageChange} />
+                      </label>
+                    </div>
+
+                    {/* Name + stats */}
+                    <div className="flex-1 text-center sm:text-left">
+                      <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{user?.full_name || 'User'}</h2>
+                      <p className={`text-sm mt-0.5 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{user?.email}</p>
+                      <div className="flex gap-4 mt-4 justify-center sm:justify-start">
+                        {[
+                          { label: 'Bookings', value: bookings.length },
+                          { label: 'Documents', value: documents.length },
+                          { label: 'Cases', value: cases.length },
+                        ].map(s => (
+                          <div key={s.label} className="text-center">
+                            <p className="text-lg font-bold text-blue-400">{s.value}</p>
+                            <p className={`text-xs ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Edit form */}
+                  <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'}`}>
+                    <div className="flex items-center justify-between mb-5">
+                      <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Personal Information</h3>
+                      {!editingProfile && (
+                        <button onClick={() => { setEditingProfile(true); setProfileForm({ full_name: user?.full_name || '', email: user?.email || '', phone: user?.phone || '' }); }}
+                          className="text-xs font-semibold text-blue-400 hover:text-blue-300 border border-blue-400/30 hover:border-blue-400/60 px-3 py-1.5 rounded-lg transition-colors">
+                          Edit
+                        </button>
+                      )}
+                    </div>
+
+                    {editingProfile ? (
+                      <form onSubmit={handleSaveProfile} className="space-y-4">
+                        {[
+                          { label: 'Full Name', key: 'full_name', type: 'text', placeholder: 'Your full name' },
+                          { label: 'Email', key: 'email', type: 'email', placeholder: 'your@email.com' },
+                          { label: 'Phone', key: 'phone', type: 'tel', placeholder: '+91 XXXXX XXXXX' },
+                        ].map(f => (
+                          <div key={f.key}>
+                            <label className={`block text-xs font-medium mb-1.5 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>{f.label}</label>
+                            <input
+                              type={f.type}
+                              value={profileForm[f.key] || ''}
+                              onChange={e => setProfileForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                              placeholder={f.placeholder}
+                              className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                            />
+                          </div>
+                        ))}
+                        <div className="flex gap-3 pt-2">
+                          <button type="submit" disabled={profileSaving}
+                            className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-60">
+                            {profileSaving ? 'Saving...' : 'Save Changes'}
+                          </button>
+                          <button type="button" onClick={() => setEditingProfile(false)}
+                            className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <div className="space-y-1">
+                        {/* User ID — copyable */}
+                        <div className={`p-3 rounded-xl mb-3 ${darkMode ? 'bg-slate-800/60 border border-slate-700' : 'bg-blue-50 border border-blue-100'}`}>
+                          <p className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${darkMode ? 'text-slate-500' : 'text-blue-400'}`}>User ID</p>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-mono flex-1 truncate ${darkMode ? 'text-blue-400' : 'text-blue-700'}`}>{user?.id || user?._id || '—'}</span>
+                            <button
+                              onClick={() => { navigator.clipboard.writeText(user?.id || user?._id || ''); }}
+                              title="Copy ID"
+                              className={`text-xs px-2 py-0.5 rounded-lg border shrink-0 transition-colors ${darkMode ? 'border-slate-600 text-slate-400 hover:text-white hover:border-slate-400' : 'border-blue-200 text-blue-500 hover:bg-blue-100'}`}
+                            >Copy</button>
+                          </div>
+                        </div>
+
+                        {/* Info grid */}
+                        {[
+                          { label: 'Full Name', value: user?.full_name || '—' },
+                          { label: 'Email Address', value: user?.email || '—' },
+                          { label: 'Phone', value: user?.phone || 'Not provided' },
+                          {
+                            label: 'Account Type',
+                            value: null,
+                            badge: (user?.role || 'user').toUpperCase(),
+                            color: 'blue',
+                          },
+                          {
+                            label: 'Account Status',
+                            value: null,
+                            badge: user?.is_verified ? '✓ Verified' : user?.status || 'Active',
+                            color: user?.is_verified ? 'green' : 'blue',
+                          },
+                          {
+                            label: 'Login Method',
+                            value: null,
+                            badge: user?.google_id ? '🔵 Google' : '🔑 Email',
+                            color: 'slate',
+                          },
+                          {
+                            label: 'Plan',
+                            value: null,
+                            badge: user?.plan ? user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : 'Free',
+                            color: user?.plan && user.plan !== 'free' ? 'amber' : 'slate',
+                          },
+                          {
+                            label: 'Member Since',
+                            value: user?.created_at
+                              ? new Date(user.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                              : '—',
+                          },
+                        ].map(row => (
+                          <div key={row.label} className={`flex justify-between items-center py-2.5 border-b last:border-b-0 ${darkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                            <span className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{row.label}</span>
+                            {row.badge ? (
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                                row.color === 'blue' ? (darkMode ? 'bg-blue-900/40 text-blue-300 border border-blue-800' : 'bg-blue-50 text-blue-700 border border-blue-200') :
+                                row.color === 'green' ? (darkMode ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800' : 'bg-green-50 text-green-700 border border-green-200') :
+                                row.color === 'amber' ? (darkMode ? 'bg-amber-900/30 text-amber-400 border border-amber-800' : 'bg-amber-50 text-amber-700 border border-amber-200') :
+                                (darkMode ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-gray-100 text-gray-600 border border-gray-200')
+                              }`}>{row.badge}</span>
+                            ) : (
+                              <span className={`text-sm font-medium max-w-[55%] text-right truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>{row.value}</span>
+                            )}
+                          </div>
+                        ))}
+
+                        {/* Activity summary */}
+                        <div className={`mt-4 grid grid-cols-3 gap-2 pt-3 border-t ${darkMode ? 'border-slate-800' : 'border-gray-100'}`}>
+                          {[
+                            { label: 'Appointments', value: bookings.length },
+                            { label: 'Documents', value: documents.length },
+                            { label: 'Cases', value: cases.length },
+                          ].map(s => (
+                            <div key={s.label} className={`rounded-xl p-3 text-center border ${darkMode ? 'bg-slate-800/50 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
+                              <p className="text-lg font-bold text-blue-400">{s.value}</p>
+                              <p className={`text-[10px] font-medium ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{s.label}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* ── RIGHT: Flagship Systems ────────────────────────────── */}
+                <div className="w-full xl:flex-1 space-y-4">
+                  <h3 className={`font-semibold text-sm uppercase tracking-widest mb-4 ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Flagship Systems</h3>
+                  {[
+                    {
+                      id: 'lxwyerai', title: 'LxwyerAI 1.0', emoji: '🤖',
+                      tagline: 'Next-Gen AI Legal Assistant',
+                      summary: 'LxwyerAI 1.0 is our flagship AI-powered legal assistant, trained on thousands of Indian legal cases. Get instant answers to legal queries, draft documents, understand your rights, and navigate complex legal situations — all with the precision of an experienced lawyer.',
+                      gradient: 'from-blue-600 to-blue-900',
+                    },
+                    {
+                      id: 'apex', title: 'Apex System', emoji: '⚖️',
+                      tagline: 'Smart Lawyer Matching Engine',
+                      summary: 'The Apex System analyzes your case complexity, budget, location, and legal requirements to surface the most compatible lawyer for your needs. Powered by multi-dimensional scoring — not just proximity — it ensures you always get the best available representation.',
+                      gradient: 'from-slate-700 to-slate-900',
+                    },
+                    {
+                      id: 'signature', title: 'Signature', emoji: '✍️',
+                      tagline: 'Verified Legal Professionals',
+                      summary: 'Signature is our premium tier of verified legal professionals who have passed LxwyerUp\'s rigorous vetting process. These lawyers are recognized for their expertise, client satisfaction, and track record — giving you access to elite-level counsel.',
+                      gradient: 'from-blue-900 to-black',
+                    },
+                  ].map(item => {
+                    const isOpen = profileExpandedCard === item.id;
+                    return (
+                      <div key={item.id}
+                        className={`rounded-2xl overflow-hidden border transition-all duration-300 cursor-pointer ${darkMode ? 'border-slate-800' : 'border-gray-200'}`}
+                        onClick={() => setProfileExpandedCard(isOpen ? null : item.id)}>
+                        {/* Header */}
+                        <div className={`bg-gradient-to-r ${item.gradient} p-5 flex items-center justify-between`}>
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{item.emoji}</span>
+                            <div>
+                              <p className="text-white font-bold text-sm">{item.title}</p>
+                              <p className="text-white/60 text-xs">{item.tagline}</p>
+                            </div>
+                          </div>
+                          <svg className={`w-5 h-5 text-white/70 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                        {/* Expanded */}
+                        {isOpen && (
+                          <div className={`px-5 py-4 ${darkMode ? 'bg-slate-900' : 'bg-gray-50'}`}>
+                            <p className={`text-sm leading-relaxed ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>{item.summary}</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+      {cancelBookingId && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCancelBookingId(null)} />
+          <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <X className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 className={`text-lg font-bold text-center mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Cancel Appointment?</h3>
+            <p className={`text-sm text-center mb-6 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setCancelBookingId(null)}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Keep</button>
+              <button onClick={handleCancelBooking}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Yes, Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ── Rate Lawyer Modal ─────────────────────────────────── */}
+      {ratingModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setRatingModal(null); setRatingValue(0); setRatingComment(''); }} />
+          <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <h3 className={`text-lg font-bold text-center mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Rate Your Consultation</h3>
+            <p className={`text-sm text-center mb-5 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>with {ratingModal.lawyerName}</p>
+            {/* Star picker */}
+            <div className="flex justify-center gap-2 mb-4">
+              {[1, 2, 3, 4, 5].map(s => (
+                <button key={s} type="button" onClick={() => setRatingValue(s)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${s <= ratingValue ? 'text-blue-400 scale-110' : (darkMode ? 'text-slate-600' : 'text-gray-300')} hover:scale-125`}>
+                  <Star className={`w-7 h-7 ${s <= ratingValue ? 'fill-amber-400' : ''}`} />
+                </button>
+              ))}
+            </div>
+            <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} rows={3}
+              placeholder="Share your experience (optional)"
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm resize-none outline-none mb-4 ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`} />
+            <div className="flex gap-3">
+              <button onClick={() => { setRatingModal(null); setRatingValue(0); setRatingComment(''); }}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Skip</button>
+              <button onClick={handleRateLawyer} disabled={ratingSaving || ratingValue === 0}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-60">
+                {ratingSaving ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Delete Document Confirm ────────────────────────────── */}
+      {docToDelete && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDocToDelete(null)} />
+          <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <FileText className="w-6 h-6 text-red-500" />
+            </div>
+            <h3 className={`text-lg font-bold text-center mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Delete Document?</h3>
+            <p className={`text-sm text-center mb-1 font-medium ${darkMode ? 'text-slate-300' : 'text-gray-800'}`}>"{docToDelete.title || docToDelete.file_name}"</p>
+            <p className={`text-xs text-center mb-6 ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDocToDelete(null)}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Cancel</button>
+              <button onClick={handleDeleteDocument}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+        </div>
+      </div>
+
+      {/* ── Mobile Bottom Navigation Bar (hidden on md+) ── */}
+      <div className={`fixed bottom-0 inset-x-0 z-50 md:hidden border-t ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'} safe-bottom`}>
+        <div className="flex items-center justify-around px-2 py-2">
+          {[
+            { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
+            { id: 'consultation', icon: Calendar, label: 'Book' },
+            { id: 'cases', icon: Briefcase, label: 'Cases' },
+            { id: 'messages', icon: MessageSquare, label: 'Chat' },
+            { id: 'documents', icon: FileText, label: 'Docs' },
+            { id: 'profile', icon: User, label: 'Profile' },
+          ].map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${
+                activeTab === id
+                  ? 'text-blue-600'
+                  : darkMode ? 'text-slate-500' : 'text-gray-400'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-[9px] font-semibold">{label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

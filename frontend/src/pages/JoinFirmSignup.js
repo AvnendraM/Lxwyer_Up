@@ -12,6 +12,9 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
 import { dummyLawFirms } from '../data/lawFirmsDataExtended';
+import GoogleSignupButton from '../components/GoogleSignupButton';
+import IndianPhoneInput from '../components/IndianPhoneInput';
+import OtpVerificationModal from '../components/OtpVerificationModal';
 
 const SimpleNavbar = ({ navigate }) => {
   return (
@@ -42,8 +45,10 @@ const JoinFirmSignup = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
 
   // Find the firm
   const firm = dummyLawFirms.find(f => f.id === firmId);
@@ -115,8 +120,30 @@ const JoinFirmSignup = () => {
 
   const handleNext = () => {
     if (validateStep(step)) {
-      setStep(step + 1);
+      if (step === 1) {
+        if (formData.phone.length !== 10) {
+          toast.error('Please enter a valid 10-digit phone number');
+          return;
+        }
+        setOtpModalOpen(true);
+      } else {
+        setStep(step + 1);
+      }
     }
+  };
+
+  const handleGoogleSignup = async (googleData) => {
+    setFormData(prev => ({
+      ...prev,
+      full_name: googleData.name,
+      email: googleData.email,
+      phone: googleData.phone,
+      password: `google_${Date.now()}`,
+      confirm_password: `google_${Date.now()}`,
+      _googleToken: googleData.accessToken,
+    }));
+    setStep(step + 1); // advance to Step 2 (Case Details)
+    toast.success('Google account connected! Tell us about your case.');
   };
 
   const processPayment = async () => {
@@ -173,7 +200,7 @@ const JoinFirmSignup = () => {
         <SimpleNavbar navigate={navigate} />
         <div className="pt-24 pb-16 px-4 text-center">
           <h1 className="text-2xl font-bold text-[#0F2944]">Law Firm not found</h1>
-          <Button onClick={() => navigate('/browse-firms')} className="mt-4">
+          <Button onClick={() => navigate('/find-lawfirm/manual')} className="mt-4">
             Browse Law Firms
           </Button>
         </div>
@@ -253,6 +280,14 @@ const JoinFirmSignup = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       <SimpleNavbar navigate={navigate} />
 
+      <OtpVerificationModal
+        isOpen={otpModalOpen}
+        onClose={() => setOtpModalOpen(false)}
+        onVerified={() => { setOtpModalOpen(false); setStep(step + 1); }}
+        email={formData.email}
+        phone={formData.phone}
+      />
+
       <div className="pt-24 pb-12 max-w-4xl mx-auto px-4">
         {/* Progress Steps */}
         <div className="flex items-center justify-center mb-8">
@@ -298,6 +333,16 @@ const JoinFirmSignup = () => {
                     <p className="text-gray-600 dark:text-slate-400">Create your account to work with {firm.firm_name}</p>
                   </div>
 
+                  {/* Google Signup */}
+                  <GoogleSignupButton onSuccess={handleGoogleSignup} theme="light" />
+
+                  {/* OR Divider */}
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400 font-medium">OR</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-[#0F2944] dark:text-slate-300 mb-2">Full Name *</label>
@@ -326,18 +371,12 @@ const JoinFirmSignup = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-[#0F2944] mb-2">Phone Number *</label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <Input
-                          value={formData.phone}
-                          onChange={(e) => updateField('phone', e.target.value)}
-                          placeholder="+91 98765 43210"
-                          className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
-                        />
-                      </div>
-                    </div>
+                    <IndianPhoneInput
+                      value={formData.phone}
+                      onChange={(digits) => updateField('phone', digits)}
+                      label="Phone Number"
+                      required
+                    />
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -365,12 +404,19 @@ const JoinFirmSignup = () => {
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                           <Input
-                            type="password"
+                            type={showConfirmPassword ? 'text' : 'password'}
                             value={formData.confirm_password}
                             onChange={(e) => updateField('confirm_password', e.target.value)}
                             placeholder="••••••••"
-                            className="pl-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
+                            className="pl-10 pr-10 bg-white border-gray-200 rounded-xl text-black placeholder:text-gray-400"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          >
+                            {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                         </div>
                       </div>
                     </div>

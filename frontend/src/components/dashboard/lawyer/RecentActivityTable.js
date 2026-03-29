@@ -1,9 +1,14 @@
 import { Calendar, MoreVertical, FileText } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const RecentActivityTable = ({ cases = [], darkMode = true }) => {
 
     return (
-        <div className={`p-6 rounded-[2.5rem] shadow-sm border h-full flex flex-col transition-colors duration-300 ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-blue-50'}`}>
+        <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className={`p-6 rounded-[2.5rem] shadow-sm border h-full flex flex-col transition-colors duration-300 hover:shadow-xl ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-blue-50'}`}
+        >
             <div className="flex items-center justify-between mb-6">
                 <h3 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Recent Cases</h3>
                 <button className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${darkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
@@ -12,7 +17,7 @@ const RecentActivityTable = ({ cases = [], darkMode = true }) => {
                 </button>
             </div>
 
-            <div className="flex-1 overflow-x-auto no-scrollbar">
+            <div className="flex-1 overflow-x-auto no-scrollbar scroll-touch">
                 {cases.length > 0 ? (
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -63,7 +68,7 @@ const RecentActivityTable = ({ cases = [], darkMode = true }) => {
                     </div>
                 )}
             </div>
-        </div>
+        </motion.div>
     );
 };
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from models.user import User, UserCreate, UserLogin, TokenResponse
 from services.auth import hash_password, verify_password, create_token, decode_token, get_current_user
@@ -95,7 +95,17 @@ async def login(login_data: UserLogin):
         raise HTTPException(status_code=403, detail='Account is deactivated. Contact your firm manager.')
     
     token = create_token(user['id'], user['user_type'])
-    user_response = {k: v for k, v in user.items() if k not in ['password', 'password_hash']}
+    
+    # Exclude password fields AND large base64 document fields to avoid browser storage quota overflow
+    EXCLUDED_FIELDS = {'password', 'password_hash', 'aadhar_card_photo', 'bar_certificate', 'firm_registration_doc', 'degree_certificate'}
+    user_response = {}
+    for k, v in user.items():
+        if k in EXCLUDED_FIELDS:
+            continue
+        # Also strip any photo/image field that is a huge base64 string (>10KB)
+        if isinstance(v, str) and len(v) > 10240 and v.startswith('data:'):
+            continue
+        user_response[k] = v
     
     return {'token': token, 'user': user_response}
 
@@ -104,3 +114,41 @@ async def login(login_data: UserLogin):
 async def get_me(current_user: dict = Depends(get_current_user)):
     """Get current user profile"""
     return {k: v for k, v in current_user.items() if k != 'password'}
+
+
+@router.put("/me")
+async def update_me(update_data: dict = Body(...), current_user: dict = Depends(get_current_user)):
+    """Update current user's profile fields (name, phone, bio, achievements)."""
+    allowed_fields = {'full_name', 'phone', 'bio', 'photo', 'achievements'}
+    update_fields = {k: v for k, v in update_data.items() if k in allowed_fields}
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No valid fields to update")
+    
+    await db.users.update_one({'id': current_user['id']}, {'$set': update_fields})
+    updated = await db.users.find_one({'id': current_user['id']}, {'_id': 0, 'password': 0})
+    return updated
+
+
+from fastapi import UploadFile, File
+import os
+import uuid
+
+@router.post("/upload-image")
+async def upload_general_image(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    """Upload a general image (e.g. for achievements) and return its URL."""
+    UPLOAD_DIR = "uploads"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    
+    file_extension = os.path.splitext(file.filename)[1]
+    filename = f"img_{current_user['id']}_{uuid.uuid4()}{file_extension}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    
+    contents: bytes = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image must be under 5 MB.")
+    
+    with open(file_path, "wb") as buffer:
+        buffer.write(contents)
+        
+    return {"url": f"/uploads/{filename}"}
+

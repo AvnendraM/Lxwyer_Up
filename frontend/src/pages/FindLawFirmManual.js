@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { API } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Search, Filter, MapPin, Users, ArrowRight, Star, Globe, Phone, Mail, Award, Check, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building2, Search, Filter, MapPin, Users, ArrowRight, Star, Globe, Phone, Mail, Award, Check, X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { WaveLayout } from '../components/WaveLayout';
 import { Button } from '../components/ui/button';
 import { dummyLawFirms, states, practiceAreas } from '../data/lawFirmsData';
+
+
+
 
 const FloatingCard = ({ children, delay = 0, className = "" }) => (
   <motion.div
@@ -47,8 +50,8 @@ export default function FindLawFirmManual() {
     fetchFirms();
   }, []);
 
-  // Map DB firms to match dummy data structure
-  const formattedDbFirms = dbFirms.map(firm => ({
+  // Memoize DB firms mapping so shuffle only recalculates when DB data changes
+  const formattedDbFirms = useMemo(() => dbFirms.map(firm => ({
     ...firm,
     id: firm.id || firm._id,
     name: firm.firm_name || firm.name,
@@ -57,17 +60,36 @@ export default function FindLawFirmManual() {
     practiceAreas: firm.practice_areas || [],
     lawyersCount: firm.total_lawyers || 0,
     description: firm.description || 'No description provided',
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200', // Fallback
+    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200',
     unique_id: firm.unique_id,
-    consultation_fee: firm.consultation_fee || firm.min_fee || firm.fee, // Ensure fee is mapped
+    consultation_fee: firm.consultation_fee || firm.min_fee || firm.fee,
     feeMin: firm.min_fee || firm.consultation_fee,
     feeRange: firm.fee_range || firm.price_range
-  }));
+  })), [dbFirms]);
 
-  const allFirms = [...formattedDbFirms, ...dummyLawFirms];
+  // Deterministic daily Fisher-Yates shuffle — same as FindLawyerManual
+  // Order changes each day so no firm is permanently promoted
+  const allFirms = useMemo(() => {
+    const combined = [...formattedDbFirms, ...dummyLawFirms];
+    const today = new Date();
+    const seed = today.getFullYear() * 1000 + Math.floor(
+      (today - new Date(today.getFullYear(), 0, 0)) / 86400000
+    );
+    let s = seed;
+    const rand = () => {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      return (s >>> 0) / 0xffffffff;
+    };
+    // Proper Fisher-Yates — guarantees uniform distribution
+    for (let i = combined.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [combined[i], combined[j]] = [combined[j], combined[i]];
+    }
+    return combined;
+  }, [formattedDbFirms]);
 
-  // Search and filter logic
-  const filteredFirms = allFirms.filter(firm => {
+  // Memoized filter — only re-runs when search/filters or shuffled list changes
+  const filteredFirms = useMemo(() => allFirms.filter(firm => {
     const matchesSearch =
       (firm.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (firm.practiceAreas || []).some(area => area.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -78,7 +100,7 @@ export default function FindLawFirmManual() {
     const matchesArea = !filters.practiceArea || (firm.practiceAreas || []).includes(filters.practiceArea);
 
     return matchesSearch && matchesState && matchesCity && matchesArea;
-  });
+  }), [allFirms, searchQuery, filters]);
 
   // Pagination
   const totalPages = Math.ceil(filteredFirms.length / firmsPerPage);
@@ -405,7 +427,7 @@ export default function FindLawFirmManual() {
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-8 p-8">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 p-5 sm:p-8">
                 <div className="md:col-span-2 space-y-8">
                   <div>
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">About the Firm</h3>
@@ -464,6 +486,32 @@ export default function FindLawFirmManual() {
           </div>
         )}
       </AnimatePresence>
+
+
+      {/* Floating AI Lawyer Matching Button — lightweight, GPU-composited */}
+      <div className="fixed bottom-8 right-8 z-50">
+        <motion.button
+          onClick={() => navigate('/ai-firm-finder')}
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: 0.5, type: 'spring', stiffness: 260, damping: 20 }}
+          whileHover={{ scale: 1.06, y: -3 }}
+          whileTap={{ scale: 0.96 }}
+          className="relative flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-[#050d1a] text-white font-semibold text-sm cursor-pointer select-none border border-blue-500/40 shadow-xl shadow-blue-700/20 hover:shadow-blue-600/40 transition-shadow duration-300"
+          style={{ backdropFilter: 'blur(12px)', willChange: 'transform' }}
+        >
+          <span className="absolute inset-0 rounded-2xl ring-1 ring-blue-500/20 pointer-events-none" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full ring-2 ring-[#050d1a] animate-pulse" />
+          <span className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/30">
+            <Building2 className="w-4 h-4 text-blue-400" />
+          </span>
+          <span className="relative">
+            AI Lawyer Matching
+            <span className="block text-[10px] font-normal text-blue-400/70 -mt-0.5">Smart firm analysis</span>
+          </span>
+        </motion.button>
+      </div>
+
     </WaveLayout>
   );
 }

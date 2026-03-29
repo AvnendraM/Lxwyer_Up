@@ -16,6 +16,10 @@ from .messages import router as messages_router
 from .network import router as network_router
 from .events import router as events_router
 from .notifications import router as notifications_router
+from .otp import router as otp_router
+from .billing import router as billing_router
+from .legal_chat import router as legal_chat_router
+from .sos import router as sos_router
 
 __all__ = [
     'auth_router',
@@ -34,5 +38,9 @@ __all__ = [
     'messages_router',
     'network_router',
     'events_router',
-    'notifications_router'
+    'notifications_router',
+    'otp_router',
+    'billing_router',
+    'legal_chat_router',
+    'sos_router'
 ]

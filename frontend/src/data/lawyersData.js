@@ -107,48 +107,56 @@ const educations = [
   'LLB, LLM from Pune University'
 ];
 
-const lawyerImages = [
-  'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1556157382-97eda2d62296?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1598257006458-087169a1f08d?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1548532928-b34e3be62fc6?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1554151228-14d9def656ec?auto=format&fit=crop&q=80&w=800'
-];
+
+// Curated professional-looking portrait indices for randomuser.me
+// Indices 1-25 for men and women consistently produce formal/office headshots
+const MALE_PRO_INDICES   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
+const FEMALE_PRO_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
+
+// Female first names for gender detection
+const femaleFirstNames = new Set([
+  'Priya', 'Neha', 'Sunita', 'Kavita', 'Meera', 'Anjali', 'Pooja', 'Rekha',
+  'Anita', 'Seema', 'Shweta', 'Nisha', 'Ritu', 'Divya', 'Sarita', 'Jyoti',
+  'Preeti', 'Shruti', 'Swati', 'Pallavi', 'Megha', 'Sneha', 'Komal', 'Tanvi', 'Sakshi'
+]);
 
 const generateLawyers = () => {
+  let maleIdx = 1;
+  let femaleIdx = 1;
+
   return specializations.flatMap((spec, specIndex) => {
-    // Generate multiple lawyers per specialization to fill up the list
     return Array.from({ length: 5 }).map((_, i) => {
       const index = specIndex * 5 + i;
-      // Round-robin assignment for location to test filters
       const location = cities[index % cities.length];
-      const experience = 5 + (index % 25); // varied experience
-
+      const experience = 5 + (index % 25);
       const firstName = firstNames[index % firstNames.length];
       const lastName = lastNames[index % lastNames.length];
       const fullName = `${firstName} ${lastName}`;
+      const isFemale = femaleFirstNames.has(firstName);
+      const feeMin = 1000 + Math.floor(Math.random() * 3000);
+      const feeMax = feeMin + 1000 + Math.floor(Math.random() * 4000);
+
+      // Assign gender-matched photo from curated professional-looking indices
+      let photo;
+      if (isFemale) {
+        photo = `https://randomuser.me/api/portraits/women/${FEMALE_PRO_INDICES[femaleIdx % FEMALE_PRO_INDICES.length]}.jpg`;
+        femaleIdx++;
+      } else {
+        photo = `https://randomuser.me/api/portraits/men/${MALE_PRO_INDICES[maleIdx % MALE_PRO_INDICES.length]}.jpg`;
+        maleIdx++;
+      }
 
       return {
         id: `dummy_lawyer_${index + 1}`,
         name: fullName,
-        firstName: firstName,
-        lastName: lastName,
+        firstName,
+        lastName,
         email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`,
         phone: '+91 9876543210',
         specialization: spec,
         secondarySpecializations: [],
         experience,
-        rating: 4.5 + (Math.random() * 0.5), // Random rating between 4.5 and 5.0
+        rating: 4.5 + (Math.random() * 0.5),
         reviews: 20 + Math.floor(Math.random() * 100),
         casesWon: 50 + Math.floor(Math.random() * 200),
         casesHandled: 80 + Math.floor(Math.random() * 300),
@@ -159,13 +167,16 @@ const generateLawyers = () => {
         barCouncilNumber: `DUMMY/${location.state.substring(0, 2).toUpperCase()}/${2024 - experience}`,
         education: educations[index % educations.length],
         languages: ['English', 'Hindi', languages[index % languages.length]],
-        feeMin: 2000 + Math.floor(Math.random() * 3000),
-        feeMax: 6000 + Math.floor(Math.random() * 5000),
+        feeMin,
+        feeMax,
+        charge_30min: String(feeMin),
+        charge_60min: String(feeMax),
         bio: `${fullName} is a distinguished ${spec} lawyer based in ${location.city} with over ${experience} years of experience. Specializing in complex ${spec.toLowerCase()} matters, they have successfully handled numerous high-profile cases and provide dedicated legal counsel to clients across ${location.state}.`,
-        photo: lawyerImages[index % lawyerImages.length], // Changed from 'image' to 'photo' to match component usage, using high-quality images
+        photo,                         // ← real randomuser.me portrait
         availability: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-        consultationModes: ['In-Person', 'Video Call', 'Phone'],
-        verified: Math.random() > 0.3, // 70% chance of being verified
+        consultationModes: ['In-Person', 'Video Call'],
+        consultation_preferences: Math.random() > 0.5 ? 'both' : 'video',
+        verified: Math.random() > 0.3,
         featured: Math.random() > 0.8,
         joinedDate: '2024-01-01'
       };

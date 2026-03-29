@@ -10,7 +10,7 @@ import { CorporateInput, CorporateButton } from '../components/CorporateComponen
 export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
+    email: 'admin@lxwyerup.com',
     password: ''
   });
   const navigate = useNavigate();
@@ -80,17 +80,6 @@ export default function AdminLogin() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <CorporateInput
-                label="Admin Email"
-                type="email"
-                data-testid="admin-email-input"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="admin@lxwyerup.com"
-                icon={Mail}
-                required
-              />
-
               <CorporateInput
                 label="Admin Password"
                 type="password"

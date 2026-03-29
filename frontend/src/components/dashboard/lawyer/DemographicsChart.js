@@ -1,5 +1,6 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Briefcase } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const DemographicsChart = ({ cases = [], darkMode = true }) => {
 
@@ -21,7 +22,11 @@ const DemographicsChart = ({ cases = [], darkMode = true }) => {
     // However, Recharts handles 0 values fine.
 
     return (
-        <div className={`p-6 rounded-[2.5rem] shadow-sm border h-full flex flex-col relative overflow-hidden transition-colors duration-300 ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-blue-50'}`}>
+        <motion.div
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className={`p-6 rounded-[2.5rem] shadow-sm border h-full flex flex-col relative overflow-hidden transition-colors duration-300 hover:shadow-xl ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-blue-50'}`}
+        >
             <div className="flex items-center justify-between mb-4 relative z-10">
                 <div>
                     <h3 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Case Status</h3>
@@ -93,7 +98,7 @@ const DemographicsChart = ({ cases = [], darkMode = true }) => {
 
             {/* Decorative gradient background similar to design */}
             <div className={`absolute bottom-0 left-0 right-0 h-32 pointer-events-none rounded-b-[2.5rem] bg-gradient-to-t from-transparent ${darkMode ? 'from-white/5' : 'from-blue-50/50'}`} />
-        </div>
+        </motion.div>
     );
 };
 

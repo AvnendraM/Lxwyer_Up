@@ -304,7 +304,7 @@ export default function CinematicHero() {
               
               <Button
                 data-testid="cinematic-hero-cta"
-                onClick={() => navigate('/role-selection')}
+                onClick={() => navigate('/register')}
                 className="relative bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xl px-12 py-6 rounded-full font-semibold shadow-2xl flex items-center space-x-3 border-2 border-blue-400/50"
               >
                 <span>Get Started</span>
@@ -682,7 +682,7 @@ export default function CinematicHero() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
-                onClick={() => navigate('/role-selection')}
+                onClick={() => navigate('/register')}
                 className={`text-lg px-10 py-6 rounded-full font-semibold shadow-xl transition-colors ${
                   theme === 'dark'
                     ? 'bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white'

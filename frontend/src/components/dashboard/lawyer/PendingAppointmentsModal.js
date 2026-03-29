@@ -84,8 +84,8 @@ const PendingAppointmentsModal = ({ isOpen, onClose, bookings, onAccept, onDecli
                                     >
                                         {/* Card Header: User Info & Status */}
                                         <div className="flex justify-between items-start mb-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-sm
+                                            <div className="flex items-center gap-4 pr-3">
+                                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-sm shrink-0
                           ${darkMode
                                                         ? 'bg-gradient-to-br from-blue-500/20 to-blue-600/20 text-blue-400 border border-blue-500/20'
                                                         : 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600 border border-blue-200/50'
@@ -93,31 +93,39 @@ const PendingAppointmentsModal = ({ isOpen, onClose, bookings, onAccept, onDecli
                                                     {booking.client_name?.[0] || booking.fullName?.[0] || <User className="w-6 h-6" />}
                                                 </div>
                                                 <div>
-                                                    <h3 className={`font-bold text-base ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                                                    <h3 className={`font-bold text-base line-clamp-1 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                                                         {booking.client_name || booking.fullName || 'Client Name'}
                                                     </h3>
                                                     <div className="flex items-center gap-2 mt-0.5">
-                                                        <span className={`text-xs px-2 py-0.5 rounded-md font-medium
+                                                        <span className={`text-xs px-2 py-0.5 rounded-md font-medium whitespace-nowrap
                               ${darkMode ? 'bg-white/5 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                                                            {booking.service_type || booking.consultationType || 'Consultation'}
+                                                            {booking.service_type || booking.consultationType || booking.consultation_type || 'Consultation'}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Date Badge */}
-                                            <div className={`flex flex-col items-end text-xs font-semibold px-3 py-1.5 rounded-lg border
+                                            <div className={`flex flex-col items-end text-xs font-semibold px-3 py-1.5 rounded-lg border shrink-0
                         ${darkMode ? 'bg-black/20 border-white/5 text-slate-300' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
-                                                <span className="flex items-center gap-1.5 mb-1">
+                                                <span className="flex items-center gap-1.5 mb-1 whitespace-nowrap">
                                                     <Calendar className="w-3.5 h-3.5 opacity-70" />
                                                     {booking.date}
                                                 </span>
-                                                <span className="flex items-center gap-1.5 text-blue-500">
+                                                <span className="flex items-center gap-1.5 text-blue-500 whitespace-nowrap">
                                                     <Clock className="w-3.5 h-3.5" />
                                                     {booking.time}
                                                 </span>
                                             </div>
                                         </div>
+
+                                        {/* Client Bio/Description */}
+                                        {(booking.description || booking.bio) && (
+                                            <div className={`mb-4 px-3 py-2.5 rounded-xl border text-sm italic
+                                                ${darkMode ? 'bg-black/20 border-white/5 text-slate-300' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                                                <p className="line-clamp-2">"{booking.description || booking.bio}"</p>
+                                            </div>
+                                        )}
 
                                         {/* Actions Grid */}
                                         <div className="grid grid-cols-3 gap-3 mt-4">

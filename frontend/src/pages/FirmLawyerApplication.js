@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Scale, ArrowLeft, Building2, User, Mail, Phone, Briefcase, GraduationCap, Languages, CheckCircle, ArrowRight } from 'lucide-react';
+import { Scale, ArrowLeft, Building2, User, Mail, Phone, Briefcase, GraduationCap, Languages, CheckCircle, ArrowRight, ShieldCheck, CreditCard, Lock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
@@ -77,8 +77,8 @@ export default function FirmLawyerApplication() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    // Note: e.preventDefault() removed as this will be called from a button click not form sumbit
     
     if (formData.password !== formData.confirm_password) {
       toast.error('Passwords do not match');
@@ -158,14 +158,14 @@ export default function FirmLawyerApplication() {
       <div className="pt-24 pb-12 px-4 max-w-2xl mx-auto">
         {/* Progress Steps */}
         <div className="flex items-center justify-center gap-4 mb-8">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
                 step >= s ? 'bg-[#0F2944] text-white' : 'bg-gray-200 text-gray-500'
               }`}>
                 {s}
               </div>
-              {s < 3 && <div className={`w-12 h-0.5 ${step > s ? 'bg-[#0F2944]' : 'bg-gray-200'}`} />}
+              {s < 4 && <div className={`w-12 h-0.5 ${step > s ? 'bg-[#0F2944]' : 'bg-gray-200'}`} />}
             </div>
           ))}
         </div>
@@ -179,15 +179,17 @@ export default function FirmLawyerApplication() {
               {step === 1 && 'Personal Information'}
               {step === 2 && 'Select Your Law Firm'}
               {step === 3 && 'Professional Details'}
+              {step === 4 && 'Application Processing Fee'}
             </h2>
             <p className="text-gray-600 text-sm">
               {step === 1 && 'Enter your basic information'}
               {step === 2 && 'Choose the law firm you want to join'}
               {step === 3 && 'Tell us about your legal expertise'}
+              {step === 4 && 'Final step to submit your application'}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <div className="space-y-4">
             {/* Step 1: Personal Info */}
             {step === 1 && (
               <div className="space-y-4">
@@ -457,16 +459,99 @@ export default function FirmLawyerApplication() {
                     Back
                   </Button>
                   <Button
-                    type="submit"
-                    disabled={loading}
+                    type="button"
+                    onClick={() => {
+                      if (!formData.specialization || !formData.experience_years) {
+                        toast.error('Please fill required professional details');
+                        return;
+                      }
+                      setStep(4);
+                    }}
                     className="flex-1 bg-[#0F2944] hover:bg-[#0F2944]/90 text-white rounded-xl py-3"
                   >
-                    {loading ? 'Submitting...' : 'Submit Application'}
+                    Continue
+                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </div>
               </div>
             )}
-          </form>
+
+            {/* Step 4: Payment Checkout */}
+            {step === 4 && (
+              <div className="space-y-6">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white shadow-md">
+                    <ShieldCheck className="w-8 h-8 text-emerald-600" />
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-inner">
+                  <div className="p-6">
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-800 pb-3">Payment Summary</h3>
+                    <div className="space-y-3 mb-6">
+                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                        <span>Application Evaluation</span>
+                        <span>₹2,118.64</span>
+                      </div>
+                      <div className="flex justify-between items-center text-slate-600 dark:text-slate-400">
+                        <span>GST (18%)</span>
+                        <span>₹381.36</span>
+                      </div>
+                      <div className="flex justify-between items-center font-bold text-lg text-slate-900 dark:text-white pt-3 border-t border-slate-200 dark:border-slate-800">
+                        <span>Total Secure Payment</span>
+                        <span className="text-emerald-600 dark:text-emerald-400">₹2,500.00</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-900/50 rounded-xl p-5 mb-2 shadow-sm">
+                      <div className="flex gap-3">
+                        <div className="mt-0.5"><div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse mt-1.5" /></div>
+                        <div>
+                          <h4 className="font-bold text-blue-900 dark:text-blue-100 text-[15px]">100% Refundable Guarantee</h4>
+                          <p className="text-sm text-blue-800/80 dark:text-blue-300/80 mt-1 leading-relaxed">
+                            The ₹2500 application fee is fully refundable regardless of whether your application is selected or rejected by our Apex system. This helps us ensure only serious verified professionals apply.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 text-center text-xs text-slate-400 flex items-center justify-center gap-2 mb-6">
+                  <Lock className="w-3.5 h-3.5" /> Payments are securely processed via 256-bit AES encryption.
+                </div>
+
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    onClick={() => setStep(3)}
+                    variant="outline"
+                    className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50 rounded-xl py-3"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="flex-[2] bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl py-3 text-lg"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="w-5 h-5 mr-2" />
+                        Pay ₹2500 & Submit
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="mt-6 text-center">
             <span className="text-gray-500">Already approved? </span>

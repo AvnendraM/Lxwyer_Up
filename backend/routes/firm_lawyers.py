@@ -98,6 +98,19 @@ async def get_firm_lawyer_applications():
     return applications
 
 
+
+@router.get("/applications/by-firm/{firm_id}")
+async def get_firm_applications_by_firm(firm_id: str, filter_status: str = None):
+    """Get lawyer applications for a specific law firm (for firm manager dashboard)"""
+    query = {"firm_id": firm_id}
+    if filter_status:
+        query["status"] = filter_status
+    applications = await db.firm_lawyer_applications.find(
+        query,
+        {"_id": 0, "password_hash": 0}
+    ).sort("created_at", -1).to_list(100)
+    return applications
+
 @router.put("/applications/{app_id}/status")
 async def update_firm_lawyer_application_status(app_id: str, status: str):
     """Update firm lawyer application status (approve/reject)"""

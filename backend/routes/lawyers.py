@@ -10,12 +10,47 @@ router = APIRouter(prefix="/lawyers", tags=["Lawyers"])
 
 
 @router.get("")
-async def get_lawyers():
-    """Get all approved lawyers for the browse page"""
-    lawyers = await db.users.find(
-        {'user_type': 'lawyer', 'is_approved': True},
-        {'password': 0}
-    ).to_list(100)
+async def get_lawyers(specialization: str = None, city: str = None, limit: int = None):
+    """Get all approved lawyers for the browse page, with optional filters"""
+    # Base filter: approved lawyers
+    query_filter = {'user_type': 'lawyer', '$or': [{'is_approved': True}, {'status': 'approved'}]}
+    
+    # Add specialization filter (case-insensitive partial match)
+    if specialization:
+        import re
+        query_filter['specialization'] = {'$regex': re.escape(specialization), '$options': 'i'}
+    
+    # Add city filter (case-insensitive partial match)
+    if city:
+        import re
+        query_filter['$or'] = [
+            {'city': {'$regex': re.escape(city), '$options': 'i'}},
+            {'state': {'$regex': re.escape(city), '$options': 'i'}},
+        ]
+        # Merge with approval filter
+        query_filter = {
+            '$and': [
+                {'user_type': 'lawyer', '$or': [{'is_approved': True}, {'status': 'approved'}]},
+                {'$or': [
+                    {'city': {'$regex': re.escape(city), '$options': 'i'}},
+                    {'state': {'$regex': re.escape(city), '$options': 'i'}},
+                ]}
+            ]
+        }
+        if specialization:
+            query_filter['$and'].append({'specialization': {'$regex': re.escape(specialization), '$options': 'i'}})
+    
+    max_results = limit if limit and limit > 0 else 1000
+    lawyers = await db.users.find(query_filter, {'password': 0}).to_list(max_results)
+    
+    # Sort lawyers to prioritize real accounts over dummy/test data
+    def sort_key(l):
+        is_dummy_id = str(l.get('_id', '')).startswith('dummy_') or str(l.get('id', '')).startswith('dummy_')
+        is_test_name = 'test' in str(l.get('name', '')).lower() or 'test' in str(l.get('full_name', '')).lower()
+        # False (0) comes before True (1)
+        return (is_dummy_id or is_test_name, l.get('name', ''))
+        
+    lawyers.sort(key=sort_key)
     
     for lawyer in lawyers:
         if isinstance(lawyer.get('created_at'), str):
@@ -53,6 +88,8 @@ async def submit_lawyer_application(application: LawyerApplicationCreate):
         state=application.state,
         city=application.city,
         court=application.court,
+        detailed_court_experience=application.detailed_court_experience,
+        primary_court=application.primary_court,
         education=application.education,
         languages=application.languages,
         fee_range=application.fee_range,
@@ -62,7 +99,18 @@ async def submit_lawyer_application(application: LawyerApplicationCreate):
         law_firm_id=application.law_firm_id,
         law_firm_name=application.law_firm_name,
         practice_start_date=application.practice_start_date,
-        education_details=application.education_details
+        education_details=application.education_details,
+        bar_council_photo=application.bar_council_photo,
+        college_degree_photo=application.college_degree_photo,
+        office_address_photo=application.office_address_photo,
+        aadhar_card_photo=application.aadhar_card_photo,
+        aadhar_card_front=application.aadhar_card_front,
+        aadhar_card_back=application.aadhar_card_back,
+        pan_card=application.pan_card,
+        application_type=application.application_type,
+        sos_locations=application.sos_locations,
+        sos_matters=application.sos_matters,
+        sos_terms_accepted=application.sos_terms_accepted,
     )
     
     await db.lawyer_applications.insert_one(app_data.model_dump())
@@ -87,9 +135,15 @@ async def upload_profile_photo(file: UploadFile = File(...), user: dict = Depend
     filename = f"{user['id']}_{uuid.uuid4()}{file_extension}"
     file_path = os.path.join(UPLOAD_DIR, filename)
     
+    # Check file size (10 MB limit)
+    contents = await file.read()
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Profile photo must be under 10 MB.")
+    await file.seek(0)
+    
     # Save file
     with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(contents)
         
     # Construct URL (assuming server runs on localhost:8000 or relative path)
     # in production this should be a full URL or relative to static mount
@@ -133,4 +187,62 @@ async def update_bio(data: BioUpdate, user: dict = Depends(get_current_user)):
         }
     )
     
-    return {'message': 'Bio updated successfully', 'bio': data.bio, 'bio_edit_count': current_count + 1}
+    return {'message': 'Bio updated successfully', 'bio': data.bio, 'bio_edit_count': user.get('bio_edit_count', 0) + 1}
+
+from typing import Literal
+
+class ConsultationPreferencesUpdate(BaseModel):
+    preferences: Literal['video', 'in_person', 'both']
+
+@router.put("/me/consultation_preferences")
+async def update_consultation_preferences(data: ConsultationPreferencesUpdate, user: dict = Depends(get_current_user)):
+    """Update lawyer consultation preferences (video only vs video and in-person)"""
+    if user.get('user_type') != 'lawyer':
+        raise HTTPException(status_code=403, detail="Only lawyers can update consultation preferences")
+        
+    await db.users.update_one(
+        {'id': user['id']},
+        {'$set': {'consultation_preferences': data.preferences}}
+    )
+    
+    return {'message': 'Consultation preferences updated', 'consultation_preferences': data.preferences}
+
+class AvailabilityUpdate(BaseModel):
+    slots: List[str]
+
+@router.put("/me/availability")
+async def update_availability(data: AvailabilityUpdate, user: dict = Depends(get_current_user)):
+    """Update lawyer availability slots"""
+    if user.get('user_type') != 'lawyer':
+        raise HTTPException(status_code=403, detail="Only lawyers can update availability")
+        
+    await db.users.update_one(
+        {'id': user['id']},
+        {'$set': {'available_slots': data.slots}}
+    )
+    
+    return {'message': 'Availability updated', 'available_slots': data.slots}
+
+
+class DeactivationRequest(BaseModel):
+    reason: str
+
+@router.post("/me/deactivate")
+async def submit_deactivation_request(data: DeactivationRequest, user: dict = Depends(get_current_user)):
+    """Submit a request to deactivate attorney account"""
+    if user.get('user_type') != 'lawyer':
+        raise HTTPException(status_code=403, detail="Only lawyers can submit deactivation requests")
+        
+    await db.users.update_one(
+        {'id': user['id']},
+        {'$set': {
+            'deactivation_request': {
+                'reason': data.reason,
+                'status': 'pending',
+                'requested_at': datetime.now().isoformat()
+            }
+        }}
+    )
+    
+    return {'message': 'Deactivation request submitted successfully'}
+

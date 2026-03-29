@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { MessageSquare, Calendar, FileText, Scale, Shield, Clock, Users, TrendingUp, ChevronUp, Gavel, BookOpen, UserCheck, Phone, MoreHorizontal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import OrbitingFeatures from '../components/OrbitingFeatures';
 
 export default function LandingPage() {
   const [showAllServices, setShowAllServices] = useState(false);
@@ -88,6 +89,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Orbiting Features */}
+      <OrbitingFeatures />
 
       {/* Services We Offer */}
       <section data-testid="services-section" className="py-20 px-4 bg-gradient-to-br from-green-50 via-white to-orange-50">

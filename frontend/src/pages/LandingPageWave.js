@@ -6,19 +6,79 @@ import Lenis from 'lenis';
 import {
     ArrowRight, Shield, Zap, Users, Brain,
     Clock, FileText, Gavel, BookOpen,
-    MessageSquare, Search, UserCheck, Menu, X, ChevronDown, Scale, AlertTriangle
+    MessageSquare, Search, UserCheck, Menu, X, ChevronDown, Scale, AlertTriangle, Sparkles
 } from 'lucide-react';
+import CountUp from 'react-countup';
 import { NavbarWave } from '../components/NavbarWave';
 import { GradientOrbs } from '../components/GradientOrbs';
 import { Button } from '../components/ui/button';
 import MagicButton from '../components/ui/MagicButton';
+import { useLang } from '../context/LanguageContext';
 
 /* ─────────────────────────────────────────────
    CSS KEYFRAMES
    ───────────────────────────────────────────── */
 
 const pageKeyframes = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@1,700&display=swap');
+
+/* ── LxwyerAI button — exact copy from NavbarWave ── */
+@keyframes borderPulse {
+  0%, 100% { border-color: rgba(255,255,255,0.12); box-shadow: 0 0 0px rgba(255,255,255,0), inset 0 1px 0 rgba(255,255,255,0.04); }
+  50%       { border-color: rgba(255,255,255,0.45); box-shadow: 0 0 10px rgba(255,255,255,0.15), 0 0 24px rgba(255,255,255,0.06), inset 0 1px 0 rgba(255,255,255,0.08); }
+}
+@keyframes shimmerSlide {
+  0%        { transform: translateX(-160%) skewX(-16deg); opacity: 0; }
+  6%        { opacity: 1; }
+  35%       { transform: translateX(260%) skewX(-16deg); opacity: 1; }
+  36%, 100% { opacity: 0; transform: translateX(260%) skewX(-16deg); }
+}
+@keyframes textFlicker {
+  0%, 90%, 100% { opacity: 1; }
+  92%            { opacity: 0.75; }
+  94%            { opacity: 1; }
+  96%            { opacity: 0.85; }
+}
+.lxwyer-wrap {
+  position: relative;
+  display: inline-flex;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: #0a0a0a;
+  border: 1px solid rgba(255,255,255,0.12);
+  animation: borderPulse 2s ease-in-out infinite;
+  transition: transform 0.2s;
+}
+.lxwyer-wrap:hover {
+  transform: scale(1.04);
+  animation: borderPulse 1s ease-in-out infinite;
+}
+.lxwyer-spin {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 50%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200,200,200,0.05) 25%,
+    rgba(255,255,255,0.22) 50%,
+    rgba(200,200,200,0.05) 75%,
+    transparent 100%
+  );
+  animation: shimmerSlide 2.5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.lxwyer-inner {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9999px;
+}
+.lxwyer-text { animation: textFlicker 6s ease-in-out infinite; }
+
 
 @keyframes orbFloat1 {
   0%   { transform: translate(0, 0) scale(1); }
@@ -54,21 +114,15 @@ const pageKeyframes = `
 
 /* ── 3D Animated Sphere ── */
 @keyframes morphSphere {
-  0%   { border-radius: 42% 58% 55% 45% / 56% 45% 55% 44%; transform: rotate(0deg) scale(1); }
-  14%  { border-radius: 52% 48% 42% 58% / 48% 62% 38% 52%; transform: rotate(51deg) scale(1.04); }
-  28%  { border-radius: 38% 62% 56% 44% / 55% 38% 62% 45%; transform: rotate(103deg) scale(0.97); }
-  42%  { border-radius: 58% 42% 48% 52% / 42% 56% 44% 58%; transform: rotate(154deg) scale(1.06); }
-  57%  { border-radius: 45% 55% 62% 38% / 52% 44% 56% 48%; transform: rotate(206deg) scale(0.98); }
-  71%  { border-radius: 55% 45% 38% 62% / 44% 58% 42% 56%; transform: rotate(257deg) scale(1.03); }
-  85%  { border-radius: 48% 52% 45% 55% / 58% 42% 58% 42%; transform: rotate(309deg) scale(1.01); }
-  100% { border-radius: 42% 58% 55% 45% / 56% 45% 55% 44%; transform: rotate(360deg) scale(1); }
+  0%   { transform: rotate(0deg)   scale(1);   }
+  25%  { transform: rotate(90deg)  scale(1.03); }
+  50%  { transform: rotate(180deg) scale(0.97); }
+  75%  { transform: rotate(270deg) scale(1.02); }
+  100% { transform: rotate(360deg) scale(1);   }
 }
 @keyframes sphereColorShift {
-  0%   { background: radial-gradient(ellipse at 30% 20%, #60a5fa 0%, #2563eb 30%, #1d4ed8 55%, #1e3a8a 80%, #0f172a 100%); }
-  25%  { background: radial-gradient(ellipse at 60% 30%, #93c5fd 0%, #3b82f6 30%, #2563eb 55%, #1d4ed8 80%, #172554 100%); }
-  50%  { background: radial-gradient(ellipse at 40% 60%, #bfdbfe 0%, #60a5fa 30%, #3b82f6 55%, #1e40af 80%, #0f172a 100%); }
-  75%  { background: radial-gradient(ellipse at 70% 40%, #93c5fd 0%, #2563eb 30%, #1d4ed8 55%, #1e3a8a 80%, #172554 100%); }
-  100% { background: radial-gradient(ellipse at 30% 20%, #60a5fa 0%, #2563eb 30%, #1d4ed8 55%, #1e3a8a 80%, #0f172a 100%); }
+  0%,100% { opacity: 1; }
+  50%     { opacity: 0.92; }
 }
 @keyframes sphereShine {
   0%   { transform: rotate(0deg); opacity: 0.6; }
@@ -110,6 +164,14 @@ const pageKeyframes = `
 @keyframes sphereShadow {
   0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.2; }
   50% { transform: translateX(-50%) scale(1.1); opacity: 0.12; }
+}
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes spinReverse {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
 }
 @keyframes convergeToCenter {
   0%   { transform: translate(var(--startX), var(--startY)) scale(1); opacity: 0; }
@@ -171,6 +233,25 @@ const pageKeyframes = `
   50%  { box-shadow: 0 6px 24px rgba(220,38,38,0.45), 0 0 0 10px rgba(239,68,68,0); }
   100% { box-shadow: 0 6px 24px rgba(220,38,38,0.45), 0 0 0 0 rgba(239,68,68,0); }
 }
+@keyframes breathe {
+  0%, 100% { transform: scale(1) translate3d(0, 0, 0); opacity: 0.6; }
+  50% { transform: scale(1.06) translate3d(10px, -8px, 0); opacity: 0.75; }
+}
+@keyframes shimmerBorder {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes nodePing {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+@keyframes heroBlob {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  25% { transform: translate3d(18px, -12px, 0) scale(1.04); }
+  50% { transform: translate3d(-12px, 18px, 0) scale(0.97); }
+  75% { transform: translate3d(10px, -6px, 0) scale(1.02); }
+}
 `;
 
 const StyleInjector = () => {
@@ -194,23 +275,24 @@ const StyleInjector = () => {
 const SmoothScrolling = () => {
     useEffect(() => {
         const lenis = new Lenis({
-            duration: 1.2,
+            duration: 0.85,
             easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            direction: 'vertical',
             gestureDirection: 'vertical',
             smooth: true,
             smoothTouch: false,
-            touchMultiplier: 2,
+            touchMultiplier: 1.5,
         });
 
+        let rafId;
         function raf(time) {
             lenis.raf(time);
-            requestAnimationFrame(raf);
+            rafId = requestAnimationFrame(raf);
         }
 
-        requestAnimationFrame(raf);
+        rafId = requestAnimationFrame(raf);
 
         return () => {
+            cancelAnimationFrame(rafId);
             lenis.destroy();
         };
     }, []);
@@ -249,32 +331,36 @@ const SmoothScrolling = () => {
    SCALES OF JUSTICE INTRO – zooms out on scroll
    ───────────────────────────────────────────── */
 
-// Legal data labels with positions (distributed around the scales) - 30% FASTER
+// Orbiting labels — reduced to 8 for better frame rate
 const legalDataItems = [
-    { label: 'Family Law', angle: 30, dist: 280, delay: 0, dur: 2.8 },
-    { label: 'Criminal Law', angle: 75, dist: 310, delay: 0.6, dur: 3.2 },
-    { label: 'Contracts', angle: 120, dist: 260, delay: 1.2, dur: 2.7 },
-    { label: 'Property Law', angle: 165, dist: 300, delay: 0.3, dur: 2.9 },
-    { label: 'Tax Law', angle: 210, dist: 270, delay: 1.5, dur: 2.5 },
-    { label: 'IP Rights', angle: 250, dist: 320, delay: 0.9, dur: 3.4 },
-    { label: 'Corporate', angle: 290, dist: 290, delay: 1.8, dur: 2.8 },
-    { label: 'Civil Rights', angle: 340, dist: 250, delay: 0.4, dur: 2.5 },
-    { label: 'Labor Law', angle: 55, dist: 340, delay: 2.1, dur: 3.0 },
-    { label: 'Banking Law', angle: 145, dist: 330, delay: 1.1, dur: 2.7 },
-    { label: 'Cyber Law', angle: 195, dist: 260, delay: 2.4, dur: 2.9 },
-    { label: 'Consumer Law', angle: 310, dist: 300, delay: 0.7, dur: 2.6 },
+    // ── Platform Features ──────────────────────────────────────────
+    { label: 'Lxwyer AI',          type: 'feature', angle: 15,  dist: 270, delay: 1.0, dur: 7.5 },
+    { label: 'SOS',                type: 'feature', angle: 200, dist: 275, delay: 3.5, dur: 7.0 },
+    { label: 'Signature',          type: 'feature', angle: 300, dist: 260, delay: 2.8, dur: 7.8 },
+    { label: 'Consult',            type: 'feature', angle: 100, dist: 272, delay: 1.8, dur: 7.6 },
+    { label: 'Documents',          type: 'feature', angle: 165, dist: 255, delay: 1.4, dur: 8.2 },
+    { label: 'Booking',            type: 'feature', angle: 230, dist: 285, delay: 3.2, dur: 7.3 },
+    { label: 'Dashboard',          type: 'feature', angle: 50,  dist: 265, delay: 2.2, dur: 8.0 },
+    // ── Practice Areas ─────────────────────────────────────────────
+    { label: 'Family Law',         type: 'law',     angle: 60,  dist: 340, delay: 1.5, dur: 8.0 },
+    { label: 'Criminal Law',       type: 'law',     angle: 140, dist: 330, delay: 2.2, dur: 8.8 },
+    { label: 'Corporate Law',      type: 'law',     angle: 250, dist: 320, delay: 1.2, dur: 8.5 },
+    { label: 'Cyber Law',          type: 'law',     angle: 340, dist: 315, delay: 2.6, dur: 9.0 },
+    { label: 'Property Law',       type: 'law',     angle: 30,  dist: 355, delay: 0.9, dur: 9.2 },
+    { label: 'Civil Law',          type: 'law',     angle: 110, dist: 345, delay: 3.0, dur: 8.6 },
+    { label: 'Labour Law',         type: 'law',     angle: 185, dist: 360, delay: 2.0, dur: 9.5 },
+    { label: 'Tax Law',            type: 'law',     angle: 270, dist: 350, delay: 3.6, dur: 8.3 },
+    { label: 'Consumer Law',       type: 'law',     angle: 315, dist: 338, delay: 0.8, dur: 9.8 },
+    { label: 'IPR Law',            type: 'law',     angle: 80,  dist: 362, delay: 2.5, dur: 9.1 },
+    { label: 'Matrimonial Law',    type: 'law',     angle: 220, dist: 375, delay: 1.7, dur: 10.0 },
 ];
 
-// Rays pointing toward center
+// Minimal ray set — 4 instead of 8 for better frame rate
 const rays = [
-    { angle: 0, len: 350, w: 2 },
-    { angle: 45, len: 300, w: 1.5 },
-    { angle: 90, len: 320, w: 1 },
-    { angle: 135, len: 280, w: 1.5 },
-    { angle: 180, len: 340, w: 2 },
-    { angle: 225, len: 300, w: 1 },
-    { angle: 270, len: 310, w: 1.5 },
-    { angle: 315, len: 290, w: 1 },
+    { angle: 0, len: 320, w: 1.5 },
+    { angle: 90, len: 300, w: 1 },
+    { angle: 180, len: 320, w: 1.5 },
+    { angle: 270, len: 300, w: 1 },
 ];
 
 const ScalesOfJusticeIntro = React.memo(() => {
@@ -288,9 +374,14 @@ const ScalesOfJusticeIntro = React.memo(() => {
     const opacityVal = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
     const yVal = useTransform(scrollYProgress, [0, 0.5], [0, -100]);
     const blurVal = useTransform(scrollYProgress, [0, 0.4], [0, 20]);
-
-    // Create a template motion value for the filter string
     const filterVal = useTransform(blurVal, (v) => `blur(${v}px)`);
+
+    // ── Hide floating labels after 20 s ───────────────────────────────
+    const [labelsVisible, setLabelsVisible] = useState(true);
+    useEffect(() => {
+        const t = setTimeout(() => setLabelsVisible(false), 20000);
+        return () => clearTimeout(t);
+    }, []);
 
     return (
         <section ref={ref} className="relative bg-[#f8faff] dark:bg-black transition-colors duration-500" style={{ height: '160vh' }}>
@@ -322,10 +413,11 @@ const ScalesOfJusticeIntro = React.memo(() => {
                                     width: `${ray.len}px`,
                                     height: `${ray.w}px`,
                                     transformOrigin: '0 50%',
-                                    transform: `rotate(${ray.angle}deg)`,
-                                    background: `linear-gradient(90deg, rgba(59,130,246,0.01) 0%, rgba(59,130,246,0.15) 50%, rgba(96,165,250,0.3) 100%)`,
-                                    animation: `rayPulse ${3 + i * 0.5}s ease-in-out ${i * 0.4}s infinite`,
+                                    transform: `rotate(${ray.angle}deg) translateZ(0)`,
+                                    background: `linear-gradient(90deg, rgba(59,130,246,0.01) 0%, rgba(59,130,246,0.12) 50%, rgba(96,165,250,0.25) 100%)`,
+                                    animation: `rayPulse ${7 + i * 1.2}s ease-in-out ${i * 0.8}s infinite`,
                                     borderRadius: '2px',
+                                    willChange: 'opacity',
                                 }}
                             />
                         );
@@ -333,68 +425,95 @@ const ScalesOfJusticeIntro = React.memo(() => {
 
                     {/* Animated legal data dots with labels */}
                     {legalDataItems.map((item, i) => {
-                        const rad = (item.angle * Math.PI) / 180;
-                        const startX = Math.cos(rad) * item.dist;
-                        const startY = Math.sin(rad) * item.dist;
-                        return (
-                            <div
-                                key={`data${i}`}
-                                style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
-                                    '--startX': `${startX}px`,
-                                    '--startY': `${startY}px`,
-                                    animation: `convergeToCenter ${item.dur}s ease-in ${item.delay}s infinite`,
-                                    zIndex: 10,
-                                }}
-                            >
-                                {/* Glowing dot */}
+                        const isFeature = item.type === 'feature';
+
+                        if (isFeature) {
+                            // Feature items: clean orbit using spin/spinReverse
+                            const orbitDist = item.dist + (i % 2 === 0 ? 15 : -10);
+                            const orbitDuration = item.dur * 3;
+                            const orbitDelay = -(item.angle / 360) * orbitDuration;
+
+                            return (
                                 <div
-                                    style={{
-                                        width: '8px',
-                                        height: '8px',
-                                        borderRadius: '50%',
-                                        background: 'linear-gradient(135deg, #60a5fa, #3b82f6)',
-                                        boxShadow: '0 0 8px rgba(59,130,246,0.6), 0 0 20px rgba(96,165,250,0.2)',
-                                        animation: `dotGlow ${1.5 + i * 0.2}s ease-in-out infinite`,
-                                    }}
-                                />
-                                {/* Label */}
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: startY > 0 ? '-22px' : '12px',
-                                        left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        whiteSpace: 'nowrap',
-                                        fontSize: '10px',
-                                        fontWeight: 500,
-                                        fontFamily: "'Outfit', sans-serif",
-                                        color: '#3b82f6',
-                                        backdropFilter: 'blur(4px)',
-                                        animation: `labelFloat ${item.dur}s ease-in ${item.delay}s infinite`,
-                                        letterSpacing: '0.3px',
-                                    }}
-                                    className="bg-[rgba(248,250,255,0.85)] dark:bg-[rgba(15,23,42,0.85)] border border-[rgba(59,130,246,0.15)] dark:border-blue-900/30 px-2 py-0.5 rounded-[10px]"
-                                >
-                                    {item.label}
-                                </div>
-                                {/* Trail line from dot to center */}
-                                <div
+                                    key={`data${i}`}
                                     style={{
                                         position: 'absolute',
                                         top: '50%',
                                         left: '50%',
-                                        width: `${Math.sqrt(startX * startX + startY * startY) * 0.3}px`,
-                                        height: '1px',
-                                        transformOrigin: '0 50%',
-                                        transform: `rotate(${Math.atan2(-startY, -startX) * (180 / Math.PI)}deg)`,
-                                        background: `linear-gradient(90deg, rgba(96,165,250,0.4), transparent)`,
+                                        zIndex: 12,
+                                        animation: `spin ${orbitDuration}s linear ${orbitDelay}s infinite`,
+                                        willChange: 'transform',
+                                        transform: 'translateZ(0)',
+                                        opacity: labelsVisible ? 1 : 0,
+                                        transition: 'opacity 1s ease-out',
                                     }}
-                                />
-                            </div>
-                        );
+                                >
+                                    <div style={{ transform: `translateX(${orbitDist}px)` }}>
+                                        <div style={{
+                                            position: 'absolute',
+                                            animation: `spinReverse ${orbitDuration}s linear ${orbitDelay}s infinite`,
+                                        }}>
+                                            <div
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '-10px',
+                                                    left: '0px',
+                                                    whiteSpace: 'nowrap',
+                                                    fontSize: '9px',
+                                                    fontWeight: 700,
+                                                    fontFamily: "'Outfit', sans-serif",
+                                                    color: 'rgba(217,119,6,0.91)',
+                                                    letterSpacing: '0.5px',
+                                                    textTransform: 'uppercase',
+                                                }}
+                                                className="px-1.5 py-0.5 rounded-[6px] border bg-[rgba(255,251,235,0.75)] dark:bg-[rgba(69,26,3,0.65)] border-[rgba(245,158,11,0.25)] dark:border-amber-700/40"
+                                            >
+                                                {item.label}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        } else {
+                            // Law items: original convergeToCenter — drift inward from starting position
+                            const rad = (item.angle * Math.PI) / 180;
+                            const startX = Math.cos(rad) * item.dist;
+                            const startY = Math.sin(rad) * item.dist;
+
+                            return (
+                                <div
+                                    key={`data${i}`}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        zIndex: 10,
+                                        '--startX': `${startX}px`,
+                                        '--startY': `${startY}px`,
+                                        animation: `convergeToCenter ${item.dur}s ease-in-out ${item.delay}s infinite`,
+                                        willChange: 'transform, opacity',
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            top: '-10px',
+                                            left: '0px',
+                                            whiteSpace: 'nowrap',
+                                            fontSize: '9px',
+                                            fontWeight: 700,
+                                            fontFamily: "'Outfit', sans-serif",
+                                            color: 'rgba(96,165,250,0.9)',
+                                            letterSpacing: '0.5px',
+                                            textTransform: 'uppercase',
+                                        }}
+                                        className="px-1.5 py-0.5 rounded-[6px] border bg-[rgba(248,250,255,0.85)] dark:bg-[rgba(15,23,42,0.85)] border-[rgba(59,130,246,0.18)] dark:border-blue-900/40"
+                                    >
+                                        {item.label}
+                                    </div>
+                                </div>
+                            );
+                        }
                     })}
 
                     {/* Glowing orb behind the icon */}
@@ -404,9 +523,9 @@ const ScalesOfJusticeIntro = React.memo(() => {
                             width: '400px',
                             height: '400px',
                             borderRadius: '50%',
-                            background: 'radial-gradient(circle, rgba(59,130,246,0.25) 0%, rgba(96,165,250,0.08) 50%, transparent 70%)',
-                            filter: 'blur(40px)',
-                            animation: 'pulseGlow 4s ease-in-out infinite',
+                            background: 'radial-gradient(circle, rgba(59,130,246,0.2) 0%, rgba(96,165,250,0.06) 50%, transparent 70%)',
+                            filter: 'blur(20px)',
+                            animation: 'pulseGlow 8s ease-in-out infinite',
                         }}
                     />
 
@@ -418,7 +537,7 @@ const ScalesOfJusticeIntro = React.memo(() => {
                             height: '220px',
                             borderRadius: '50%',
                             border: '1px solid rgba(59,130,246,0.12)',
-                            animation: 'spinSlow 20s linear infinite',
+                            animation: 'spinSlow 40s linear infinite',
                         }}
                     />
                     <div
@@ -428,7 +547,7 @@ const ScalesOfJusticeIntro = React.memo(() => {
                             height: '280px',
                             borderRadius: '50%',
                             border: '1px dashed rgba(96,165,250,0.08)',
-                            animation: 'spinSlow 30s linear infinite reverse',
+                            animation: 'spinSlow 55s linear infinite reverse',
                         }}
                     />
 
@@ -447,12 +566,12 @@ const ScalesOfJusticeIntro = React.memo(() => {
                         <rect x="35" y="82" width="30" height="5" rx="2.5" fill="url(#baseGrad)" />
 
                         {/* Animated Beam Group - SWAYING */}
-                        <g style={{ transformOrigin: '50px 20px', animation: 'balanceBeam 6s ease-in-out infinite' }}>
+                        <g style={{ transformOrigin: '50px 20px', animation: 'balanceBeam 10s ease-in-out infinite' }}>
                             {/* Beam */}
                             <rect x="15" y="18" width="70" height="4" rx="2" fill="url(#beamGrad)" />
 
                             {/* Left Pan Group - COUNTER ROTATE */}
-                            <g style={{ transformOrigin: '20px 22px', animation: 'counterRotate 6s ease-in-out infinite' }}>
+                            <g style={{ transformOrigin: '20px 22px', animation: 'counterRotate 10s ease-in-out infinite' }}>
                                 {/* Left pan chain */}
                                 <line x1="20" y1="22" x2="20" y2="45" stroke="#60a5fa" strokeWidth="1.5" />
                                 <line x1="15" y1="22" x2="15" y2="40" stroke="#60a5fa" strokeWidth="1" opacity="0.6" />
@@ -462,7 +581,7 @@ const ScalesOfJusticeIntro = React.memo(() => {
                             </g>
 
                             {/* Right Pan Group - COUNTER ROTATE */}
-                            <g style={{ transformOrigin: '80px 22px', animation: 'counterRotate 6s ease-in-out infinite' }}>
+                            <g style={{ transformOrigin: '80px 22px', animation: 'counterRotate 10s ease-in-out infinite' }}>
                                 {/* Right pan chain */}
                                 <line x1="80" y1="22" x2="80" y2="45" stroke="#60a5fa" strokeWidth="1.5" />
                                 <line x1="75" y1="22" x2="75" y2="40" stroke="#60a5fa" strokeWidth="1" opacity="0.6" />
@@ -503,7 +622,7 @@ const ScalesOfJusticeIntro = React.memo(() => {
                     >
                         Lxwyer Up
                     </h2>
-                    <p className="text-sm text-slate-400 dark:text-slate-500 transition-colors" style={{ position: 'relative', zIndex: 5 }}>Scroll to explore</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors" style={{ position: 'relative', zIndex: 5 }}>Scroll to explore</p>
                 </motion.div>
             </div >
         </section >
@@ -530,23 +649,23 @@ const SolutionParticles = ({ xPos, yPos, opacity }) => {
 
         let idCounter = 0;
         const interval = setInterval(() => {
-            if (Math.random() > 0.4) return; // Control density
+            if (Math.random() > 0.5) return; // Control density
 
             const id = idCounter++;
             const angle = Math.random() * 360;
-            const distance = 150 + Math.random() * 100; // How far they travel
+            const distance = 150 + Math.random() * 100;
 
             const newItem = {
                 id,
                 label: solutions[Math.floor(Math.random() * solutions.length)],
-                angle: angle, // Store angle for rotation
-                dist: distance, // Total distance
+                angle: angle,
+                dist: distance,
                 delay: 0,
                 duration: 4 + Math.random() * 2,
             };
 
-            setParticles(prev => [...prev.slice(-15), newItem]);
-        }, 600);
+            setParticles(prev => [...prev.slice(-6), newItem]);
+        }, 2800);
 
         return () => clearInterval(interval);
     }, []);
@@ -675,11 +794,8 @@ const GlassFragment = ({ progress, fragment, index, total }) => {
             background: isDark
                 ? `linear-gradient(${135 + index * 15}deg, rgba(30,58,138,${0.6 + fragment.brightness * 0.2}), rgba(15,23,42,${0.4 + fragment.brightness * 0.1}), rgba(30,58,138,${0.5 + fragment.brightness * 0.2}))`
                 : `linear-gradient(${135 + index * 15}deg, rgba(147,197,253,${0.4 + fragment.brightness * 0.3}), rgba(96,165,250,${0.15 + fragment.brightness * 0.15}), rgba(219,234,254,${0.3 + fragment.brightness * 0.2}))`,
-            backdropFilter: 'blur(8px)',
             border: isDark ? '1px solid rgba(59,130,246,0.2)' : '1px solid rgba(255,255,255,0.3)',
-            boxShadow: isDark
-                ? `0 0 ${12 + fragment.size * 0.3}px rgba(37,99,235,${0.15 + fragment.brightness * 0.1}), inset 0 0 ${fragment.size * 0.2}px rgba(255,255,255,0.05)`
-                : `0 0 ${12 + fragment.size * 0.3}px rgba(96,165,250,${0.2 + fragment.brightness * 0.15}), inset 0 0 ${fragment.size * 0.2}px rgba(255,255,255,0.2)`,
+            willChange: 'transform, opacity',
         }}>
             {/* Service label on larger fragments */}
             {fragment.hasLabel && (
@@ -706,8 +822,8 @@ const GlassFragment = ({ progress, fragment, index, total }) => {
 /* ── Fragment Ring (all shattered pieces together) ─── */
 const FragmentRing = ({ progress }) => {
     const fragments = React.useMemo(() => {
-        return Array.from({ length: 16 }).map((_, i) => {
-            const angle = (i / 16) * 360 + (Math.random() - 0.5) * 20;
+        return Array.from({ length: 10 }).map((_, i) => {
+            const angle = (i / 10) * 360 + (Math.random() - 0.5) * 20;
             // Massive scatter: fly extremely far across the viewport
             const dist = 500 + Math.random() * 600;
             // Large readable pieces
@@ -755,7 +871,7 @@ const MistParticle = ({ progress, config }) => {
 
 const MistCloud = ({ progress }) => {
     const particles = React.useMemo(() => {
-        return Array.from({ length: 30 }).map((_, i) => {
+        return Array.from({ length: 12 }).map((_, i) => {
             const angle = Math.random() * 360;
             const speed = 100 + Math.random() * 250;
             return {
@@ -836,31 +952,32 @@ const SphereExplosion = () => {
     // ── ANIMATION TIMELINE (extended for more scroll space) ──
     // 0.30: Explosion container fades in
     // 0.32: BLAST — fragments + mist fly out, "Lxwyer Up" text emerges
-    // 0.32 - 0.42: Orbiting phase with "Lxwyer Up" visible
-    // 0.42 - 0.44: "Lxwyer Up" blurs out — "Easy & Efficient" takes over
-    // 0.44 - 0.58: "Easy & Efficient" is prominent
-    // 0.58 - 0.62: Everything fades out
+    // 0.32 - 0.48: Orbiting phase with "Lxwyer Up" visible
+    // 0.48 - 0.52: "Lxwyer Up" blurs out — "Easy & Efficient" takes over
+    // 0.52 - 0.68: "Easy & Efficient" is prominent
+    // 0.68 - 0.73: Everything fades out
 
-    const visibleRange = useTransform(scrollYProgress, [0.30, 0.32, 0.58, 0.62], [0, 1, 1, 0]);
-    const fragmentProgress = useTransform(scrollYProgress, [0.32, 0.58], [0, 1]);
-    const mistProgress = useTransform(scrollYProgress, [0.31, 0.45], [0, 1]);
+    const visibleRange = useTransform(scrollYProgress, [0.30, 0.32, 0.68, 0.73], [0, 1, 1, 0]);
+    const fragmentProgress = useTransform(scrollYProgress, [0.32, 0.68], [0, 1]);
+    const mistProgress = useTransform(scrollYProgress, [0.31, 0.52], [0, 1]);
 
     // White flash at moment of blast
-    const flashOpacity = useTransform(scrollYProgress, [0.31, 0.32, 0.34], [0, 0.7, 0]);
+    const flashOpacity = useTransform(scrollYProgress, [0.31, 0.32, 0.36], [0, 0.22, 0]);
 
     // Shockwave rings (expanding circles)
-    const ring1Scale = useTransform(scrollYProgress, [0.32, 0.37], [0.3, 4]);
-    const ring1Opacity = useTransform(scrollYProgress, [0.32, 0.33, 0.37], [0, 0.4, 0]);
-    const ring2Scale = useTransform(scrollYProgress, [0.33, 0.38], [0.3, 3]);
-    const ring2Opacity = useTransform(scrollYProgress, [0.33, 0.34, 0.38], [0, 0.25, 0]);
+    const ring1Scale = useTransform(scrollYProgress, [0.32, 0.40], [0.3, 4]);
+    const ring1Opacity = useTransform(scrollYProgress, [0.32, 0.34, 0.40], [0, 0.4, 0]);
+    const ring2Scale = useTransform(scrollYProgress, [0.34, 0.42], [0.3, 3]);
+    const ring2Opacity = useTransform(scrollYProgress, [0.34, 0.36, 0.42], [0, 0.25, 0]);
 
     // "Lxwyer Up" Text Reveal — appears then BLURS AWAY when Easy & Efficient comes
-    const textScaleRaw = useTransform(scrollYProgress, [0.32, 0.35, 0.42, 0.46], [0, 1.05, 1, 0.8]);
-    const textOpacity = useTransform(scrollYProgress, [0.32, 0.34, 0.42, 0.46], [0, 1, 1, 0]);
-    const textBlur = useTransform(scrollYProgress, [0.32, 0.35, 0.42, 0.46], [30, 0, 0, 30]);
-    const textGlow = useTransform(scrollYProgress, [0.32, 0.35, 0.40], [40, 15, 0]);
+    const textScaleRaw = useTransform(scrollYProgress, [0.32, 0.37, 0.48, 0.54], [0, 1.05, 1, 0.8]);
+    const textOpacity = useTransform(scrollYProgress, [0.32, 0.36, 0.48, 0.54], [0, 1, 1, 0]);
+    const textBlur = useTransform(scrollYProgress, [0.32, 0.37, 0.48, 0.54], [30, 0, 0, 30]);
+    const textGlow = useTransform(scrollYProgress, [0.32, 0.37, 0.46], [40, 15, 0]);
     const textScaleSpring = useSpring(textScaleRaw, { stiffness: 180, damping: 18 });
     const filterBlur = useTransform(textBlur, v => `blur(${v}px)`);
+
 
     return (
         <motion.div style={{
@@ -875,7 +992,7 @@ const SphereExplosion = () => {
             {/* White Flash */}
             <motion.div style={{
                 position: 'absolute', inset: 0,
-                background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(219,234,254,0.4) 50%, transparent 80%)',
+                background: 'radial-gradient(circle, rgba(200,220,255,0.35) 0%, rgba(147,197,253,0.15) 45%, transparent 75%)',
                 opacity: flashOpacity,
             }} />
 
@@ -960,7 +1077,7 @@ const ScrollReactiveSphere = () => {
     const yRaw = useTransform(scrollYProgress, [0, 0.25, 0.35], [45, 45, 50]);
 
     // Size: Start medium, grow before burst - Smoother expansion
-    const size = useTransform(scrollYProgress, [0, 0.30, 0.50], [180, 220, 800]);
+    const size = useTransform(scrollYProgress, [0, 0.30, 0.50], [126, 154, 560]);
 
     // Opacity: Fade in -> out at burst - Smoother fade out (extended range)
     const opacity = useTransform(scrollYProgress, [0, 0.06, 0.35, 0.55], [0, 1, 1, 0]);
@@ -1054,10 +1171,150 @@ const ScrollReactiveSphere = () => {
     );
 };
 
+/* ─────────────────────────────────────────────
+   REVOLUTION WRITING SCROLL SECTION
+   ClipPath left→right reveal + glowing pen tip
+   ───────────────────────────────────────────── */
+const RevolutionScrollSection = () => {
+    const ref = useRef(null);
+    const { scrollYProgress } = useScroll({ target: ref, offset: ['start 0.9', 'end 0.1'] });
+
+    // Writing reveal — fast: 0.05→0.40 (full word written in first 35% of scroll)
+    const writeProgress = useTransform(scrollYProgress, [0.05, 0.40], [0, 1]);
+    const clipRight     = useTransform(writeProgress, v => `inset(0 ${(1 - v) * 100}% 0 0)`);
+
+    // Pen tip tracks the right edge of the reveal
+    const penX          = useTransform(writeProgress, v => `${v * 100}%`);
+    const penOpacity    = useTransform(writeProgress, [0, 0.03, 0.95, 1], [0, 1, 1, 0]);
+
+    // "Bringing a" — appears immediately
+    const bringOpacity  = useTransform(scrollYProgress, [0.00, 0.10], [0, 1]);
+    const bringY        = useTransform(scrollYProgress, [0.00, 0.10], [14, 0]);
+
+    // Tagline — appears after writing finishes
+    const tagOpacity    = useTransform(scrollYProgress, [0.38, 0.50], [0, 1]);
+    const tagY          = useTransform(scrollYProgress, [0.38, 0.50], [12, 0]);
+
+    // Whole block fades out
+    const blockOpacity  = useTransform(scrollYProgress, [0.80, 0.95], [1, 0]);
+
+    return (
+        <section
+            ref={ref}
+            style={{ position: 'relative', width: '100%', height: '240vh', background: 'black' }}
+        >
+            <div style={{
+                position: 'sticky', top: 0, height: '100vh',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
+            }}>
+                {/* Ambient glow */}
+                <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'radial-gradient(ellipse 55% 40% at 50% 50%, rgba(30,58,138,0.10) 0%, transparent 70%)',
+                    pointerEvents: 'none',
+                }} />
+
+                <motion.div style={{
+                    opacity: blockOpacity,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center',
+                    padding: '0 5vw',
+                    width: '100%',
+                }}>
+                    {/* Small label */}
+                    <motion.p style={{
+                        fontFamily: "'Outfit', sans-serif",
+                        fontSize: 'clamp(0.55rem, 0.9vw, 0.82rem)',
+                        fontWeight: 600,
+                        letterSpacing: '0.5em',
+                        textTransform: 'uppercase',
+                        color: 'rgba(148,163,184,0.5)',
+                        marginBottom: '0.8rem',
+                        opacity: bringOpacity,
+                        y: bringY,
+                    }}>
+                        Bringing&nbsp;a
+                    </motion.p>
+
+                    {/* REVOLUTION — writing clipPath + pen tip */}
+                    <div style={{ position: 'relative', width: '100%', textAlign: 'center' }}>
+
+                        {/* Ghost (stable layout placeholder) */}
+                        <h2 style={{
+                            fontFamily: "'Playfair Display', Georgia, serif",
+                            fontStyle: 'italic',
+                            fontSize: 'clamp(4.5rem, 16.9vw, 16.9rem)',
+                            fontWeight: 700,
+                            lineHeight: 1.05,
+                            letterSpacing: '-0.02em',
+                            margin: 0,
+                            color: 'rgba(255,255,255,0.04)',
+                            WebkitTextStroke: '1px rgba(255,255,255,0.05)',
+                            userSelect: 'none',
+                        }}>
+                            Revolution
+                        </h2>
+
+                        {/* Revealed text — clips L→R */}
+                        <motion.h2 style={{
+                            fontFamily: "'Playfair Display', Georgia, serif",
+                            fontStyle: 'italic',
+                            fontSize: 'clamp(4.5rem, 16.9vw, 16.9rem)',
+                            fontWeight: 700,
+                            lineHeight: 1.05,
+                            letterSpacing: '-0.02em',
+                            margin: 0,
+                            background: 'linear-gradient(135deg, #f8faff 0%, #bfdbfe 30%, #93c5fd 60%, #818cf8 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            backgroundClip: 'text',
+                            clipPath: clipRight,
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0,
+                        }}>
+                            Revolution
+                        </motion.h2>
+
+                        {/* Glowing pen tip */}
+                        <motion.div style={{
+                            position: 'absolute',
+                            top: '5%', height: '90%',
+                            left: penX,
+                            width: '3px',
+                            borderRadius: '2px',
+                            background: 'linear-gradient(180deg, transparent 0%, rgba(147,197,253,0.9) 20%, #ffffff 50%, rgba(147,197,253,0.9) 80%, transparent 100%)',
+                            boxShadow: '0 0 10px 3px rgba(147,197,253,0.5), 0 0 22px 7px rgba(99,102,241,0.22)',
+                            opacity: penOpacity,
+                            transform: 'translateX(-50%)',
+                        }} />
+                    </div>
+
+                    {/* Tagline */}
+                    <motion.p style={{
+                        fontFamily: "'Outfit', sans-serif",
+                        fontSize: 'clamp(0.8rem, 1.3vw, 1rem)',
+                        fontWeight: 300,
+                        letterSpacing: '0.18em',
+                        color: 'rgba(148,163,184,0.45)',
+                        marginTop: '1.4rem',
+                        opacity: tagOpacity,
+                        y: tagY,
+                        lineHeight: 1.7,
+                    }}>
+                        in Indian Legal Services
+                    </motion.p>
+                </motion.div>
+            </div>
+        </section>
+    );
+};
+
 const ExplosionSpacer = () => {
     return (
-        <section className="relative w-full bg-[#f8faff] dark:bg-black transition-colors duration-500" style={{ height: '280vh' }}>
-            {/* Dedicated scroll space — extended for blast + Easy & Efficient + breathing room */}
+        <section className="relative w-full bg-[#f8faff] dark:bg-black transition-colors duration-500" style={{ height: '160vh' }}>
+            {/* Dedicated scroll space for sphere explosion */}
         </section>
     );
 };
@@ -1068,84 +1325,121 @@ const ExplosionSpacer = () => {
 
 const HeroSection = () => {
     const navigate = useNavigate();
+    const { t } = useLang();
+
+    // Ambient blobs
+    const blobs = [
+        { color: 'rgba(59,130,246,0.13)', size: 600, x: '10%', y: '20%', dur: 18, delay: 0 },
+        { color: 'rgba(139,92,246,0.10)', size: 500, x: '70%', y: '60%', dur: 22, delay: 4 },
+        { color: 'rgba(6,182,212,0.08)', size: 400, x: '50%', y: '10%', dur: 16, delay: 8 },
+        { color: 'rgba(59,130,246,0.07)', size: 350, x: '85%', y: '15%', dur: 25, delay: 2 },
+        { color: 'rgba(167,139,250,0.09)', size: 450, x: '5%', y: '70%', dur: 20, delay: 6 },
+        { color: 'rgba(34,211,238,0.07)', size: 300, x: '60%', y: '80%', dur: 14, delay: 10 },
+    ];
 
     return (
-        <section className="relative py-24 px-6 lg:px-8 bg-[#f8faff] dark:bg-black transition-colors duration-500">
+        <section className="relative py-28 px-6 lg:px-8 bg-[#f8faff] dark:bg-[#040810] transition-colors duration-500 overflow-hidden">
+            {/* Animated ambient blobs */}
+            {blobs.map((b, i) => (
+                <div key={i} style={{
+                    position: 'absolute', left: b.x, top: b.y,
+                    width: b.size, height: b.size,
+                    background: `radial-gradient(circle, ${b.color} 0%, transparent 70%)`,
+                    animation: `heroBlob ${b.dur}s ease-in-out ${b.delay}s infinite`,
+                    filter: 'blur(60px)', pointerEvents: 'none', zIndex: 0,
+                    transform: 'translate(-50%, -50%)',
+                }} />
+            ))}
+
+            {/* Cinematic grid background */}
+            <div className="absolute inset-0 pointer-events-none"
+                style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(99,102,241,0.06) 1px, transparent 0)', backgroundSize: '48px 48px', zIndex: 0 }} />
+
             <div className="relative z-10 max-w-5xl mx-auto text-center">
                 <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: 'easeOut' }}>
+
                     {/* Pill badge */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: 0.3 }}
-                        className="inline-flex items-center gap-2 px-5 py-2 rounded-full mb-10 bg-blue-500/10 border border-blue-500/20 dark:bg-slate-900/50 dark:border-blue-500/30 backdrop-blur-sm"
+                        className="inline-flex items-center gap-2 px-5 py-2 rounded-full mb-10 bg-blue-600/8 border border-blue-500/20 dark:bg-blue-600/10 dark:border-blue-500/30 backdrop-blur-sm"
                     >
                         <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-500 opacity-75" />
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
                         </span>
-                        <span className="text-xs font-medium tracking-wide uppercase text-blue-600 dark:text-blue-400">India's First Legal Tech Ecosystem</span>
+                        <span className="text-xs font-bold tracking-[0.25em] uppercase text-blue-600 dark:text-blue-400">{t('landing_hero_badge')}</span>
                     </motion.div>
 
+                    {/* Headline */}
                     <h2
-                        className="text-6xl md:text-8xl font-bold mb-8 tracking-tight text-slate-900 dark:text-slate-100 transition-colors leading-tight"
+                        className="text-6xl md:text-8xl font-black mb-8 tracking-tight text-slate-900 dark:text-white transition-colors leading-[1.02]"
                         style={{ fontFamily: "'Outfit', sans-serif" }}
                     >
-                        Justice You Understand,{' '}
+                        <motion.span initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.5 }}>
+                            {t('landing_hero_title_1')}{' '}
+                        </motion.span>
                         <br className="hidden sm:block" />
-                        <span className="text-blue-600 dark:text-blue-500">Technology</span> You Trust
+                        <motion.span
+                            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.6, delay: 0.85 }}
+                            className="relative inline-block"
+                        >
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 dark:from-blue-400 dark:via-indigo-300 dark:to-blue-400">
+                                {t('landing_hero_title_2')}
+                            </span>
+                            <motion.span
+                                initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                                transition={{ duration: 0.9, delay: 1.1, ease: [0.22, 1, 0.36, 1] }}
+                                className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full origin-left"
+                            />
+                        </motion.span>
                     </h2>
 
-                    <p className="text-lg sm:text-xl max-w-2xl mx-auto mb-12 leading-relaxed text-slate-500 dark:text-slate-400 transition-colors">
-                        Connect with verified lawyers, get instant AI-powered legal guidance, and navigate the Indian legal system with confidence.
-                    </p>
+                    <motion.p
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2, duration: 0.8 }}
+                        className="text-lg sm:text-xl max-w-2xl mx-auto mb-14 leading-relaxed text-slate-900 dark:text-slate-500 dark:text-slate-400 font-light transition-colors"
+                    >
+                        {t('landing_hero_subtitle')}
+                    </motion.p>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                         <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                             <button
-                                onClick={() => navigate('/role-selection')}
-                                className="group relative inline-flex items-center gap-3 h-14 px-10 rounded-full text-lg font-bold transition-all duration-300 
-                                bg-gradient-to-br from-gray-50 to-gray-200 dark:from-slate-800 dark:to-slate-950
-                                text-slate-800 dark:text-white
-                                border-t border-l border-white/50 dark:border-white/10
-                                shadow-[inset_2px_2px_4px_rgba(255,255,255,0.8),4px_4px_10px_rgba(0,0,0,0.1)] 
-                                dark:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.05),4px_4px_10px_rgba(0,0,0,0.5)]
-                                hover:shadow-[0_0_30px_rgba(59,130,246,0.6)] dark:hover:shadow-[0_0_30px_rgba(6,182,212,0.6)]
+                                onClick={() => navigate('/user-get-started')}
+                                className="group relative inline-flex items-center gap-3 h-14 px-10 rounded-2xl text-base font-bold transition-all duration-300
+                                bg-blue-600 hover:bg-blue-700 text-white
+                                shadow-2xl shadow-blue-600/30 hover:shadow-blue-600/50
                                 hover:scale-105 active:scale-95"
                             >
-                                Get Started
-                                <span className="flex items-center justify-center w-8 h-8 rounded-full 
-                                    bg-slate-200 dark:bg-slate-800 
-                                    group-hover:bg-blue-500 dark:group-hover:bg-cyan-500 
-                                    group-hover:text-white transition-all duration-300
-                                    shadow-inner group-hover:translate-x-1">
-                                    <ArrowRight className="w-4 h-4" />
-                                </span>
+                                {t('landing_find_lawyer')}
+                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                             </button>
                         </motion.div>
-                        <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                            <button
-                                onClick={() => navigate('/quick-chat')}
-                                className="ai-btn-glow ai-btn-shimmer group relative inline-flex items-center gap-2.5 h-14 px-9 rounded-full text-lg font-bold text-white overflow-hidden transition-all duration-300 active:scale-95"
-                                style={{
-                                    background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 60%, #5b21b6 100%)',
-                                    border: '1px solid rgba(196,181,253,0.5)',
-                                }}
-                            >
-                                <span className="text-base" style={{ filter: 'drop-shadow(0 0 6px rgba(216,180,254,1))' }}>✦</span>
-                                LxwyerAI
-                            </button>
+                        <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
+                            <div className="lxwyer-wrap">
+                              <div className="lxwyer-spin" />
+                              <button
+                                onClick={() => navigate('/lxwyerai')}
+                                className="lxwyer-inner h-14 px-9 text-base font-bold whitespace-nowrap"
+                              >
+                                <Sparkles className="w-4 h-4 text-white/60" />
+                                <span className="lxwyer-text text-white font-black tracking-[0.04em]">Lxwyer<span className="text-blue-400">AI</span></span>
+                              </button>
+                            </div>
                         </motion.div>
                     </div>
 
-                    <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 2.5, repeat: Infinity }} className="mt-20">
-                        <ChevronDown className="w-6 h-6 mx-auto" style={{ color: '#94a3b8' }} />
+                    <motion.div animate={{ y: [0, 10, 0] }} transition={{ duration: 2.5, repeat: Infinity }} className="mt-14 pl-1">
+                        <ChevronDown className="w-5 h-5 text-slate-500 dark:text-slate-600" />
                     </motion.div>
                 </motion.div>
             </div>
         </section>
     );
 };
+
 
 /* ─────────────────────────────────────────────
    FEATURE BENTO GRID – numbered cards, glassmorphic
@@ -1161,7 +1455,7 @@ const BentoCard = ({ number, icon: Icon, title, description, span = 1, index }) 
             initial={{ opacity: 0, y: 30 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5, delay: index * 0.08 }}
-            className={`group relative p-8 rounded-3xl transition-all duration-500 cursor-default ${span === 2 ? 'md:col-span-2' : ''} bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-sm`}
+            className={`group relative p-8 rounded-3xl transition-all duration-500 cursor-default ${span === 2 ? 'md:col-span-2' : ''} bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-black/5 dark:border-slate-200 dark:border-white/10 shadow-sm`}
             onMouseEnter={(e) => {
                 e.currentTarget.style.border = '1px solid rgba(59,130,246,0.2)';
                 e.currentTarget.style.boxShadow = '0 8px 40px rgba(59,130,246,0.08)';
@@ -1190,8 +1484,8 @@ const BentoCard = ({ number, icon: Icon, title, description, span = 1, index }) 
                     <Icon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                    <h3 className="text-lg font-bold mb-2 text-slate-900 dark:text-slate-100 transition-colors" style={{ fontFamily: "'Outfit', sans-serif" }}>{title}</h3>
-                    <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400 transition-colors">{description}</p>
+                    <h3 className="text-lg font-bold mb-2 text-slate-900 dark:text-slate-800 dark:text-slate-100 transition-colors" style={{ fontFamily: "'Outfit', sans-serif" }}>{title}</h3>
+                    <p className="text-sm leading-relaxed text-slate-900 dark:text-slate-500 dark:text-slate-400 transition-colors">{description}</p>
                 </div>
             </div>
         </motion.div>
@@ -1201,20 +1495,21 @@ const BentoCard = ({ number, icon: Icon, title, description, span = 1, index }) 
 const FeaturesSection = () => {
     const ref = useRef(null);
     const isInView = useInView(ref, { once: true, margin: '-80px' });
+    const { t } = useLang();
 
     const features = [
-        { icon: Brain, title: 'AI Legal Assistant', description: 'Get instant answers to your legal queries powered by AI trained on Indian law and procedures.', span: 2 },
-        { icon: Search, title: 'Find Lawyers', description: 'Connect with verified lawyers across India specializing in your specific legal needs.' },
-        { icon: FileText, title: 'Case Management', description: 'Track your case progress, documents, and timelines in one secure platform.' },
-        { icon: MessageSquare, title: 'Legal Consultation', description: 'Book online or offline consultations with experienced legal professionals.', span: 2 },
-        { icon: Shield, title: 'Secure & Private', description: 'Your data and communications are protected with end-to-end encryption.' },
+        { icon: Brain, title: t('landing_feat1_title'), description: t('landing_feat1_desc'), span: 2 },
+        { icon: Search, title: t('landing_feat2_title'), description: t('landing_feat2_desc') },
+        { icon: FileText, title: t('landing_feat3_title'), description: t('landing_feat3_desc') },
+        { icon: MessageSquare, title: t('landing_feat4_title'), description: t('landing_feat4_desc'), span: 2 },
+        { icon: Shield, title: t('landing_feat5_title'), description: t('landing_feat5_desc') },
     ];
 
     return (
         <section
             id="features"
             ref={ref}
-            className="relative py-28 px-6 lg:px-8 bg-slate-50/80 dark:bg-black transition-colors duration-500"
+            className="relative py-28 px-6 lg:px-8 bg-slate-50 dark:bg-[#060b14] transition-colors duration-500"
         >
             <div className="relative z-10 max-w-6xl mx-auto">
                 <motion.div
@@ -1223,16 +1518,16 @@ const FeaturesSection = () => {
                     transition={{ duration: 0.6 }}
                     className="text-center mb-20"
                 >
-                    <span className="text-xs uppercase tracking-[0.2em] font-semibold mb-4 block text-blue-600 dark:text-blue-500">Features</span>
-                    <h2 className="text-4xl sm:text-5xl font-bold mb-5 text-slate-900 dark:text-slate-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                        Everything You Need
+                    <span className="text-xs uppercase tracking-[0.2em] font-semibold mb-4 block text-blue-600 dark:text-blue-500">{t('landing_features_title')}</span>
+                    <h2 className="text-4xl sm:text-5xl font-bold mb-5 text-slate-900 dark:text-slate-800 dark:text-slate-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        {t('landing_features_title')}
                     </h2>
-                    <p className="text-lg max-w-2xl mx-auto text-slate-500 dark:text-slate-400">
-                        Comprehensive legal solutions designed for modern India
+                    <p className="text-lg max-w-2xl mx-auto text-slate-900 dark:text-slate-500 dark:text-slate-400">
+                        {t('landing_features_sub')}
                     </p>
                 </motion.div>
 
-                <div className="grid md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
                     {features.map((f, i) => (
                         <BentoCard key={f.title} number={String(i + 1).padStart(2, '0')} {...f} index={i} />
                     ))}
@@ -1279,7 +1574,7 @@ const ServiceCard = ({ icon: Icon, title, description, index }) => {
             >
                 <Icon className="w-6 h-6" style={{ color: '#60a5fa' }} />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2" style={{ fontFamily: "'Outfit', sans-serif" }}>{title}</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2" style={{ fontFamily: "'Outfit', sans-serif" }}>{title}</h3>
             <p className="text-sm leading-relaxed" style={{ color: 'rgba(148,163,184,0.7)' }}>{description}</p>
         </motion.div>
     );
@@ -1300,8 +1595,7 @@ const ServicesSection = () => {
         <section
             id="services"
             ref={ref}
-            className="relative py-28 px-6 lg:px-8"
-            style={{ background: '#000000' }}
+            className="relative py-28 px-6 lg:px-8 bg-[#040810] dark:bg-[#020508] transition-colors duration-500"
         >
             <div className="relative z-10 max-w-6xl mx-auto">
                 <motion.div
@@ -1311,7 +1605,7 @@ const ServicesSection = () => {
                     className="text-center mb-20"
                 >
                     <span className="text-xs uppercase tracking-[0.2em] font-semibold mb-4 block" style={{ color: '#60a5fa' }}>Services</span>
-                    <h2 className="text-4xl sm:text-5xl font-bold text-white mb-5" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                    <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white mb-5" style={{ fontFamily: "'Outfit', sans-serif" }}>
                         Services We Offer
                     </h2>
                     <p className="text-lg max-w-2xl mx-auto" style={{ color: 'rgba(148,163,184,0.8)' }}>
@@ -1319,7 +1613,7 @@ const ServicesSection = () => {
                     </p>
                 </motion.div>
 
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     {services.map((s, i) => (
                         <ServiceCard key={s.title} {...s} index={i} />
                     ))}
@@ -1335,196 +1629,194 @@ const ServicesSection = () => {
 
 const EcosystemSection = () => {
     const ref = useRef(null);
-    const isInView = useInView(ref, { once: true, margin: '-80px' });
+    const isInView = useInView(ref, { once: true, margin: '-10%' });
+    const { t } = useLang();
 
-    const points = [
-        { icon: Users, label: 'Connect with lawyers in your city' },
-        { icon: Shield, label: 'Transparent pricing with no hidden costs' },
-        { icon: Clock, label: 'Track your case progress in real-time' },
-        { icon: FileText, label: 'Secure document management' },
+    // Generate floating particles once — reduced to 10 for performance
+    const particles = React.useMemo(() => Array.from({ length: 10 }, (_, i) => ({
+        id: i, x: Math.random() * 100, y: Math.random() * 100,
+        size: Math.random() * 3 + 1.5,
+        color: i % 3 === 0 ? '#3b82f6' : i % 3 === 1 ? '#6366f1' : '#06b6d4',
+        dur: 4 + Math.random() * 6, delay: Math.random() * 5,
+    })), []);
+
+    const steps = [
+        { num: '01', title: t('eco_s1_title'), icon: '💬', desc: t('eco_s1_desc') },
+        { num: '02', title: t('eco_s2_title'), icon: '⚡', desc: t('eco_s2_desc') },
+        { num: '03', title: t('eco_s3_title'), icon: '⚖️', desc: t('eco_s3_desc') },
+        { num: '04', title: t('eco_s4_title'), icon: '🚀', desc: t('eco_s4_desc') },
+        { num: '05', title: t('eco_s5_title'), icon: '✅', desc: t('eco_s5_desc') },
     ];
 
     return (
-        <section
-            ref={ref}
-            className="relative py-28 px-6 lg:px-8 bg-[#f8faff] dark:bg-black transition-colors duration-500"
-        >
-            <div className="relative z-10 max-w-4xl mx-auto">
-                <div className="flex flex-col gap-16 items-center">
-                    {/* Visual – connectivity */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={isInView ? { opacity: 1, scale: 1 } : {}}
-                        transition={{ duration: 0.7 }}
-                        className="relative flex items-center justify-center order-2 lg:order-1"
+        <section ref={ref} className="relative py-32 px-6 lg:px-8 bg-[#f8faff] dark:bg-black transition-colors duration-500 overflow-hidden">
+
+            {/* Twinkling floating particles */}
+            {particles.map(p => (
+                <div key={p.id} style={{
+                    position: 'absolute', left: `${p.x}%`, top: `${p.y}%`,
+                    width: p.size, height: p.size, borderRadius: '50%',
+                    background: p.color, boxShadow: `0 0 ${p.size * 3}px ${p.color}`,
+                    animation: `twinkle ${p.dur}s ${p.delay}s ease-in-out infinite`,
+                    pointerEvents: 'none', zIndex: 0,
+                }} />
+            ))}
+
+            {/* Breathing orbs */}
+            <div style={{ position: 'absolute', top: '20%', left: '15%', width: 500, height: 500, borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.10) 0%, transparent 70%)', filter: 'blur(80px)', animation: 'breathe 14s ease-in-out infinite', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '15%', right: '10%', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.09) 0%, transparent 70%)', filter: 'blur(80px)', animation: 'breathe 18s ease-in-out 6s infinite', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: '60%', left: '50%', width: 350, height: 350, borderRadius: '50%', background: 'radial-gradient(circle, rgba(6,182,212,0.07) 0%, transparent 70%)', filter: 'blur(70px)', animation: 'breathe 22s ease-in-out 3s infinite', pointerEvents: 'none' }} />
+
+            <div className="max-w-7xl mx-auto relative z-10">
+                {/* Animated headline */}
+                <motion.div
+                    initial={{ opacity: 0, y: 60 }}
+                    animate={isInView ? { opacity: 1, y: 0 } : {}}
+                    transition={{ duration: 0.9, ease: 'easeOut' }}
+                    className="text-center mb-32"
+                >
+                    <h2 className="text-5xl md:text-7xl font-bold text-slate-900 dark:text-white mb-6 tracking-tight leading-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        {t('eco_from').split('').map((ch, i) => (
+                            <motion.span key={`f${i}`} initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.2 + i * 0.04, duration: 0.4 }}>{ch}</motion.span>
+                        ))}
+                        <span className="text-transparent bg-clip-text bg-gradient-to-br from-slate-400 to-slate-600 dark:from-slate-500 dark:to-slate-300 italic font-medium pr-2">{t('eco_confused')}</span>
+                        <br />
+                        <motion.span initial={{ opacity: 0 }} animate={isInView ? { opacity: 1 } : {}} transition={{ delay: 0.9 }}>{t('eco_to')}</motion.span>
+                        <motion.span
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={isInView ? { opacity: 1, scale: 1 } : {}}
+                            transition={{ delay: 1.1, type: 'spring', stiffness: 100 }}
+                            className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300 text-6xl md:text-8xl"
+                        >{t('eco_confident')}</motion.span>
+                    </h2>
+                    <motion.p
+                        initial={{ opacity: 0, y: 10 }} animate={isInView ? { opacity: 1, y: 0 } : {}}
+                        transition={{ delay: 1.4, duration: 0.6 }}
+                        className="text-lg md:text-xl text-slate-600 dark:text-slate-500 dark:text-slate-400 font-light max-w-2xl mx-auto"
                     >
-                        {/* Central hub */}
-                        <div className="relative" style={{ width: '320px', height: '320px' }}>
-                            {/* Rotating ring */}
-                            <div
-                                className="absolute inset-0 rounded-full"
-                                style={{
-                                    border: '1px dashed rgba(59,130,246,0.2)',
-                                    animation: 'spinSlow 30s linear infinite',
-                                }}
-                            />
-                            {/* Inner ring */}
-                            <div
-                                className="absolute rounded-full"
-                                style={{
-                                    top: '20%', left: '20%', right: '20%', bottom: '20%',
-                                    border: '1px solid rgba(59,130,246,0.1)',
-                                    animation: 'spinSlow 20s linear infinite reverse',
-                                }}
-                            />
-                            {/* Center logo */}
-                            <div
-                                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-2xl flex items-center justify-center"
-                                style={{
-                                    background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
-                                    boxShadow: '0 8px 30px rgba(37,99,235,0.3)',
-                                }}
+                        {t('eco_sub')}
+                    </motion.p>
+                </motion.div>
+
+                {/* Cinematic Vertical Timeline */}
+                <div className="relative max-w-4xl mx-auto">
+                    {/* Glowing vertical line */}
+                    <motion.div
+                        initial={{ scaleY: 0 }}
+                        animate={isInView ? { scaleY: 1 } : {}}
+                        transition={{ duration: 2.5, ease: 'easeInOut', delay: 0.3 }}
+                        className="absolute left-6 md:left-1/2 top-0 bottom-0 w-[1px] md:-translate-x-1/2 bg-gradient-to-b from-transparent via-blue-500/50 dark:via-blue-400/50 to-transparent origin-top"
+                    />
+
+                    {steps.map((step, i) => {
+                        const isEven = i % 2 !== 0;
+                        return (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, x: isEven ? 60 : -60 }}
+                                animate={isInView ? { opacity: 1, x: 0 } : {}}
+                                transition={{ duration: 0.7, delay: 0.5 + i * 0.18, ease: [0.22, 1, 0.36, 1] }}
+                                className={`relative flex flex-col md:flex-row items-center justify-between mb-24 last:mb-0 ${isEven ? 'md:flex-row-reverse' : ''}`}
                             >
-                                <span className="text-white text-lg font-bold" style={{ fontFamily: "'Outfit', sans-serif" }}>LU</span>
-                            </div>
-
-                            {/* Orbiting nodes */}
-                            {[
-                                { angle: 0, icon: '⚖️', label: 'Legal' },
-                                { angle: 72, icon: '🤖', label: 'AI' },
-                                { angle: 144, icon: '📋', label: 'Docs' },
-                                { angle: 216, icon: '👥', label: 'Clients' },
-                                { angle: 288, icon: '🔒', label: 'Secure' },
-                            ].map((node, i) => {
-                                const rad = (node.angle * Math.PI) / 180;
-                                const radius = 130;
-                                const x = Math.cos(rad) * radius;
-                                const y = Math.sin(rad) * radius;
-                                return (
-                                    <div
-                                        key={i}
-                                        className="absolute flex items-center justify-center"
-                                        style={{
-                                            top: `calc(50% + ${y}px - 22px)`,
-                                            left: `calc(50% + ${x}px - 22px)`,
-                                            width: '44px',
-                                            height: '44px',
-                                            borderRadius: '12px',
-                                            background: 'rgba(255,255,255,0.9)',
-                                            backdropFilter: 'blur(12px)',
-                                            border: '1px solid rgba(59,130,246,0.12)',
-                                            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-                                            animation: `float ${5 + i}s ease-in-out infinite`,
-                                            animationDelay: `${i * 0.3}s`,
-                                        }}
-                                    >
-                                        <span className="text-lg">{node.icon}</span>
+                                {/* Center Node with ripple */}
+                                <div className="absolute left-6 md:left-1/2 -translate-x-[calc(50%-0.5px)] z-10">
+                                    {/* Ripple rings */}
+                                    <div style={{ position: 'absolute', inset: -8, borderRadius: '50%', border: '1px solid rgba(59,130,246,0.4)', animation: `nodePing 2.5s ${i * 0.4}s ease-out infinite` }} />
+                                    <div style={{ position: 'absolute', inset: -14, borderRadius: '50%', border: '1px solid rgba(59,130,246,0.2)', animation: `nodePing 2.5s ${i * 0.4 + 0.8}s ease-out infinite` }} />
+                                    <div className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-900 border-2 border-blue-500 dark:border-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.5)] flex items-center justify-center">
+                                        <div className="absolute inset-1 rounded-full bg-blue-600 dark:bg-blue-400 animate-pulse" />
                                     </div>
-                                );
-                            })}
-                        </div>
-                    </motion.div>
+                                </div>
 
-                    {/* Text content – centered */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={isInView ? { opacity: 1, y: 0 } : {}}
-                        transition={{ duration: 0.7, delay: 0.15 }}
-                        className="text-center order-1 lg:order-2"
-                    >
-                        <span className="text-xs uppercase tracking-[0.2em] font-semibold mb-4 block text-blue-600 dark:text-blue-500">Why Lxwyer Up</span>
-                        <h2 className="text-4xl sm:text-5xl font-bold mb-6 leading-tight text-slate-900 dark:text-slate-100 transition-colors" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                            Legal Services
-                            <span className="block text-blue-600 dark:text-blue-500">Designed for India</span>
-                        </h2>
-                        <p className="text-lg mb-10 leading-relaxed max-w-2xl mx-auto text-slate-500 dark:text-slate-400 transition-colors">
-                            We understand the complexities of the Indian legal system. Our platform bridges the gap between citizens and quality legal representation.
-                        </p>
-
-                        <ul className="grid sm:grid-cols-2 gap-5 max-w-2xl mx-auto text-left">
-                            {points.map((p, i) => (
-                                <motion.li
-                                    key={i}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={isInView ? { opacity: 1, y: 0 } : {}}
-                                    transition={{ delay: i * 0.12 + 0.3 }}
-                                    className="flex items-center gap-4 bg-white/50 dark:bg-slate-800/50 p-4 rounded-xl border border-blue-100 dark:border-slate-800"
+                                {/* Content Box */}
+                                <motion.div
+                                    className={`ml-16 md:ml-0 md:w-5/12 ${isEven ? 'md:pl-12 text-left' : 'md:pr-12 md:text-right'}`}
+                                    whileHover={{ y: -6 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
                                 >
-                                    <div
-                                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/10 dark:border-blue-500/30"
+                                    <div className="group relative p-8 rounded-3xl bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-slate-200/50 dark:border-slate-100 dark:border-white/5 hover:border-blue-500/40 dark:hover:border-blue-400/40 transition-all duration-500"
+                                        style={{ boxShadow: '0 4px 30px rgba(0,0,0,0.06)' }}
+                                        onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 40px rgba(59,130,246,0.15), 0 4px 30px rgba(0,0,0,0.08)'}
+                                        onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 30px rgba(0,0,0,0.06)'}
                                     >
-                                        <p.icon className="w-5 h-5" style={{ color: '#2563eb' }} />
+                                        {/* Emoji icon */}
+                                        <div className="text-3xl mb-3 group-hover:scale-125 transition-transform duration-300 inline-block">{step.icon}</div>
+                                        <div className={`text-blue-600 dark:text-blue-500 font-mono text-sm mb-3 tracking-[0.2em] font-bold opacity-80 ${isEven ? 'text-left' : 'md:text-right text-left'}`}>
+                                            {t('eco_phase')} {step.num}
+                                        </div>
+                                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4 tracking-tight">{step.title}</h3>
+                                        <p className="text-base text-slate-600 dark:text-slate-500 dark:text-slate-400 leading-relaxed font-light">{step.desc}</p>
                                     </div>
-                                    <span className="text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors">{p.label}</span>
-                                </motion.li>
-                            ))}
-                        </ul>
-                    </motion.div>
+                                </motion.div>
+                                <div className="hidden md:block md:w-5/12" />
+                            </motion.div>
+                        );
+                    })}
                 </div>
             </div>
         </section>
     );
 };
 
+
+
+
+
 /* ─────────────────────────────────────────────
    STATS – animated counters
    ───────────────────────────────────────────── */
 
 const AnimatedCounter = ({ target, suffix = '' }) => {
-    const [count, setCount] = useState(0);
     const ref = useRef(null);
-    const isInView = useInView(ref, { once: true });
+    const isInView = useInView(ref, { once: true, margin: '-50px' });
+    const endValue = parseInt(target.replace(/,/g, ''));
 
-    useEffect(() => {
-        if (!isInView) return;
-        let start = 0;
-        const end = parseInt(target);
-        const duration = 2000;
-        const step = Math.max(1, Math.floor(end / (duration / 16)));
-        const timer = setInterval(() => {
-            start += step;
-            if (start >= end) { setCount(end); clearInterval(timer); }
-            else setCount(start);
-        }, 16);
-        return () => clearInterval(timer);
-    }, [isInView, target]);
-
-    return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
+    return (
+        <span ref={ref}>
+            {isInView ? <CountUp end={endValue} duration={2.5} separator="," /> : '0'}
+            {suffix}
+        </span>
+    );
 };
 
 const StatsSection = () => {
     const ref = useRef(null);
     const isInView = useInView(ref, { once: true, margin: '-80px' });
+    const { t } = useLang();
 
     const stats = [
-        { value: '1000', suffix: '+', label: 'Active Lawyers' },
-        { value: '50', suffix: '+', label: 'Legal Areas' },
-        { value: '1000', suffix: '+', label: 'Queries Solved & Helped' },
+        { value: '1000', suffix: '+', label: t('landing_stats_lawyers') },
+        { value: '10000', suffix: '+', label: t('landing_stats_cases') },
+        { value: '3', suffix: '+', label: 'States Covered' },
     ];
 
     return (
-        <section
-            ref={ref}
+        <section ref={ref} className="relative py-20 px-6 lg:px-8 overflow-hidden">
+            {/* Full-width cinematic gradient bar */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-700" />
+            <div className="absolute top-0 right-1/4 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-1/4 w-48 h-48 bg-indigo-900/30 rounded-full blur-2xl pointer-events-none" />
 
-            className="relative py-20 px-6 lg:px-8 bg-[rgba(248,250,255,0.85)] dark:bg-black/85 transition-colors duration-500"
-        >
-            <div className="relative z-10 max-w-3xl mx-auto">
+            <div className="relative z-10 max-w-6xl mx-auto">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.6 }}
-                    className="grid grid-cols-3 gap-6"
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-10 max-w-3xl mx-auto"
                 >
                     {stats.map((s, i) => (
-                        <div
+                        <motion.div
                             key={i}
-                            className="text-center py-8 px-4 rounded-3xl transition-all duration-500 bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-sm"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={isInView ? { opacity: 1, y: 0 } : {}}
+                            transition={{ duration: 0.5, delay: i * 0.1 }}
+                            className="text-center"
                         >
-                            <div className="text-3xl md:text-4xl font-bold mb-2 text-slate-900 dark:text-slate-100" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                            <div className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
                                 <AnimatedCounter target={s.value} suffix={s.suffix} />
                             </div>
-                            <div className="text-xs uppercase tracking-[0.15em] font-medium text-slate-400 dark:text-slate-500">{s.label}</div>
-                        </div>
+                            <div className="text-xs uppercase tracking-[0.25em] font-medium text-blue-200">{s.label}</div>
+                        </motion.div>
                     ))}
                 </motion.div>
             </div>
@@ -1540,12 +1832,12 @@ const CTASection = () => {
     const navigate = useNavigate();
     const ref = useRef(null);
     const isInView = useInView(ref, { once: true });
+    const { t } = useLang();
 
     return (
         <section
             ref={ref}
-            className="relative py-32 px-6 lg:px-8 overflow-hidden"
-            style={{ background: '#000000' }}
+            className="relative py-32 px-6 lg:px-8 overflow-hidden bg-[#040810] dark:bg-[#020508] transition-colors duration-500"
         >
             {/* Glow behind CTA */}
             <div
@@ -1569,24 +1861,24 @@ const CTASection = () => {
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.7 }}
                 >
-                    <span className="text-xs uppercase tracking-[0.2em] font-semibold mb-4 block" style={{ color: '#60a5fa' }}>Get Started Today</span>
-                    <h2 className="text-4xl sm:text-5xl font-bold text-white mb-8" style={{ fontFamily: "'Outfit', sans-serif" }}>
-                        Ready to Get Legal Help?
+                    <span className="text-xs uppercase tracking-[0.2em] font-semibold mb-4 block" style={{ color: '#60a5fa' }}>{t('landing_cta_title')}</span>
+                    <h2 className="text-4xl sm:text-5xl font-bold text-slate-900 dark:text-white mb-8" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        {t('landing_cta_sub')}
                     </h2>
                     <p className="text-xl mb-12 max-w-2xl mx-auto" style={{ color: 'rgba(148,163,184,0.7)' }}>
-                        Start your journey towards justice today. Our team is ready to assist you.
+                        {t('landing_cta_sub')}
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                             <Button
-                                onClick={() => navigate('/role-selection')}
-                                className="h-14 px-10 rounded-full text-white text-lg font-semibold transition-all"
+                                onClick={() => navigate('/user-get-started')}
+                                className="h-14 px-10 rounded-full text-slate-900 dark:text-white text-lg font-semibold transition-all"
                                 style={{
                                     background: 'linear-gradient(135deg, #1d4ed8, #3b82f6)',
                                     boxShadow: '0 8px 30px rgba(37,99,235,0.3)',
                                 }}
                             >
-                                Book Your Consultation
+                                {t('landing_cta_btn')}
                                 <ArrowRight className="ml-2 w-5 h-5" />
                             </Button>
                         </motion.div>
@@ -1603,30 +1895,31 @@ const CTASection = () => {
 
 const Footer = () => {
     const navigate = useNavigate();
+    const { t } = useLang();
     return (
         <footer
-            className="relative py-16 px-6 lg:px-8 bg-[#060a14] dark:bg-black border-t border-white/5 dark:border-white/5 transition-colors duration-500"
+            className="relative py-16 px-6 lg:px-8 bg-[#060a14] dark:bg-black border-t border-slate-100 dark:border-white/5 dark:border-slate-100 dark:border-white/5 transition-colors duration-500"
         >
             <div className="max-w-7xl mx-auto">
-                <div className="grid md:grid-cols-4 gap-12 mb-12">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-8 mb-12">
                     {/* Brand */}
                     <div>
                         <div className="mb-5">
-                            <span className="text-lg font-bold text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>Lxwyer Up</span>
+                            <span className="text-lg font-bold text-slate-900 dark:text-white" style={{ fontFamily: "'Outfit', sans-serif" }}>Lxwyer Up</span>
                         </div>
                         <p className="text-sm leading-relaxed" style={{ color: 'rgba(148,163,184,0.5)' }}>
-                            Justice You Understand, Technology You Trust
+                            {t('footer_tagline')}
                         </p>
                     </div>
 
                     {/* Quick Links */}
                     <div>
-                        <h4 className="text-sm font-semibold text-white mb-5">Quick Links</h4>
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-5">{t('footer_company')}</h4>
                         <ul className="space-y-3">
                             {[
-                                { label: 'Home', path: '/' },
-                                { label: 'About', path: '/premium-about' },
-                                { label: 'Contact', path: '/premium-contact' },
+                                { label: t('nav_about'), path: '/about' },
+                                { label: t('nav_contact'), path: '/contact' },
+                                { label: t('nav_features'), path: '/features' },
                             ].map(l => (
                                 <li key={l.label}>
                                     <button onClick={() => navigate(l.path)} className="text-sm transition-colors" style={{ color: 'rgba(148,163,184,0.5)' }}
@@ -1642,17 +1935,17 @@ const Footer = () => {
 
                     {/* Services */}
                     <div>
-                        <h4 className="text-sm font-semibold text-white mb-5">Services</h4>
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-5">{t('nav_features')}</h4>
                         <ul className="space-y-3 text-sm" style={{ color: 'rgba(148,163,184,0.5)' }}>
-                            <li>Legal Consultation</li>
-                            <li>Find Lawyers</li>
-                            <li>AI Assistant</li>
+                            <li>{t('consult_browse_title')}</li>
+                            <li>{t('landing_feat1_title')}</li>
+                            <li>{t('sos_emergency')}</li>
                         </ul>
                     </div>
 
                     {/* Contact */}
                     <div>
-                        <h4 className="text-sm font-semibold text-white mb-5">Contact</h4>
+                        <h4 className="text-sm font-semibold text-slate-900 dark:text-white mb-5">{t('nav_contact')}</h4>
                         <ul className="space-y-3 text-sm" style={{ color: 'rgba(148,163,184,0.5)' }}>
                             <li>avnendram.7@gmail.com</li>
                             <li>+91 8318216968</li>
@@ -1662,7 +1955,7 @@ const Footer = () => {
                 </div>
 
                 <div className="pt-8 text-center text-sm" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', color: 'rgba(148,163,184,0.3)' }}>
-                    © {new Date().getFullYear()} Lxwyer Up. All rights reserved.
+                    {t('footer_rights')}
                 </div>
             </div>
         </footer>
@@ -1715,7 +2008,7 @@ const LandingPageWave = () => {
     }, []);
 
     return (
-        <div className="min-h-screen relative" style={{ background: '#f8faff' }}>
+        <div className="min-h-screen relative bg-[#f8faff] dark:bg-[#040810] transition-colors duration-500">
             <StyleInjector />
             <SmoothScrolling />
             <GradientOrbs />
@@ -1726,11 +2019,11 @@ const LandingPageWave = () => {
                 <NavbarWave />
                 <ScalesOfJusticeIntro />
                 <HeroSection />
+                <RevolutionScrollSection />
                 <ExplosionSpacer />
-                <FeaturesSection />
+
                 <StatsSection />
                 <EcosystemSection />
-                <ServicesSection />
                 <CTASection />
                 <Footer />
             </div>

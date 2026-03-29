@@ -1,21 +1,24 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Briefcase, MapPin, ArrowRight, ChevronLeft, ChevronRight, Scale, X, Check, GraduationCap } from 'lucide-react';
+import { Search, Filter, Briefcase, MapPin, ArrowRight, ChevronLeft, ChevronRight, Scale, X, Check, GraduationCap, Sparkles, Award, Star, Calendar } from 'lucide-react';
 import axios from 'axios';
 import { API } from '../App';
 import { WaveLayout } from '../components/WaveLayout';
 import { Button } from '../components/ui/button';
 import { dummyLawyers, states, specializations, searchLawyers } from '../data/lawyersData';
 import LawyerCard from '../components/LawyerCard';
+import { getLawyerPhoto, getInitials, onPhotoError } from '../utils/lawyerPhoto';
+import { useLang } from '../context/LanguageContext';
+
+
 
 const FloatingCard = ({ children, delay = 0, className = "" }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, delay }}
-    whileHover={{ y: -5, transition: { duration: 0.2 } }}
-    className={`bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-blue-900/5 dark:shadow-blue-900/20 rounded-2xl ${className}`}
+    className={`bg-white/80 dark:bg-[#121212] backdrop-blur-xl border border-white/20 dark:border-[#2A2A2A] shadow-xl shadow-blue-900/5 dark:shadow-none rounded-2xl hover:-translate-y-1 transition-transform duration-200 ${className}`}
   >
     {children}
   </motion.div>
@@ -23,70 +26,152 @@ const FloatingCard = ({ children, delay = 0, className = "" }) => (
 
 export default function FindLawyerManual() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { t } = useLang();
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     state: '',
     city: '',
     specialization: '',
     court: '',
-    minRating: 0
+    minRating: 0,
+    consultationType: '',
+    withAchievement: false
   });
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedLawyer, setSelectedLawyer] = useState(null);
+  const [expandedImage, setExpandedImage] = useState(null);
   const [dbLawyers, setDbLawyers] = useState([]);
+  const [loadingLawyers, setLoadingLawyers] = useState(true);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceRef = useRef(null);
   const lawyersPerPage = 12;
+
+  // Initialize filters from URL parameters if available
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const specParam = params.get('specialization');
+    const locParam = params.get('location');
+
+    if (specParam || locParam) {
+      setFilters(prev => ({
+        ...prev,
+        specialization: specParam || '',
+        // If they specify location, check if it matches a state.
+        // For simplicity, we search both city and state using the generic text search inside filteredLawyers.
+      }));
+      if (locParam) {
+        setSearchQuery(locParam);
+      }
+    }
+  }, [location.search]);
 
   // Fetch verified lawyers from backend
   useEffect(() => {
     const fetchLawyers = async () => {
+      setLoadingLawyers(true);
       try {
-        const response = await axios.get(`${API}/lawyers`);
-        console.log('Fetched lawyers:', response.data);
-        setDbLawyers(response.data);
+        const response = await axios.get(`${API}/lawyers`, { timeout: 5000 });
+        setDbLawyers(response.data || []);
       } catch (error) {
-        console.error('Error fetching lawyers:', error);
+        console.warn('Backend unavailable, using local data:', error.message);
+        setDbLawyers([]);
+      } finally {
+        setLoadingLawyers(false);
       }
     };
     fetchLawyers();
   }, []);
 
-  // Map DB lawyers to match dummy data structure if needed
-  const formattedDbLawyers = dbLawyers.map(lawyer => ({
+  // Map DB lawyers to match component structure
+  const formattedDbLawyers = useMemo(() => dbLawyers.map(lawyer => ({
     ...lawyer,
     id: lawyer.id || lawyer._id,
     name: lawyer.full_name || lawyer.name,
     experience: lawyer.experience_years || lawyer.experience,
     education: lawyer.education || 'Legal Qualification',
-    photo: lawyer.photo ? (lawyer.photo.startsWith('http') ? lawyer.photo : `http://localhost:8000${lawyer.photo}`) : 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=800', // Fallback
+    photo: lawyer.photo
+      ? (lawyer.photo.startsWith('http') || lawyer.photo.startsWith('data:image')
+        ? lawyer.photo
+        : `${API.replace('/api', '')}${lawyer.photo.startsWith('/') ? '' : '/'}${lawyer.photo}`)
+      : null,
+    court: Array.isArray(lawyer.court) ? lawyer.court : (lawyer.court ? [lawyer.court] : (lawyer.courts ? (Array.isArray(lawyer.courts) ? lawyer.courts : [lawyer.courts]) : [])),
+    specialization: Array.isArray(lawyer.specialization) ? lawyer.specialization[0] : (lawyer.specialization || (lawyer.specializations && lawyer.specializations[0]) || ''),
     fee: lawyer.consultation_fee || lawyer.fee_range || 'Contact for fee',
     languages: lawyer.languages || ['English'],
-    rating: 4.8, // Default or fetched if available
-    verified: lawyer.is_verified || lawyer.is_approved || lawyer.status === 'approved' || lawyer.verified === true
-  }));
+    rating: lawyer.rating || 4.8,
+    verified: true,
+    isDatabaseLawyer: true,
+    // Explicitly carry these fields so expanded card always has them
+    achievements: Array.isArray(lawyer.achievements) ? lawyer.achievements : [],
+    bio: lawyer.bio || '',
+    unique_id: lawyer.unique_id || '',
+  })), [dbLawyers]);
 
-  // Combine dummy and DB lawyers
-  // Use DB lawyers first, then dummy
-  const allLawyers = [...formattedDbLawyers, ...dummyLawyers];
+  // Shuffle ALL lawyers (DB + approved dummies) together so no one is promoted
+  const shuffledLawyers = useMemo(() => {
+    const all = [
+      ...formattedDbLawyers,
+      ...dummyLawyers.filter(l => l.verified),
+    ];
+    const today = new Date();
+    const seed = today.getFullYear() * 1000 + Math.floor(
+      (today - new Date(today.getFullYear(), 0, 0)) / 86400000
+    );
+    let s = seed;
+    const rand = () => {
+      s = (s * 1664525 + 1013904223) & 0xffffffff;
+      return (s >>> 0) / 0xffffffff;
+    };
+    for (let i = all.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [all[i], all[j]] = [all[j], all[i]];
+    }
+    return all;
+  }, [formattedDbLawyers]);
 
-  // Search and filter logic
-  const filteredLawyers = allLawyers.filter(lawyer => {
-    // Basic search text match
+  // Debounce search query updates
+  const handleSearchChange = useCallback((e) => {
+    const val = e.target.value;
+    setSearchQuery(val);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(val), 300);
+  }, []);
+
+  // Search and filter logic — memoized, only re-runs when debounced query or filters change
+  const filteredLawyers = useMemo(() => shuffledLawyers.filter(lawyer => {
     const matchesSearch =
-      (lawyer.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (lawyer.specialization?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-      (lawyer.city?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+      (lawyer.name?.toLowerCase() || '').includes(debouncedQuery.toLowerCase()) ||
+      (lawyer.specialization?.toLowerCase() || '').includes(debouncedQuery.toLowerCase()) ||
+      (lawyer.city?.toLowerCase() || '').includes(debouncedQuery.toLowerCase());
 
     if (!matchesSearch) return false;
-
-    // Filter matches
     if (filters.state && lawyer.state !== filters.state) return false;
     if (filters.city && lawyer.city !== filters.city) return false;
     if (filters.specialization && lawyer.specialization !== filters.specialization) return false;
-    if (filters.court && lawyer.court !== filters.court) return false;
+    if (filters.court) {
+      const lawyerCourts = Array.isArray(lawyer.court) ? lawyer.court : (lawyer.court ? [lawyer.court] : []);
+      if (!lawyerCourts.some(c => c === filters.court)) return false;
+    }
+    if (filters.consultationType) {
+      const modes = new Set();
+      (lawyer.consultation_types || []).forEach(t => modes.add(t.toLowerCase().replace(/ /g, '_')));
+      if (lawyer.consultation_preferences) {
+        const pref = lawyer.consultation_preferences.toLowerCase().trim();
+        if (pref === 'both') { modes.add('video'); modes.add('in_person'); }
+        else modes.add(pref.replace(/ /g, '_'));
+      }
+      const sel = filters.consultationType;
+      if (sel === 'video' && !modes.has('video')) return false;
+      if (sel === 'in_person' && !modes.has('in_person')) return false;
+      if (sel === 'both' && !(modes.has('video') && modes.has('in_person'))) return false;
+    }
+
+    if (filters.withAchievement && (!lawyer.achievements || !Array.isArray(lawyer.achievements) || lawyer.achievements.length === 0)) return false;
 
     return true;
-  });
+  }), [shuffledLawyers, debouncedQuery, filters]);
 
   // Pagination
   const totalPages = Math.ceil(filteredLawyers.length / lawyersPerPage);
@@ -105,9 +190,12 @@ export default function FindLawyerManual() {
       city: '',
       specialization: '',
       court: '',
-      minRating: 0
+      minRating: 0,
+      consultationType: '',
+      withAchievement: false
     });
     setSearchQuery('');
+    setDebouncedQuery('');
     setCurrentPage(1);
   };
 
@@ -125,62 +213,91 @@ export default function FindLawyerManual() {
     return states[filters.state]?.courts || [];
   };
 
+  const currentFilters = [
+    { key: 'specialization', value: filters.specialization },
+    { key: 'state', value: filters.state },
+    { key: 'city', value: filters.city },
+    { key: 'court', value: filters.court },
+    { key: 'consultationType', value: filters.consultationType },
+    ...(filters.withAchievement ? [{ key: 'withAchievement', value: 'Has Achievements' }] : [])
+  ].filter(f => f.value);
+
   return (
     <WaveLayout activePage="find-lawyer">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12 relative z-10">
 
         {/* Header Section */}
         <div className="text-center mb-12">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-full mb-6"
-          >
-            <Scale className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-sm font-medium text-blue-600 dark:text-blue-300">Verified Legal Professionals</span>
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6 tracking-tight"
           >
-            Find Your Perfect <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Legal Advocate</span>
+            {t('fl_title')} <span className="text-blue-600 dark:text-slate-200">{t('fl_title_2')}</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto"
+            className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-6"
           >
-            Browse through our curated list of experienced lawyers across various specializations and locations.
+            {t('fl_sub')}
           </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 dark:bg-[#1A1A1A] border border-blue-100 dark:border-[#333] rounded-full"
+          >
+            <Scale className="w-3.5 h-3.5 text-blue-600 dark:text-slate-400" />
+            <span className="text-xs font-medium text-blue-600 dark:text-slate-400">{t('fl_verified')}</span>
+          </motion.div>
         </div>
 
         {/* Search & Filters */}
         <FloatingCard className="p-6 mb-12 sticky top-24 z-30">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
+          <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="relative flex-1 w-full relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
+                placeholder={t('fl_search_ph')}
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name, specialization, or location..."
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                onChange={handleSearchChange}
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:ring-slate-700/50 dark:focus:border-[#444] transition-all shadow-sm dark:shadow-none"
               />
             </div>
-
             <Button
               variant="outline"
               onClick={() => setShowFilters(!showFilters)}
-              className={`min-w-[120px] h-[50px] border-slate-200 dark:border-slate-700 ${showFilters ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-300'}`}
+              className={`min-w-[120px] h-[50px] border-slate-200 dark:border-[#333] dark:bg-[#1A1A1A] ${showFilters || currentFilters.length > 0 ? 'bg-blue-50 dark:bg-[#222] border-blue-200 dark:border-[#444] text-blue-700 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              {t('fl_filters')}
+              {currentFilters.length > 0 && (
+                <span className="ml-2 w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                  {currentFilters.length}
+                </span>
+              )}
             </Button>
           </div>
+
+          {/* Active Filter Badges */}
+          {currentFilters.length > 0 && !showFilters && (
+            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              {currentFilters.map(f => (
+                <span key={f.key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-[#222] text-slate-700 dark:text-slate-300 border dark:border-[#333] rounded-lg text-sm font-medium">
+                  {f.key === 'consultationType' ? (f.value === 'both' ? 'Video/In-person' : (f.value === 'video' ? 'Video Call' : 'In-Person')) : f.value}
+                  <button onClick={() => handleFilterChange(f.key, f.key === 'withAchievement' ? false : '')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              <button onClick={clearFilters} className="text-sm text-red-500 hover:text-red-700 font-medium ml-2">{t('fl_clear_all')}</button>
+            </div>
+          )}
 
           <AnimatePresence>
             {showFilters && (
@@ -192,7 +309,7 @@ export default function FindLawyerManual() {
               >
                 <div className="grid md:grid-cols-4 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">State</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('fl_state')}</label>
                     <select
                       value={filters.state}
                       onChange={(e) => {
@@ -200,9 +317,9 @@ export default function FindLawyerManual() {
                         handleFilterChange('city', '');
                         handleFilterChange('court', '');
                       }}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+                      className="w-full p-2.5 bg-slate-50 dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 dark:focus:border-[#555]"
                     >
-                      <option value="">All States</option>
+                      <option value="">{t('fl_all_states')}</option>
                       {Object.keys(states).map(state => (
                         <option key={state} value={state}>{state}</option>
                       ))}
@@ -210,14 +327,14 @@ export default function FindLawyerManual() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">City</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('fl_city')}</label>
                     <select
                       value={filters.city}
                       onChange={(e) => handleFilterChange('city', e.target.value)}
                       disabled={!filters.state}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                      className="w-full p-2.5 bg-slate-50 dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50 dark:focus:border-[#555]"
                     >
-                      <option value="">All Cities</option>
+                      <option value="">{t('fl_all_cities')}</option>
                       {getCities().map(city => (
                         <option key={city} value={city}>{city}</option>
                       ))}
@@ -225,13 +342,13 @@ export default function FindLawyerManual() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Specialization</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('fl_specialization')}</label>
                     <select
                       value={filters.specialization}
                       onChange={(e) => handleFilterChange('specialization', e.target.value)}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500"
+                      className="w-full p-2.5 bg-slate-50 dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 dark:focus:border-[#555]"
                     >
-                      <option value="">All Specializations</option>
+                      <option value="">{t('fl_all_specs')}</option>
                       {specializations.map(spec => (
                         <option key={spec} value={spec}>{spec}</option>
                       ))}
@@ -239,27 +356,62 @@ export default function FindLawyerManual() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Court</label>
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('fl_court')}</label>
                     <select
                       value={filters.court}
                       onChange={(e) => handleFilterChange('court', e.target.value)}
                       disabled={!filters.state}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                      className="w-full p-2.5 bg-slate-50 dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 disabled:opacity-50 dark:focus:border-[#555]"
                     >
-                      <option value="">All Courts</option>
+                      <option value="">{t('fl_all_courts')}</option>
                       {getCourts().map(court => (
                         <option key={court} value={court}>{court}</option>
                       ))}
                     </select>
                   </div>
+
+                  {/* Consultation Type filter */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t('fl_consult_type')}</label>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {[
+                        { val: '', label: 'Any' },
+                        { val: 'video', label: '🎥 Video Call' },
+                        { val: 'in_person', label: '🏛️ In-Person' },
+                      ].map(opt => (
+                        <button
+                          key={opt.val}
+                          onClick={() => handleFilterChange('consultationType', opt.val)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${filters.consultationType === opt.val
+                            ? 'bg-blue-600 border-blue-600 text-white shadow'
+                            : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-blue-400'
+                            }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex justify-end mt-4">
+                <div className="flex justify-between items-center mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleFilterChange('withAchievement', !filters.withAchievement)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${filters.withAchievement ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                    >
+                      <span className="sr-only">Toggle Achievements</span>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${filters.withAchievement ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      <Award className="w-4 h-4 text-green-500" /> {t('fl_achievements')}
+                    </span>
+                  </div>
                   <button
                     onClick={clearFilters}
                     className="text-sm text-red-500 hover:text-red-600 font-medium transition-colors"
                   >
-                    Clear All Filters
+                    {t('fl_clear_filters')}
                   </button>
                 </div>
               </motion.div>
@@ -268,12 +420,26 @@ export default function FindLawyerManual() {
         </FloatingCard>
 
         {/* Results */}
-        <div className="mb-8 flex items-center justify-between text-slate-600 dark:text-slate-400 px-2">
-          <p>Showing <span className="font-semibold text-slate-900 dark:text-white">{startIndex + 1}-{Math.min(endIndex, filteredLawyers.length)}</span> of <span className="font-semibold text-slate-900 dark:text-white">{filteredLawyers.length}</span> lawyers</p>
+        <div className="mb-6 flex items-center justify-between text-slate-600 dark:text-slate-400 px-2">
+          <div className="flex items-center gap-3">
+            {loadingLawyers ? (
+              <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm font-medium">
+                <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                {t('fl_loading')}
+              </div>
+            ) : (
+              <p>
+                {t('fl_showing')} <span className="font-semibold text-slate-900 dark:text-white">{startIndex + 1}–{Math.min(endIndex, filteredLawyers.length)}</span> {t('fl_of')}{' '}
+                <span className="font-semibold text-slate-900 dark:text-white">{filteredLawyers.length}</span> {t('fl_lawyers')}
+              </p>
+            )}
+          </div>
         </div>
 
+
+
         {currentLawyers.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
             {currentLawyers.map((lawyer, index) => (
               <LawyerCard
                 key={lawyer.id}
@@ -289,10 +455,10 @@ export default function FindLawyerManual() {
             <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
               <Search className="w-10 h-10 text-slate-300 dark:text-slate-600" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No lawyers found</h3>
-            <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-8">We couldn't find any lawyers matching your current filters. Try adjusting your search criteria.</p>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{t('fl_no_found')}</h3>
+            <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-8">{t('fl_no_found_sub')}</p>
             <Button onClick={clearFilters} variant="outline">
-              Clear All Filters
+              {t('fl_clear_filters')}
             </Button>
           </div>
         )}
@@ -367,49 +533,61 @@ export default function FindLawyerManual() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.3)] dark:shadow-black/50 overflow-hidden max-h-[90vh] overflow-y-auto border border-white/20 dark:border-slate-800"
+              className="relative w-full max-w-3xl bg-white dark:bg-[#121212] rounded-[2.5rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.3)] dark:shadow-none overflow-hidden flex flex-col max-h-[90vh] border border-white/20 dark:border-[#2A2A2A]"
             >
-              {/* Modal Header Image/Gradient */}
-              <div className="h-40 bg-gradient-to-r from-blue-600 to-indigo-600 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+              {/* Modal Header — pure gradient banner, no overflowing image */}
+              <div className="h-36 bg-gradient-to-br from-blue-700 via-indigo-600 to-violet-700 dark:from-slate-800 dark:via-[#111] dark:to-black relative shrink-0">
+                {/* Fine pattern overlay */}
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
+                {/* Watermark */}
+                <span className="absolute top-5 right-7 text-white/20 dark:text-white/5 font-black text-5xl tracking-widest select-none pointer-events-none uppercase">Lxwyer Up</span>
+                {/* Close button */}
                 <button
                   onClick={() => setSelectedLawyer(null)}
-                  className="absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors backdrop-blur-md"
+                  className="absolute top-5 left-5 p-2 bg-white/10 hover:bg-white/20 dark:bg-black/20 dark:hover:bg-black/40 rounded-full text-white dark:text-slate-300 transition-colors backdrop-blur-md"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="px-10 pb-10">
-                <div className="relative -mt-20 mb-8 flex justify-between items-end">
-                  <div className="flex items-end gap-8">
-                    <img
-                      src={selectedLawyer.photo}
-                      alt={selectedLawyer.name}
-                      className="w-40 h-40 rounded-[2rem] border-[6px] border-white shadow-2xl object-cover bg-white"
-                    />
-                    <div className="pb-1">
-                      <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-white">{selectedLawyer.name}</h2>
-                      <p className="text-blue-600 dark:text-blue-400 font-medium text-lg">{selectedLawyer.specialization}</p>
-                    </div>
-                  </div>
-                  <div className="hidden sm:block">
-                    {selectedLawyer.verified && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-semibold rounded-lg border border-green-100 dark:border-green-800">
-                        <Check className="w-4 h-4" /> Verified
-                      </span>
+              <div className="flex-1 overflow-y-auto overscroll-contain px-5 sm:px-10 pb-10 custom-scrollbar">
+                {/* Avatar + name row — in normal flow, no absolute overlap */}
+                <div className="flex items-center gap-5 pt-6 pb-6 mb-2 border-b border-slate-100 dark:border-slate-800">
+                  {/* Avatar */}
+                  <div className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl shrink-0">
+                    {getLawyerPhoto(selectedLawyer.photo, selectedLawyer.name) ? (
+                      <img
+                        src={getLawyerPhoto(selectedLawyer.photo, selectedLawyer.name)}
+                        alt={selectedLawyer.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+                        <span className="text-2xl font-black text-white">{getInitials(selectedLawyer.name)}</span>
+                      </div>
                     )}
                   </div>
+                  {/* Name / spec */}
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white truncate">{selectedLawyer.name}</h2>
+                    <p className="text-blue-600 dark:text-blue-400 font-medium text-base mt-0.5">{selectedLawyer.specialization}</p>
+                  </div>
+                  {/* Verified badge */}
+                  {selectedLawyer.verified && (
+                    <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-semibold rounded-lg border border-green-100 dark:border-green-800 shrink-0">
+                      <Check className="w-4 h-4" /> Verified
+                    </span>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-black/20 flex flex-col justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <div className="p-6 bg-white dark:bg-[#1A1A1A] rounded-3xl border border-slate-100 dark:border-[#333] shadow-lg shadow-slate-200/50 dark:shadow-none flex flex-col justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                     <div className="flex items-center gap-2 text-slate-400 mb-2 text-xs uppercase tracking-wider font-bold">
                       <Briefcase className="w-4 h-4 text-blue-500" /> Experience
                     </div>
                     <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{selectedLawyer.experience} Years</div>
                   </div>
-                  <div className="p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-black/20 flex flex-col justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                  <div className="p-6 bg-white dark:bg-[#1A1A1A] rounded-3xl border border-slate-100 dark:border-[#333] shadow-lg shadow-slate-200/50 dark:shadow-none flex flex-col justify-center hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                     <div className="flex items-center gap-2 text-slate-400 mb-2 text-xs uppercase tracking-wider font-bold">
                       <MapPin className="w-4 h-4 text-blue-500" /> Location
                     </div>
@@ -417,7 +595,7 @@ export default function FindLawyerManual() {
                   </div>
                 </div>
 
-                <div className="mb-10 p-6 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-black/20 hover:shadow-xl transition-all duration-300">
+                <div className="mb-10 p-6 bg-white dark:bg-[#1A1A1A] rounded-3xl border border-slate-100 dark:border-[#333] shadow-lg shadow-slate-200/50 dark:shadow-none hover:shadow-xl transition-all duration-300">
                   <div className="flex items-center gap-2 text-slate-400 mb-3 text-xs uppercase tracking-wider font-bold">
                     <GraduationCap className="w-4 h-4 text-blue-500" /> Education
                   </div>
@@ -426,36 +604,230 @@ export default function FindLawyerManual() {
 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
                       About
-                      <div className="h-1 w-12 bg-blue-600 rounded-full mt-1"></div>
+                      <div className="h-px flex-1 bg-slate-100 dark:bg-[#2A2A2A]" />
                     </h3>
-                    <p className="text-slate-600 dark:text-slate-300 leading-loose text-lg">{selectedLawyer.bio}</p>
+                    {selectedLawyer.bio ? (() => {
+                      const parts = selectedLawyer.bio
+                        .split(/\s*[\u2014\u2013\-]{2,}\s*/)
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                      return (
+                        <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                          {parts.length > 1 ? parts.map((para, i) => (
+                            <p key={i} className="text-slate-600 dark:text-slate-300 leading-relaxed text-lg">{para}</p>
+                          )) : (
+                            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-lg">
+                              {selectedLawyer.bio}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })() : (
+                      <p className="text-slate-400 dark:text-slate-500 italic text-lg">No bio available.</p>
+                    )}
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-8 p-6 bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700">
-                    <div>
-                      <h3 className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.2em]">Practice Court</h3>
-                      <p className="text-slate-700 dark:text-slate-200 font-bold">{selectedLawyer.court}</p>
+                  {/* Achievements Section */}
+                  {selectedLawyer?.achievements && Array.isArray(selectedLawyer.achievements) && selectedLawyer.achievements.length > 0 && (
+                    <div className="p-6 sm:p-8 bg-gradient-to-br from-green-50/50 to-emerald-100/50 dark:from-[#0a1a0f] dark:to-[#050f0a] rounded-3xl border border-green-200/50 dark:border-green-500/20 shadow-inner relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                        <Award className="w-48 h-48 text-green-500" />
+                      </div>
+
+                      <h3 className="text-base font-black text-green-900 dark:text-green-400 uppercase tracking-widest mb-5 flex items-center gap-3 relative z-10">
+                        <Award className="w-5 h-5 text-green-500" />
+                        Milestones & Achievements
+                        <div className="h-px flex-1 bg-gradient-to-r from-green-200/50 dark:from-green-500/20 to-transparent" />
+                      </h3>
+
+                      <div className="space-y-4 relative z-10">
+                        {[...selectedLawyer.achievements].sort((a, b) => b.pinned - a.pinned).map(ach => (
+                          <div key={ach.id}
+                            className={`rounded-2xl border p-5 flex gap-5 items-center relative overflow-hidden transition-all shadow-sm hover:shadow-md ${ach.pinned
+                                ? 'bg-gradient-to-r from-white to-green-50/50 dark:from-[#05170a] dark:to-[#031005] border-green-300 dark:border-green-500/40 shadow-green-500/5'
+                                : 'bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md border-green-100 dark:border-green-500/10 hover:border-green-300/50 dark:hover:border-green-500/30'
+                              }`}
+                          >
+                            {ach.photo ? (
+                              <img
+                                src={ach.photo.startsWith('http') || ach.photo.startsWith('data:') ? ach.photo : `${API.replace('/api', '')}${ach.photo}`}
+                                alt="achievement"
+                                className="w-52 h-52 rounded-2xl object-cover shrink-0 border border-green-200 dark:border-green-500/30 shadow-sm cursor-pointer hover:scale-[1.02] transition-transform"
+                                onClick={() => setExpandedImage(ach.photo.startsWith('http') || ach.photo.startsWith('data:') ? ach.photo : `${API.replace('/api', '')}${ach.photo}`)}
+                              />
+                            ) : (
+                              <div className="w-52 h-52 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/40 dark:to-green-900/20 border border-green-200 dark:border-green-700/50 shadow-inner">
+                                <Award className="w-16 h-16 text-green-500 dark:text-green-400 drop-shadow-sm" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <p className="font-bold text-xl leading-snug text-slate-900 dark:text-green-50">
+                                  {ach.title}
+                                </p>
+                                {ach.pinned && (
+                                  <span className="shrink-0 flex items-center gap-1.5 text-[10px] font-black text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 px-2.5 py-1 rounded-full tracking-wider uppercase border border-green-200 dark:border-green-800/50">
+                                    <Star className="w-3 h-3 fill-current" /> Featured
+                                  </span>
+                                )}
+                              </div>
+                              {ach.date && (
+                                <p className="text-[13px] font-medium text-green-700/70 dark:text-green-500/60 flex items-center gap-1.5">
+                                  <Calendar className="w-3.5 h-3.5" /> {ach.date}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-[0.2em]">Consultation Fee</h3>
-                      <p className="text-blue-600 dark:text-blue-400 font-black text-2xl">{selectedLawyer.fee}</p>
+                  )}
+
+                  {/* Details row */}
+                  <div className="divide-y divide-slate-100 dark:divide-[#2A2A2A] border border-slate-100 dark:border-[#2A2A2A] rounded-xl overflow-hidden">
+
+                    {/* Practice Court */}
+                    <div className="flex flex-col gap-3 px-5 py-5 border-b border-slate-100 dark:border-[#2A2A2A]">
+                      <div className="flex items-center gap-2">
+                        <Scale className="w-4 h-4 text-indigo-500" />
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest pt-0.5">Court Experience</span>
+                      </div>
+
+                      {selectedLawyer.primary_court && (
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-md border border-indigo-200 dark:border-indigo-800">
+                            Primary
+                          </span>
+                          <span className="font-semibold text-slate-900 dark:text-white">{selectedLawyer.primary_court}</span>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {Array.isArray(selectedLawyer.detailed_court_experience) && selectedLawyer.detailed_court_experience.length > 0 ? (
+                          selectedLawyer.detailed_court_experience.map((c, i) => (
+                            <div key={i} className="flex items-center text-xs font-medium bg-slate-50 dark:bg-[#1a1a1a] border border-slate-200 dark:border-[#333] rounded-lg overflow-hidden group hover:border-slate-300 dark:hover:border-[#444] transition-colors">
+                              <span className="px-3 py-1.5 text-slate-700 dark:text-slate-200 bg-white dark:bg-[#222]">
+                                {c.court_name}
+                              </span>
+                              <span className="px-2.5 py-1.5 bg-slate-100 dark:bg-[#111] text-slate-500 border-l border-slate-200 dark:border-[#333]">
+                                {c.years} yrs
+                              </span>
+                            </div>
+                          ))
+                        ) : Array.isArray(selectedLawyer.court) && selectedLawyer.court.length > 0 ? (
+                          selectedLawyer.court.map((c, i) => (
+                            <span key={i} className="text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-[#222] border border-slate-200 dark:border-[#333] px-3 py-1.5 rounded-lg">
+                              {c}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-slate-500 dark:text-slate-400 italic">{selectedLawyer.court || 'Not specified'}</span>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Consultation Fee */}
+                    <div className="flex items-center gap-4 px-5 py-4">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest w-36 shrink-0">Consultation Fee</span>
+                      <span className="text-base font-semibold text-slate-900 dark:text-white">{selectedLawyer.fee || '—'}</span>
+                    </div>
+
+                    {/* Consultation Type */}
+                    <div className="flex items-start gap-4 px-5 py-4">
+                      <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest w-36 shrink-0 pt-0.5">Mode</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(() => {
+                          const pref = (selectedLawyer.consultation_preferences || '').toLowerCase().trim();
+                          const types = (selectedLawyer.consultation_types || []).map(t => t.toLowerCase());
+                          const hasVideo = pref === 'video' || pref === 'both' || types.some(t => t.includes('video'));
+                          const hasInPerson = pref === 'in_person' || pref === 'both' || types.some(t => t.includes('in_person') || t.includes('in person'));
+                          const modes = [];
+                          if (hasVideo) modes.push('Video Call');
+                          if (hasInPerson) modes.push('In-Person');
+                          return modes.length > 0 ? modes.map((m, i) => (
+                            <span key={i} className="text-xs font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-[#222] border border-slate-200 dark:border-[#333] px-2.5 py-1 rounded-md">{m}</span>
+                          )) : <span className="text-sm text-slate-400 dark:text-slate-500 italic">Not specified</span>;
+                        })()}
+                      </div>
+                    </div>
+
                   </div>
 
-                  <div className="pt-6 border-t border-slate-100 dark:border-slate-700 flex gap-4">
+                  <div className="pt-6 border-t border-slate-100 dark:border-[#333] flex gap-4">
                     <Button
                       onClick={() => handleBookConsultation(selectedLawyer)}
-                      className="flex-1 h-14 text-lg font-bold bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-800 hover:to-indigo-800 shadow-xl shadow-blue-900/20 text-white rounded-xl transition-all hover:scale-[1.02]"
+                      className="flex-1 h-14 text-lg font-bold bg-gradient-to-r from-blue-700 to-indigo-700 dark:from-slate-200 dark:to-slate-300 hover:from-blue-800 hover:to-indigo-800 dark:hover:from-white dark:hover:to-slate-200 shadow-xl shadow-blue-900/20 dark:shadow-none text-white dark:text-slate-900 rounded-xl transition-all hover:scale-[1.02]"
                     >
-                      Book Consultation <ArrowRight className="w-5 h-5 ml-2" />
+                      {t('fl_book')} <ArrowRight className="w-5 h-5 ml-2" />
                     </Button>
                   </div>
                 </div>
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+
+      {/* Floating AI Lawyer Matching Button — lightweight, GPU-composited */}
+      <div className="fixed bottom-8 right-8 z-50">
+        <motion.button
+          onClick={() => navigate('/find-lawyer/ai')}
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ delay: 0.5, type: 'spring', stiffness: 260, damping: 20 }}
+          whileHover={{ scale: 1.06, y: -3 }}
+          whileTap={{ scale: 0.96 }}
+          className="relative flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-[#050d1a] text-white font-semibold text-sm cursor-pointer select-none border border-blue-500/40 shadow-xl shadow-blue-700/20 hover:shadow-blue-600/40 transition-shadow duration-300"
+          style={{ backdropFilter: 'blur(12px)', willChange: 'transform' }}
+        >
+          {/* Static blue glow ring */}
+          <span className="absolute inset-0 rounded-2xl ring-1 ring-blue-500/20 pointer-events-none" />
+          {/* Live pulse dot */}
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full ring-2 ring-[#050d1a] animate-pulse" />
+          <span className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-blue-600/20 border border-blue-500/30">
+            <Scale className="w-4 h-4 text-blue-400" />
+          </span>
+          <span className="relative">
+            {t('fl_ai_btn')}
+            <span className="block text-[10px] font-normal text-blue-400/70 -mt-0.5">{t('fl_ai_sub')}</span>
+          </span>
+        </motion.button>
+      </div>
+
+      {/* Expanded Image Modal */}
+      <AnimatePresence>
+        {expandedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            onClick={() => setExpandedImage(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-5xl max-h-[90vh] flex flex-col items-center"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setExpandedImage(null)}
+                className="absolute -top-12 right-0 p-2 text-white hover:text-red-400 bg-black/50 rounded-full backdrop-blur-md transition-colors shadow-lg border border-white/20"
+                title="Close"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <img
+                src={expandedImage}
+                alt="Expanded Achievement"
+                className="w-auto h-auto max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl border border-white/10"
+              />
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </WaveLayout>

@@ -16,29 +16,27 @@ export const Footer = () => {
               Simplifying the justice system using technology and AI
             </p>
           </div>
-          
+
           {/* Quick Links */}
           <div>
             <h3 className="text-white font-semibold mb-4">Quick Links</h3>
             <div className="space-y-2">
               <Link to="/about" className="block text-slate-400 hover:text-white text-sm transition-colors">About Us</Link>
               <Link to="/features" className="block text-slate-400 hover:text-white text-sm transition-colors">Features</Link>
-              <Link to="/how-it-works" className="block text-slate-400 hover:text-white text-sm transition-colors">How It Works</Link>
               <Link to="/contact" className="block text-slate-400 hover:text-white text-sm transition-colors">Contact</Link>
             </div>
           </div>
-          
+
           {/* For Users */}
           <div>
             <h3 className="text-white font-semibold mb-4">For Users</h3>
             <div className="space-y-2">
-              <Link to="/for-clients" className="block text-slate-400 hover:text-white text-sm transition-colors">For Clients</Link>
-              <Link to="/for-lawyers" className="block text-slate-400 hover:text-white text-sm transition-colors">For Lawyers</Link>
-              <Link to="/user-login" className="block text-slate-400 hover:text-white text-sm transition-colors">Client Login</Link>
-              <Link to="/lawyer-login" className="block text-slate-400 hover:text-white text-sm transition-colors">Lawyer Login</Link>
+              <Link to="/login" className="block text-slate-400 hover:text-white text-sm transition-colors">Client Login</Link>
+              <Link to="/login" className="block text-slate-400 hover:text-white text-sm transition-colors">Lawyer Login</Link>
+              <Link to="/register" className="block text-slate-400 hover:text-white text-sm transition-colors">Join as Expert</Link>
             </div>
           </div>
-          
+
           {/* Contact */}
           <div>
             <h3 className="text-white font-semibold mb-4">Contact Us</h3>
@@ -58,7 +56,7 @@ export const Footer = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-400 text-sm">
           <p>&copy; {new Date().getFullYear()} Lxwyer Up. All rights reserved.</p>
         </div>

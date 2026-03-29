@@ -12,7 +12,7 @@ const SimpleNavbar = ({ navigate }) => {
           </button>
           
           <button
-            onClick={() => navigate('/role-selection')}
+            onClick={() => navigate('/register')}
             className="flex items-center gap-2 text-gray-600 hover:text-[#0F2944] transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -47,7 +47,7 @@ export default function LawFirmRoleSelection() {
       icon: Building2,
       features: ['Register your firm', 'Manage lawyers', 'View all reports', 'Track firm revenue'],
       route: '/lawfirm-application',
-      loginRoute: '/lawfirm-login',
+      loginRoute: '/login',
       testId: 'lawfirm-manager-card'
     },
     {

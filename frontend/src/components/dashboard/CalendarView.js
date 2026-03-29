@@ -96,16 +96,27 @@ export default function CalendarView({
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8 z-10 relative">
                     <div>
-                        <h2 className={`text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                            {format(currentDate, 'MMMM, yyyy')}
-                        </h2>
+                        <div className="flex items-center gap-3">
+                            <h2 className={`text-3xl font-bold tracking-tight ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                                {view === 'day'
+                                    ? format(currentDate, 'EEEE, MMMM d, yyyy')
+                                    : view === 'week'
+                                        ? `${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d')} – ${format(endOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d, yyyy')}`
+                                        : format(currentDate, 'MMMM yyyy')
+                                }
+                            </h2>
+                            {view === 'day' && isToday(currentDate) && (
+                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${darkMode ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-blue-50 text-blue-600 border border-blue-200'
+                                    }`}>Today</span>
+                            )}
+                        </div>
                         <div className="flex items-center gap-4 mt-2">
                             <div className={`flex items-center bg-opacity-20 rounded-full p-1 ${darkMode ? 'bg-white/5' : 'bg-slate-100'}`}>
                                 <button onClick={handlePrev} className={`p-2 rounded-full transition-all hover:scale-110 ${darkMode ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-white text-slate-500'}`}>
                                     <ChevronLeft className="w-5 h-5" />
                                 </button>
-                                <button onClick={handleToday} className={`px-4 text-sm font-semibold ${darkMode ? 'text-white' : 'text-slate-700'}`}>
-                                    Today
+                                <button onClick={handleToday} className={`px-4 text-sm font-semibold transition-colors ${isToday(currentDate) ? (darkMode ? 'text-blue-400' : 'text-blue-600') : (darkMode ? 'text-white hover:text-blue-400' : 'text-slate-700 hover:text-blue-600')}`}>
+                                    {isToday(currentDate) ? 'Today' : format(currentDate, view === 'month' ? 'MMM yyyy' : 'MMM d')}
                                 </button>
                                 <button onClick={handleNext} className={`p-2 rounded-full transition-all hover:scale-110 ${darkMode ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-white text-slate-500'}`}>
                                     <ChevronRight className="w-5 h-5" />
@@ -142,7 +153,7 @@ export default function CalendarView({
                 </div>
 
                 {/* Calendar Content */}
-                <div className="flex-1 overflow-y-auto no-scrollbar relative min-h-[600px]">
+                <div className="flex-1 overflow-hidden relative min-h-[600px]">
                     {renderMainContent()}
                 </div>
             </div>
@@ -184,7 +195,7 @@ export default function CalendarView({
                                     onClick={() => { setSelectedDate(day); setCurrentDate(day); }}
                                     className={`
                                         relative h-10 w-10 mx-auto rounded-xl flex items-center justify-center text-sm font-bold transition-all duration-300
-                                        ${!isCurrentMonth ? 'opacity-30' : ''}
+                                        ${!isCurrentMonth ? 'opacity-50' : ''}
                                         ${isSelected
                                             ? (darkMode ? 'bg-white text-black shadow-lg shadow-white/20 scale-110' : 'bg-slate-900 text-white shadow-lg shadow-slate-900/30 scale-110')
                                             : (darkMode ? 'text-gray-400 hover:bg-white/5 hover:text-white' : 'text-slate-600 hover:bg-slate-100')
@@ -198,7 +209,26 @@ export default function CalendarView({
                         })}
                     </div>
 
-                    <div className={`h-px w-full mb-8 ${darkMode ? 'bg-white/5' : 'bg-slate-100'}`} />
+                    <div className={`h-px w-full mb-6 ${darkMode ? 'bg-white/5' : 'bg-slate-100'}`} />
+
+                    {/* Color Legend */}
+                    <div className="mb-6">
+                        <h4 className={`text-xs font-bold uppercase tracking-wider mb-3 ${darkMode ? 'text-gray-500' : 'text-slate-400'}`}>Event Types</h4>
+                        <div className="space-y-2">
+                            {[
+                                { color: 'bg-[#60A5FA]', label: 'Meeting / Custom Event' },
+                                { color: 'bg-[#FBBF24]', label: 'Court Hearing' },
+                                { color: 'bg-[#A78BFA]', label: 'Personal' },
+                                { color: 'bg-[#34D399]', label: 'Video Consultation' },
+                                { color: 'bg-[#FB7185]', label: 'In-Person Consultation' },
+                            ].map(({ color, label }) => (
+                                <div key={label} className="flex items-center gap-2.5">
+                                    <div className={`w-3 h-3 rounded-full flex-shrink-0 ${color}`} />
+                                    <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>{label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
 
                     {/* Upcoming List */}
                     <div>
@@ -207,31 +237,50 @@ export default function CalendarView({
                             <button className={`text-xs font-semibold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>View All</button>
                         </div>
                         <div className="space-y-4">
-                            {events.slice(0, 3).map((event, idx) => {
-                                const colors = EVENT_COLORS[event.color || 'blue'];
-                                return (
-                                    <div
-                                        key={idx}
-                                        onClick={() => onEventClick(event)}
-                                        className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all hover:scale-[1.02]
-                                            ${darkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-50 hover:bg-white hover:shadow-md'}
-                                        `}
-                                    >
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg shadow-lg ${darkMode ? colors.darkBg + ' ' + colors.darkShadow : colors.bg + ' ' + colors.shadow}`}>
-                                            {event.type === 'hearing' ? '⚖️' : event.type === 'meeting' ? '🤝' : '📅'}
+                            {(() => {
+                                const now = new Date();
+                                const tomorrow = addDays(new Date(now.getFullYear(), now.getMonth(), now.getDate()), 1);
+                                const upcoming = events
+                                    .filter(e => {
+                                        try { return parseISO(e.start_time) > now; } catch { return false; }
+                                    })
+                                    .sort((a, b) => parseISO(a.start_time) - parseISO(b.start_time))
+                                    .slice(0, 3);
+
+                                if (upcoming.length === 0) {
+                                    return <p className={`text-center text-sm py-8 ${darkMode ? 'text-gray-600' : 'text-slate-400'}`}>No upcoming events</p>;
+                                }
+
+                                return upcoming.map((event, idx) => {
+                                    const colors = EVENT_COLORS[event.color || 'blue'];
+                                    const eventDate = parseISO(event.start_time);
+                                    const timeStr = format(eventDate, 'h:mm a');
+                                    let dateLabel;
+                                    if (isToday(eventDate)) dateLabel = `Today · ${timeStr}`;
+                                    else if (isSameDay(eventDate, tomorrow)) dateLabel = `Tomorrow · ${timeStr}`;
+                                    else dateLabel = `${format(eventDate, 'MMM d')} · ${timeStr}`;
+
+                                    return (
+                                        <div
+                                            key={idx}
+                                            onClick={() => onEventClick(event)}
+                                            className={`flex items-center gap-4 p-4 rounded-2xl cursor-pointer transition-all hover:scale-[1.02]
+                                                ${darkMode ? 'bg-white/5 hover:bg-white/10' : 'bg-slate-50 hover:bg-white hover:shadow-md'}
+                                            `}
+                                        >
+                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg shadow-lg ${darkMode ? colors.darkBg + ' ' + colors.darkShadow : colors.bg + ' ' + colors.shadow}`}>
+                                                {event.type === 'hearing' ? '⚖️' : event.type === 'meeting' ? '🤝' : event.type === 'consultation' ? '📋' : '📅'}
+                                            </div>
+                                            <div>
+                                                <h4 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{event.title}</h4>
+                                                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-slate-500'}`}>
+                                                    {dateLabel} • {event.type}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{event.title}</h4>
-                                            <p className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-slate-500'}`}>
-                                                {format(parseISO(event.start_time || new Date().toISOString()), 'h:mm a')} • {event.type}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                            {events.length === 0 && (
-                                <p className={`text-center text-sm py-8 ${darkMode ? 'text-gray-600' : 'text-slate-400'}`}>No upcoming events</p>
-                            )}
+                                    );
+                                });
+                            })()}
                         </div>
                     </div>
                 </div>
@@ -244,75 +293,104 @@ export default function CalendarView({
 
 /* --- Subcards for Views --- */
 
+const HOUR_PX = 64; // pixels per hour — single source of truth
+const DAY_START = 7;  // 7 AM
+const DAY_END = 22; // grid ends at 10 PM label
+
 function DayView({ date, events, onEventClick, darkMode }) {
-    const hours = Array.from({ length: 11 }, (_, i) => i + 8); // 8 AM to 6 PM
+    // hours we draw lines + labels for: 7, 8, 9 … 22
+    const hours = Array.from({ length: DAY_END - DAY_START + 1 }, (_, i) => i + DAY_START);
+    const totalPx = (DAY_END - DAY_START) * HOUR_PX; // 15 slots × 64px = 960px
 
     return (
-        <div className="relative min-w-[600px] py-4">
-            {/* Time Grid */}
-            <div className="absolute left-0 top-0 bottom-0 w-20 flex flex-col">
-                {hours.map(h => (
-                    <div key={h} className={`flex-1 text-xs font-semibold text-right pr-6 relative ${darkMode ? 'text-gray-500' : 'text-slate-400'}`}>
-                        {h > 12 ? h - 12 : h} {h >= 12 ? 'PM' : 'AM'}
-                    </div>
-                ))}
-            </div>
+        <div
+            className="relative min-w-[600px] py-2 overflow-y-auto"
+            style={{
+                maxHeight: '72vh',
+                scrollbarWidth: 'thin',
+                scrollbarColor: darkMode ? 'rgba(255,255,255,0.12) transparent' : 'rgba(0,0,0,0.12) transparent',
+            }}
+        >
+            <div className="relative" style={{ height: `${totalPx}px` }}>
 
-            {/* Events Area */}
-            <div className="ml-20 relative h-[660px]"> {/* Fixed height for scrollable area (11 hours * 60px) */}
-                {/* Horizontal Lines */}
-                {hours.map((h, i) => (
-                    <div key={h} className={`absolute w-full h-px ${darkMode ? 'bg-white/5' : 'bg-slate-100'}`} style={{ top: `${(i / (hours.length - 1)) * 100}%` }} />
-                ))}
-
-                {/* Events Mapping */}
-                {events.filter(e => isSameDay(parseISO(e.start_time || new Date().toISOString()), date)).map((event, idx) => {
-                    const start = parseISO(event.start_time || new Date().toISOString());
-                    const startHour = getHours(start);
-                    const startMin = getMinutes(start);
-
-                    // Calculation relative to 8 AM start and 10 hour duration (8am - 6pm displayed)
-                    const totalMinutes = (startHour - 8) * 60 + startMin;
-                    const topPercent = (totalMinutes / (10 * 60)) * 100;
-                    const heightPercent = 10; // Default ~1 hour visually
-
-                    const colors = EVENT_COLORS[event.color || 'blue'];
-
+                {/* Hour rows: label + divider line */}
+                {hours.map((h, i) => {
+                    const topPx = i * HOUR_PX;
                     return (
-                        <motion.div
-                            key={idx}
-                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            whileHover={{ scale: 1.02, zIndex: 10 }}
-                            onClick={() => onEventClick(event)}
-                            className={`absolute left-4 right-4 p-4 rounded-3xl cursor-pointer flex flex-col justify-center
-                                ${darkMode ? colors.darkBg : colors.bg} 
-                                ${darkMode ? colors.darkShadow : colors.shadow}
-                            `}
-                            style={{ top: `${Math.max(0, Math.min(topPercent, 90))}%`, height: `${heightPercent}%` }}
+                        <div
+                            key={h}
+                            className="absolute left-0 right-0 flex items-start"
+                            style={{ top: `${topPx}px` }}
                         >
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <h4 className={`font-bold text-sm leading-tight ${darkMode ? colors.darkText : colors.text}`}>{event.title}</h4>
-                                    <p className={`text-xs opacity-80 ${darkMode ? colors.darkText : colors.text}`}>{event.description || event.type}</p>
-                                </div>
-                                <div className={`text-xs font-bold px-3 py-1 rounded-full bg-black/20 text-white backdrop-blur-md`}>
-                                    {format(start, 'h:mm a')}
-                                </div>
+                            {/* Label — shift up by half its own height so the line and label align */}
+                            <div
+                                className={`w-20 flex-shrink-0 text-xs font-semibold text-right pr-4 select-none`}
+                                style={{ marginTop: '-8px', color: darkMode ? '#6b7280' : '#94a3b8' }}
+                            >
+                                {h === 12 ? '12 PM' : h > 12 ? `${h - 12} PM` : `${h} AM`}
                             </div>
-                        </motion.div>
+                            {/* Horizontal line */}
+                            <div className={`flex-1 h-px ${darkMode ? 'bg-white/5' : 'bg-slate-100'}`} />
+                        </div>
                     );
                 })}
 
-                {/* Current Time Indicator */}
-                {isToday(date) && (
-                    <div
-                        className="absolute left-0 right-0 h-0.5 bg-red-500 z-10 flex items-center pointer-events-none"
-                        style={{ top: `${((getHours(new Date()) - 8) * 60 + getMinutes(new Date())) / (10 * 60) * 100}%` }}
-                    >
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-sm ring-2 ring-red-200" />
-                    </div>
-                )}
+                {/* Events — absolutely positioned inside the same px space */}
+                <div className="absolute top-0 bottom-0 left-20 right-0">
+                    {events
+                        .filter(e => {
+                            try { return isSameDay(parseISO(e.start_time), date); } catch { return false; }
+                        })
+                        .map((event, idx) => {
+                            const start = parseISO(event.start_time);
+                            const h = getHours(start);
+                            const m = getMinutes(start);
+                            const topPx = (h - DAY_START) * HOUR_PX + (m / 60) * HOUR_PX;
+                            const heightPx = HOUR_PX - 6;
+                            const colors = EVENT_COLORS[event.color || 'blue'];
+
+                            // Don't render outside the visible range
+                            if (topPx + heightPx < 0 || topPx > totalPx) return null;
+
+                            return (
+                                <motion.div
+                                    key={idx}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    whileHover={{ scale: 1.02, zIndex: 20 }}
+                                    onClick={() => onEventClick(event)}
+                                    className={`absolute left-4 right-4 flex items-center px-4 rounded-2xl cursor-pointer shadow-lg
+                                        ${darkMode ? colors.darkBg + ' ' + colors.darkShadow : colors.bg + ' ' + colors.shadow}
+                                    `}
+                                    style={{ top: `${topPx}px`, height: `${heightPx}px`, zIndex: 5 }}
+                                >
+                                    <div className="flex-1 min-w-0 mr-3">
+                                        <h4 className={`font-bold text-sm truncate leading-tight ${darkMode ? colors.darkText : colors.text}`}>{event.title}</h4>
+                                        <p className={`text-xs opacity-75 truncate ${darkMode ? colors.darkText : colors.text}`}>{event.description || event.case || event.type}</p>
+                                    </div>
+                                    <div className="flex-shrink-0 text-xs font-bold px-3 py-1 rounded-full bg-black/20 text-white whitespace-nowrap">
+                                        {format(start, 'h:mm a')}
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+
+                    {/* Current Time Indicator */}
+                    {isToday(date) && (() => {
+                        const now = new Date();
+                        const nowPx = (getHours(now) - DAY_START) * HOUR_PX + (getMinutes(now) / 60) * HOUR_PX;
+                        if (nowPx < 0 || nowPx > totalPx) return null;
+                        return (
+                            <div
+                                className="absolute left-0 right-0 h-0.5 bg-red-500 z-10 flex items-center pointer-events-none"
+                                style={{ top: `${nowPx}px` }}
+                            >
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-sm ring-2 ring-red-200" />
+                            </div>
+                        );
+                    })()}
+                </div>
+
             </div>
         </div>
     );

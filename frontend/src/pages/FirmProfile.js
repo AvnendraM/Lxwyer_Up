@@ -27,7 +27,7 @@ const SimpleNavbar = ({ navigate }) => {
               Login
             </Button>
             <Button
-              onClick={() => navigate('/role-selection')}
+              onClick={() => navigate('/register')}
               className="bg-[#0F2944] hover:bg-[#0F2944]/90 text-white"
             >
               Sign Up
@@ -52,7 +52,7 @@ const FirmProfile = () => {
         <SimpleNavbar navigate={navigate} />
         <div className="pt-24 pb-16 px-4 text-center">
           <h1 className="text-2xl font-bold text-[#0F2944]">Law Firm not found</h1>
-          <Button onClick={() => navigate('/browse-firms')} className="mt-4">
+          <Button onClick={() => navigate('/find-lawfirm/manual')} className="mt-4">
             Browse Law Firms
           </Button>
         </div>
@@ -68,7 +68,7 @@ const FirmProfile = () => {
         <div className="max-w-5xl mx-auto">
           {/* Back Button */}
           <button
-            onClick={() => navigate('/browse-firms')}
+            onClick={() => navigate('/find-lawfirm/manual')}
             className="flex items-center gap-2 text-gray-600 hover:text-[#0F2944] mb-6 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -153,7 +153,7 @@ const FirmProfile = () => {
                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
               <Button
-                onClick={() => navigate('/role-selection?redirect=booking')}
+                onClick={() => navigate('/register?redirect=booking')}
                 variant="outline"
                 className="border-2 border-[#0F2944] text-[#0F2944] px-8 py-4 rounded-xl font-semibold text-lg"
               >

@@ -6,8 +6,9 @@ const StatCard = ({ title, value, subtext, icon: Icon, colorClass, delay = 0, da
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay }}
-            className={`p-6 rounded-[2rem] shadow-sm border relative overflow-hidden group hover:shadow-md transition-all duration-300 ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-blue-50'}`}
+            whileHover={{ scale: 1.02, y: -5 }}
+            transition={{ delay, type: "spring", stiffness: 300, damping: 20 }}
+            className={`p-6 rounded-[2rem] shadow-sm border relative overflow-hidden group hover:shadow-xl transition-colors duration-300 ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-blue-50'}`}
         >
             <div className="flex justify-between items-start mb-4">
                 <div className={`w-12 h-12 rounded-2xl ${colorClass} bg-opacity-10 flex items-center justify-center text-xl`}>

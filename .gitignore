@@ -10,7 +10,7 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Next.js
+# Next.js / React build
 .next/
 out/
 build/
@@ -19,20 +19,52 @@ dist/
 # Python
 __pycache__/
 *.pyc
+*.pyo
 venv/
 .venv/
+*.egg-info/
 
-# Environment Variables
+# Environment Variables — NEVER commit secrets
 .env
 .env.*
 *.env
 *.env.*
+!.env.example
+!frontend/.env.production
 
-# Local Data and Uploads
-start_db/data/
-backend/uploads/
-test_results_detailed.json
-
-# Misc
-dump.rdb
+# Logs
 *.log
+backend/server.log
+backend/backend.log
+backend/uvicorn.log
+backend/mongod.log
+/tmp/*.log
+
+# MongoDB data
+backend/db_data/
+start_db/data/
+mongod.pid
+
+# Uploads (user files — not for repo)
+backend/uploads/
+
+# Test artifacts
+test_results_detailed.json
+backend/test_*.py
+
+# MongoDB data directories
+data/
+mongodb-macos-aarch64-*/
+
+# Temp / scratch files
+nohup.out
+*.tmp
+*.bak
+frontend/test_*.js
+main_assistant_copied.py
+parse_jwt.py
+update_notifications.py
+check_db.py
+seed_db.sh
+start_all.sh
+_legal_assistant_tmp/

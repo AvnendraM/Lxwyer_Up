@@ -1,87 +1,125 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Send, Bot, Briefcase, MapPin, ArrowRight, X, AlertCircle, CheckCircle, MessageSquare, Sparkles, User, Loader2, Star, Globe, Mic, MicOff, Phone, Mail } from 'lucide-react';
+import { Building2, Send, Bot, Briefcase, MapPin, ArrowRight, ArrowLeft, X, CheckCircle, MessageSquare, Sparkles, User, Loader2, Star, Globe, Mic, MicOff, Phone, Mail, Users, ChevronDown, ChevronUp, HelpCircle, Scale, Shield, Zap, Clock } from 'lucide-react';
 import axios from 'axios';
 import { API } from '../App';
 import { WaveLayout } from '../components/WaveLayout';
 import { Button } from '../components/ui/button';
 import { dummyLawFirms, states, practiceAreas } from '../data/lawFirmsData';
-import { greetings, farewells, thanks, acknowledgements, aboutBot, legalInfo, customQA, fallbackResponses, caseTypeKeywords, locationKeywords } from '../data/chatbotData';
+import { greetings, farewells, thanks, acknowledgements, aboutBot, legalInfo, customQA, fallbackResponses, caseTypeKeywords, locationKeywords, advancedLegalInfo, hindiPhrases, proceduralQA, nameQueryResponses } from '../data/chatbotData';
+import VoiceModeOverlay from '../components/VoiceModeOverlay';
+import { buildKnowledgeBase, lookupByName, getPlatformAwarenessResponse, getSuggestiveChips } from '../utils/lawyerKnowledgeBase';
 
+// ── FAQ Data ────────────────────────────────────────────────────────────────
+const FIRM_FAQ = [
+  { q: 'How does AI law firm matching work?', a: 'Our AI analyses your requirement (practice area, location, size) and scores law firms using a smart-match algorithm, surfacing the most relevant firms for your legal needs instantly.' },
+  { q: 'What types of law firms are on Lxwyer Up?', a: 'We list boutique and full-service firms covering Corporate, Criminal, IP, Tax, Real Estate, Family Law, Labour Law, Consumer Law, Cyber Law, and more.' },
+  { q: 'Can I contact a law firm directly?', a: 'Yes. Click "Book Consultation" on any matched firm to schedule a meeting with their senior partners or a dedicated team.' },
+  { q: 'Do law firms offer virtual consultations?', a: 'Many listed firms offer video consultations. Mention "online" or "virtual" in your message and the AI will filter firms accordingly.' },
+  { q: 'What if no firm matches my location?', a: 'The AI will broaden its search to nearby cities or the state level, or suggest that you try the manual browse page for more results.' },
+  { q: 'How do I know which practice area I need?', a: 'Just describe your legal issue in plain English — the AI will automatically identify the most relevant practice area and find matching firms.' },
+  { q: 'Are the firms verified?', a: 'All firms on Lxwyer Up are onboarded after a verification process. Verified firms have submitted registration details and practice area credentials.' },
+  { q: 'Can large corporates use this platform?', a: 'Absolutely. You can specify "corporate retainer", "M&A", "due diligence", or other corporate legal needs and the AI will match high-capacity firms.' },
+  { q: 'Is my information kept private?', a: 'Your conversation is processed securely and not shared with third parties. Firms only receive your details after you initiate a booking.' },
+  { q: 'What if I need multiple practice areas?', a: 'Simply list all your needs — e.g. "IP and Employment law firm in Mumbai" — and the AI will find firms with multi-disciplinary capabilities.' },
+];
+
+// ── Follow-up question bank ───────────────────────────────────────────────
+const FIRM_FOLLOWUP = [
+  { key: 'size',     text: '🏢 What size of firm do you prefer?',             chips: ['Boutique (1–10 lawyers)', 'Mid-size (10–50)', 'Large firm (50+)', 'Any size'] },
+  { key: 'mode',     text: '📱 How would you like to consult?',               chips: ['In-person visit', 'Video call', 'Either works'] },
+  { key: 'budget',   text: '💰 What is your approximate budget?',             chips: ['Under ₹5,000', 'Under ₹15,000', 'Above ₹15,000', 'Discuss with firm'] },
+  { key: 'urgency',  text: '⚡ How urgent is this matter?',                  chips: ['Not urgent', 'Within a week', 'Urgent — ASAP'] },
+  { key: 'language', text: '🗣️ Which language do you prefer?',               chips: ['English', 'Hindi', 'Regional language', 'Doesn\'t matter'] },
+];
+
+// ── Defined OUTSIDE the component so React never remounts on keystroke ──
 const ChatMessage = ({ message, isBot }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    className={`flex items-start gap-3 ${isBot ? '' : 'flex-row-reverse'}`}
-  >
-    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-lg ${isBot ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-100 dark:border-slate-700'
-      }`}>
-      {isBot ? <Bot className="w-5 h-5" /> : <User className="w-5 h-5" />}
+  <div className={`flex items-start gap-3 ${isBot ? '' : 'flex-row-reverse'}`}>
+    <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 shadow-md ${
+      isBot ? 'bg-slate-700 text-slate-200' : 'bg-slate-800 text-slate-300'
+    }`}>
+      {isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
     </div>
-    <div className={`max-w-[80%] rounded-2xl p-4 shadow-sm ${isBot
-      ? 'bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-tl-none'
-      : 'bg-blue-600 dark:bg-blue-600 text-white rounded-tr-none shadow-blue-500/20'
-      }`}>
-      {message.content && <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>}
-
-      {message.cards && (
-        <div className="space-y-3 mt-3">
-          {message.cards.map((card, idx) => (
-            <div key={idx} className={`p-3 rounded-xl border ${card.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800' :
-              card.type === 'alert' ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-100 dark:border-amber-800' :
-                'bg-slate-50 dark:bg-slate-700/50 border-slate-100 dark:border-slate-600'
-              }`}>
-              <div className="flex items-start gap-3">
-                {card.icon === 'check' && <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />}
-                {card.icon === 'alert' && <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />}
-                {card.icon === 'message' && <MessageSquare className="w-5 h-5 text-blue-600 mt-0.5" />}
-                <div>
-                  <h4 className="font-semibold text-slate-900 dark:text-white text-sm mb-1">{card.title}</h4>
-                  <p className="text-slate-600 dark:text-slate-300 text-sm">{card.content}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className={`max-w-[82%] rounded-3xl px-5 py-3.5 shadow-sm ${
+      isBot
+        ? 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-sm'
+        : 'bg-slate-700 text-white rounded-tr-sm'
+    }`}>
+      <p className="whitespace-pre-wrap leading-relaxed text-sm">{message.content?.replace(/\*\*(.*?)\*\*/g, (_, t) => t)}</p>
     </div>
-  </motion.div>
+  </div>
 );
+
+// ── FAQ Accordion Item ────────────────────────────────────────────────────
+const FAQItem = ({ faq, index }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.03 }}
+      className="border-b border-slate-800/60 last:border-0"
+    >
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between py-4 text-left gap-4 group"
+      >
+        <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">{faq.q}</span>
+        {open ? <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <p className="pb-4 text-sm text-slate-500 leading-relaxed">{faq.a}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+const ALLOWED_FIRM_STATES = null; // Law firms are available nationwide
 
 export default function FindLawFirmAI() {
   const navigate = useNavigate();
-  const messagesEndRef = useRef(null);
+  const chatEndRef = useRef(null);
   const recognitionRef = useRef(null);
 
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: "Hello! I'm your AI consultant for connecting with top law firms. I can help find the right legal partners for your business or personal needs.",
-      cards: [
-        {
-          type: 'info',
-          icon: 'message',
-          title: 'How can I assist?',
-          content: 'Describe your requirements. For example: "Looking for a corporate law firm in Mumbai" or "Need help with intellectual property rights"'
-        }
-      ]
-    }
-  ]);
+  const [messages, setMessages] = useState([{
+    role: 'assistant',
+    content: "Hello! 👋 I'm your AI consultant for finding the right law firm. Describe your legal requirement and city — I'll match you with the best firms.\n\nFor example: \"Looking for a corporate law firm in Mumbai\" or \"IP law firm in Delhi\"",
+  }]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recommendedFirms, setRecommendedFirms] = useState([]);
-  const [showRecommendations, setShowRecommendations] = useState(false);
   const [selectedFirm, setSelectedFirm] = useState(null);
+  const [mobileView, setMobileView] = useState('chat');
   const [allFirms, setAllFirms] = useState(dummyLawFirms);
-  const [conversationState, setConversationState] = useState({
-    practiceArea: null,
-    state: null,
-    hasRecommended: false
-  });
+  const [quickChips, setQuickChips] = useState([]);
+  const [followUpQueue, setFollowUpQueue] = useState([]);
+  const [followUpIndex, setFollowUpIndex] = useState(0);
+  const [showFAQ, setShowFAQ] = useState(false);
+  const [showVoiceMode, setShowVoiceMode] = useState(false);
+  // Live-training index from fetched backend firm data
+  const [liveIndex, setLiveIndex] = useState({ cities: new Set(), areas: new Set() });
+  // Full knowledge base for name queries & platform awareness
+  const [knowledgeBase, setKnowledgeBase] = useState(null);
+  // Suggestive chips from typing
+  const [typingChips, setTypingChips] = useState([]);
+  const suggestDebounceRef = useRef(null);
+  // Multi-turn memory
+  const [memory, setMemory] = useState({ practiceArea: null, location: null, budget: null, mode: null, language: null, urgent: false });
 
-  // Fetch verified law firms locally
+  // Fetch verified law firms
   useEffect(() => {
     const fetchFirms = async () => {
       try {
@@ -94,224 +132,269 @@ export default function FindLawFirmAI() {
           state: firm.state,
           practiceAreas: firm.practice_areas || [],
           lawyersCount: firm.total_lawyers || 0,
-          description: firm.description || 'No description provided',
+          description: firm.description || 'A verified law firm on Lxwyer Up.',
           image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=1200',
           unique_id: firm.unique_id,
-          // Ensure fee fields exist for booking
           feeMin: 5000,
-          feeRange: "₹5,000 - ₹15,000"
+          feeRange: '₹5,000 - ₹15,000',
         }));
-        setAllFirms([...formattedDbFirms, ...dummyLawFirms]);
+        const merged = [...formattedDbFirms, ...dummyLawFirms];
+        setAllFirms(merged);
+
+        // ── AUTO-TRAIN: build live index from backend firm data ───────────
+        const cities = new Set();
+        const areas  = new Set();
+        merged.forEach(f => {
+          if (f.city)  cities.add(f.city.toLowerCase());
+          if (f.state) cities.add(f.state.toLowerCase());
+          (f.practiceAreas || []).forEach(a => areas.add(a.toLowerCase()));
+        });
+        setLiveIndex({ cities, areas });
+
+        // Build full KB for name/platform queries
+        // Map firms to a lawyer-like structure the KB builder understands
+        const firmAsLawyer = merged.map(f => ({
+          name: f.name || f.firm_name,
+          specialization: (f.practiceAreas || [])[0] || '',
+          city: f.city,
+          state: f.state,
+          feeMin: f.feeMin || 5000,
+          languages: f.languages || ['English'],
+        }));
+        setKnowledgeBase(buildKnowledgeBase(firmAsLawyer));
       } catch (error) {
-        console.error('Error fetching law firms:', error);
-        // Fallback to dummy data on error
         setAllFirms(dummyLawFirms);
       }
     };
     fetchFirms();
   }, []);
 
-  // Speech Recognition Setup
-  useEffect(() => {
-    if ('webkitSpeechRecognition' in window) {
-      const recognition = new window.webkitSpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      recognition.onstart = () => setIsListening(true);
-      recognition.onend = () => setIsListening(false);
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInputMessage(prev => (prev ? `${prev} ${transcript}` : transcript));
-      };
-      recognitionRef.current = recognition;
-    }
-  }, []);
+  // Auto-scroll
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
 
-  const toggleListening = () => {
-    if (!recognitionRef.current) {
-      alert("Speech recognition is not supported in this browser.");
-      return;
-    }
-    if (isListening) recognitionRef.current.stop();
-    else recognitionRef.current.start();
-  };
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isLoading]);
+  // ── Detection Helpers ─────────────────────────────────────────────────────
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
   const detectPracticeArea = (message) => {
     const msg = message.toLowerCase();
-    // Use keywords from imported data if possible, or fallback loop
+
+    // First pass: live practice area index from backend firms
+    for (const area of liveIndex.areas) {
+      const words = area.split(/\s+/);
+      if (words.every(w => msg.includes(w))) {
+        return area.replace(/\b\w/g, c => c.toUpperCase());
+      }
+    }
+
+    // Second pass: extended keyword bank (150+ terms, 15 categories)
     for (const [type, keywords] of Object.entries(caseTypeKeywords)) {
       if (keywords.some(kw => msg.includes(kw))) return type;
     }
-    // Fallback checks
-    if (msg.includes('corporate') || msg.includes('business') || msg.includes('merger')) return 'Corporate Law';
-    if (msg.includes('ip') || msg.includes('intellectual') || msg.includes('patent')) return 'Intellectual Property';
-    if (msg.includes('tax') || msg.includes('gst')) return 'Tax Law';
-    if (msg.includes('real estate') || msg.includes('property')) return 'Real Estate';
-    if (msg.includes('criminal')) return 'Criminal Defense';
-    if (msg.includes('family') || msg.includes('divorce')) return 'Family Law';
+    const extra = {
+      'Corporate Law':           ['corporate','business','company','merger','acquisition','board','shareholder','llp','partnership','startup','venture','due diligence','mou','nda','sebi','compliance','incorporation','directorship','roc','memorandum','articles'],
+      'Intellectual Property':   ['ip','intellectual','patent','trademark','copyright','design','trade secret','infringement','licensing','royalty','brand protection','geographical indication'],
+      'Tax Law':                 ['tax','gst','tds','itr','income tax','tax evasion','advance tax','benami','tribunal','assessment','demand notice','tax audit','service tax','customs'],
+      'Real Estate':             ['real estate','property','land','plot','flat','apartment','registration','conveyance','mutation','lease','rent','sale deed','builder','reit','rera','housing'],
+      'Criminal Law':            ['criminal','crime','arrest','bail','fir','murder','fraud','cheating','assault','robbery','narcotics','pocso','kidnapping','extortion','blackmail','corruption','bribery','forgery'],
+      'Family Law':              ['family','divorce','custody','alimony','maintenance','matrimonial','guardianship','adoption','inheritance','will','probate','498a','dowry','domestic violence'],
+      'Labour Law':              ['labour','employment','employee','termination','salary','wages','pf','epf','esic','gratuity','posh','retrenchment','layoff','maternity','contract labour','industrial dispute'],
+      'Consumer Law':            ['consumer','complaint','deficiency','refund','product defect','warranty','unfair trade','consumer forum','consumer court','compensation'],
+      'Cyber Law':               ['cyber','hacking','data breach','online fraud','it act','ransomware','phishing','deepfake','identity theft','social media crime','digital'],
+      'Immigration Law':         ['immigration','visa','passport','oci','nri','citizenship','asylum','deportation','work permit','foreign national'],
+      'Debt Recovery':           ['debt','loan','recovery','cheque bounce','npa','drt','sarfaesi','emi','default','dishonour','insolvency','ibc','liquidation'],
+      'Environmental Law':       ['environment','pollution','ngt','forest','wildlife','waste','emission','green','ecb','contamination'],
+      'Arbitration':             ['arbitration','mediation','adr','dispute resolution','arbitral','commercial dispute','conciliation'],
+      'Banking Law':             ['banking','bank','nbfc','rbi','financial regulation','fema','foreign exchange','credit','loan default'],
+      'Media & Entertainment':   ['media','entertainment','film','music','publishing','defamation','content','celebrity','ott','streaming'],
+    };
+    for (const [type, keywords] of Object.entries(extra)) {
+      if (keywords.some(kw => msg.includes(kw))) return type;
+    }
     return null;
   };
 
-  const detectState = (message) => {
+  const detectLocation = (message) => {
     const msg = message.toLowerCase();
-    // Sort by key length descending
+
+    // First: live cities from fetched backend firms
+    for (const city of liveIndex.cities) {
+      if (msg.includes(city)) return city.replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    // Fallback: static keyword bank
     const sorted = Object.entries(locationKeywords).sort((a, b) => b[0].length - a[0].length);
     for (const [key, value] of sorted) {
       if (msg.includes(key)) {
-        // Fix: If value is an object (common in locationKeywords), return the city or state name string
-        if (typeof value === 'object') {
-          return value.city || value.state || key;
-        }
+        if (typeof value === 'object') return value.city || value.state || key;
         return value;
       }
     }
-    // Fallback simple checks
-    if (msg.includes('delhi')) return 'Delhi';
-    if (msg.includes('mumbai')) return 'Mumbai';
-    if (msg.includes('pune')) return 'Pune';
-    if (msg.includes('maharashtra')) return 'Maharashtra';
-    if (msg.includes('bangalore') || msg.includes('bengaluru')) return 'Bangalore';
-    if (msg.includes('karnataka')) return 'Karnataka';
-    if (msg.includes('chennai')) return 'Chennai';
-    if (msg.includes('tamil nadu')) return 'Tamil Nadu';
-    if (msg.includes('hyderabad')) return 'Hyderabad';
-    if (msg.includes('telangana')) return 'Telangana';
-    if (msg.includes('kolkata')) return 'Kolkata';
-    if (msg.includes('west bengal')) return 'West Bengal';
-    if (msg.includes('ahmedabad')) return 'Ahmedabad';
-    if (msg.includes('gujarat')) return 'Gujarat';
-    if (msg.includes('jaipur')) return 'Jaipur';
-    if (msg.includes('rajasthan')) return 'Rajasthan';
-    if (msg.includes('lucknow')) return 'Lucknow';
-    if (msg.includes('noida')) return 'Noida';
-    if (msg.includes('uttar pradesh')) return 'Uttar Pradesh';
+    const extras = { delhi:'Delhi', mumbai:'Mumbai', pune:'Pune', bangalore:'Bangalore', bengaluru:'Bangalore', chennai:'Chennai', hyderabad:'Hyderabad', kolkata:'Kolkata', ahmedabad:'Ahmedabad', jaipur:'Jaipur', lucknow:'Lucknow', noida:'Noida', gurgaon:'Gurgaon', chandigarh:'Chandigarh', surat:'Surat', indore:'Indore', bhopal:'Bhopal', nagpur:'Nagpur', kochi:'Kochi', bhubaneswar:'Bhubaneswar', patna:'Patna', ranchi:'Ranchi', coimbatore:'Coimbatore', vadodara:'Vadodara', agra:'Agra', faridabad:'Faridabad', meerut:'Meerut', varanasi:'Varanasi' };
+    for (const [key, val] of Object.entries(extras)) { if (msg.includes(key)) return val; }
     return null;
   };
 
-  const recommendFirms = (practiceArea, state) => {
-    let filtered = [...allFirms];
+  const detectUrgency = (msg) => /urgent|asap|emergency|immediately|right away|today/i.test(msg);
 
-    // 1. Filter by Practice Area (if detected)
-    if (practiceArea) {
-      filtered = filtered.filter(f =>
-        f.practiceAreas?.some(pa => pa.toLowerCase().includes(practiceArea.toLowerCase())) ||
-        f.practiceAreas?.includes(practiceArea)
-      );
+  const getEmotionalResponse = (message) => {
+    if (/\b(stress|stressed|anxious|anxiety|worried|overwhelmed|panicking|panic|scared|fear|nervous|depressed|sad|helpless|hopeless|exhausted)\b/i.test(message)) {
+      return `I hear you — it sounds like you're going through a difficult time. 💙\n\nI'm a legal AI assistant, so I can't provide mental health support. But please reach out:\n\n📞 iCall Helpline: 9152987821\n📞 Vandrevala Foundation: 1860-2662-345 (24/7)\n\nIf your stress is due to a legal matter, I can find the right law firm to help. Just describe your issue and city!`;
     }
-
-    // 2. Filter by Location (State OR City)
-    if (state && typeof state === 'string') {
-      filtered = filtered.filter(f =>
-        (f.state && f.state.toLowerCase() === state.toLowerCase()) ||
-        (f.city && f.city.toLowerCase() === state.toLowerCase()) ||
-        (f.state && f.state.toLowerCase().includes(state.toLowerCase())) ||
-        (f.city && f.city.toLowerCase().includes(state.toLowerCase()))
-      );
-    }
-
-    // Scorable sort
-    filtered.sort((a, b) => (b.lawyersCount || 0) - (a.lawyersCount || 0));
-    return filtered.slice(0, 3);
+    return null;
   };
 
-  // Conversational Responses
-  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   const getConversationalResponse = (message) => {
     const msg = message.toLowerCase().trim();
     if (greetings.keywords.some(kw => msg === kw || msg === kw + '!' || msg === kw + '.')) return pick(greetings.responses);
     if (farewells.keywords.some(kw => msg === kw || msg === kw + '!' || msg === kw + '.')) return pick(farewells.responses);
     if (thanks.keywords.some(kw => msg === kw || msg === kw + '!' || msg === kw + '.')) return pick(thanks.responses);
+    if (aboutBot.keywords?.some(kw => msg.includes(kw))) return pick(aboutBot.responses);
     return null;
   };
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim() || isLoading) return;
+  // ── Firm Matching ─────────────────────────────────────────────────────────
+  const localMatchFirms = (practiceArea, location) => {
+    let filtered = [...allFirms];
+    if (practiceArea) {
+      filtered = filtered.filter(f =>
+        f.practiceAreas?.some(pa => pa.toLowerCase().includes(practiceArea.toLowerCase()) || practiceArea.toLowerCase().includes(pa.toLowerCase()))
+      );
+    }
+    if (location && typeof location === 'string') {
+      const loc = location.toLowerCase();
+      filtered = filtered.filter(f =>
+        (f.state && f.state.toLowerCase().includes(loc)) ||
+        (f.city && f.city.toLowerCase().includes(loc))
+      );
+    }
+    filtered.sort((a, b) => (b.lawyersCount || 0) - (a.lawyersCount || 0));
+    return filtered.slice(0, 5);
+  };
 
-    const userMessage = inputMessage.trim();
+  // Backend smart match
+  const smartMatchFirms = async (query) => {
+    try {
+      let sessionId = sessionStorage.getItem('firm_match_session_id');
+      if (!sessionId) { sessionId = Math.random().toString(36).substring(2, 15); sessionStorage.setItem('firm_match_session_id', sessionId); }
+      const response = await axios.post(`${API}/smart-match/firms`, { query, session_id: sessionId });
+      return response.data;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  // ── Send Message ─────────────────────────────────────────────────────────
+  const handleSendMessage = async (overrideMsg) => {
+    const raw = overrideMsg || inputMessage;
+    if (!raw.trim() || isLoading) return;
+    const userMessage = raw.trim();
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setInputMessage('');
     setIsLoading(true);
+    setQuickChips([]);
+    setTypingChips([]);
 
-    setTimeout(() => {
-      // 1. Check conversational responses
-      const conversationalResp = getConversationalResponse(userMessage);
-      if (conversationalResp) {
-        setMessages(prev => [...prev, { role: 'assistant', content: conversationalResp }]);
+    await new Promise(r => setTimeout(r, 700));
+
+    // Platform-awareness ("how many firms", "which cities")
+    if (knowledgeBase) {
+      const platformReply = getPlatformAwarenessResponse(knowledgeBase, userMessage);
+      if (platformReply) {
+        setMessages(prev => [...prev, { role: 'assistant', content: platformReply }]);
+        setQuickChips(['Corporate firms Delhi', 'IP law Mumbai', 'Show all firms']);
         setIsLoading(false);
         return;
       }
+    }
 
-      // 2. Firm Recommendation Logic
-      const detectedArea = detectPracticeArea(userMessage);
-      const detectedState = detectState(userMessage);
+    // Emotional check
+    const emotionalReply = getEmotionalResponse(userMessage);
+    if (emotionalReply) {
+      setMessages(prev => [...prev, { role: 'assistant', content: emotionalReply }]);
+      setIsLoading(false);
+      return;
+    }
 
-      // Merge with previous state to remember context
-      const nextPracticeArea = detectedArea || conversationState.practiceArea;
-      const nextState = detectedState || conversationState.state;
+    // Conversational shortcuts
+    const convoReply = getConversationalResponse(userMessage);
+    if (convoReply) {
+      setMessages(prev => [...prev, { role: 'assistant', content: convoReply }]);
+      setIsLoading(false);
+      return;
+    }
 
-      const newState = {
-        practiceArea: nextPracticeArea,
-        state: nextState,
-        hasRecommended: false
-      };
-      setConversationState(newState);
+    // Show-all shortcut
+    if (/show all|browse all|see all|all firms/i.test(userMessage)) {
+      navigate('/find-lawfirm/manual');
+      setIsLoading(false);
+      return;
+    }
 
-      let responseContent = '';
-      let responseCards = [];
+    // Detect intents + merge with memory
+    const newPracticeArea = detectPracticeArea(userMessage);
+    const newLocation    = detectLocation(userMessage);
+    const isUrgent       = detectUrgency(userMessage);
+    const practiceArea   = newPracticeArea || memory.practiceArea;
+    const location       = newLocation || memory.location;
+    const urgent         = isUrgent || memory.urgent;
 
-      // Logic to determine response based on what we know
-      if (nextPracticeArea && nextState) {
-        // We have both, recommend firms
-        const firms = recommendFirms(nextPracticeArea, nextState);
+    setMemory(prev => ({ ...prev, practiceArea, location, urgent }));
 
-        if (firms.length > 0) {
-          responseContent = `I've found ${firms.length} top-tier firms in ${nextState} specializing in ${nextPracticeArea}.`;
-          setRecommendedFirms(firms);
-          setShowRecommendations(true);
-          // Mark as recommended so we don't loop endlessly if user just says "thanks" later
-          setConversationState(prev => ({ ...prev, hasRecommended: true }));
-        } else {
-          // Fallback: try searching just by state if strict match failed
-          const firmsBroad = recommendFirms(null, nextState);
-          if (firmsBroad.length > 0) {
-            responseContent = `I couldn't find a firm purely for ${nextPracticeArea} in ${nextState}, but here are some top firms in that region.`;
-            setRecommendedFirms(firmsBroad.slice(0, 3));
-            setShowRecommendations(true);
-          } else {
-            responseContent = `I'm currently expanding my network in ${nextState}. Please try another major city.`;
-          }
-        }
-      } else if (nextPracticeArea && !nextState) {
-        responseContent = `Excellent choice. For ${nextPracticeArea}, where are you looking for a firm?`;
-        responseCards.push({
-          type: 'info',
-          icon: 'message',
-          title: 'Location Required',
-          content: 'Please confirm your preferred state (e.g., Delhi, Maharashtra) to identify local firms.'
-        });
-      } else if (!nextPracticeArea && nextState) {
-        responseContent = `Got it, ${nextState}. What specific legal expertise does your organization require? (e.g. Corporate, IP, Tax)`;
+    // ── Run backend smart match first ─────────────────────────────────────
+    const matchData = await smartMatchFirms(userMessage);
+
+    let enriched = [];
+    if (matchData && matchData.results && matchData.results.length > 0) {
+      enriched = matchData.results;
+    } else if (practiceArea || location) {
+      enriched = localMatchFirms(practiceArea, location);
+      // Broaden if nothing found
+      if (enriched.length === 0 && location) enriched = localMatchFirms(null, location).slice(0, 3);
+      if (enriched.length === 0 && practiceArea) enriched = localMatchFirms(practiceArea, null).slice(0, 3);
+    }
+
+    if (enriched.length > 0) {
+      setRecommendedFirms(enriched);
+
+      const locationText = location || (matchData?.query_summary?.location?.city) || 'India';
+      const areaText = practiceArea || 'your requirement';
+      let responseContent = `Smart match complete:\n\n📋 ${areaText}\n📍 ${locationText}`;
+      if (urgent) responseContent += `\n⚡ Urgent — prioritised by size`;
+      responseContent += `\n\n✅ Found ${enriched.length} law firm${enriched.length > 1 ? 's' : ''}! Want better results? I can refine by firm size, consultation mode, or budget.`;
+
+      // Build follow-up queue
+      const missingFollowUps = FIRM_FOLLOWUP.filter(fq => {
+        if (fq.key === 'budget' && memory.budget) return false;
+        if (fq.key === 'mode' && memory.mode) return false;
+        if (fq.key === 'language' && memory.language) return false;
+        if (fq.key === 'urgency' && urgent) return false;
+        return true;
+      }).slice(0, 2);
+
+      setFollowUpQueue(missingFollowUps);
+      setFollowUpIndex(0);
+
+      setMessages(prev => [...prev, { role: 'assistant', content: responseContent }]);
+      if (missingFollowUps.length > 0) {
+        setQuickChips(missingFollowUps[0].chips);
       } else {
-        // Fallback to legal info if no clear intent
-        responseContent = "Could you elaborate on your requirements? I need to understand the practice area and desired location.";
+        setQuickChips(['Book consultation', 'Show all firms', 'New search']);
       }
-
+    } else if (practiceArea && !location) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `I understand you need help with ${practiceArea}.\n\nPlease also mention your city or state.\nExample: "${practiceArea} firm in Delhi"` }]);
+      setQuickChips(['Delhi', 'Mumbai', 'Bangalore', 'Hyderabad']);
+    } else if (!practiceArea && location) {
+      setMessages(prev => [...prev, { role: 'assistant', content: `Got it, you're in ${location}.\n\nWhat type of legal expertise does your firm need?\nExample: "Corporate", "IP", "Tax", "Criminal"` }]);
+      setQuickChips(['Corporate Law', 'Intellectual Property', 'Tax Law', 'Criminal Law', 'Family Law']);
+    } else {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: responseContent,
-        cards: responseCards.length > 0 ? responseCards : undefined
+        content: `I can help match you with the right law firm! Try describing:\n\n1. 📋 Legal area (Corporate, IP, Tax, Criminal...)\n2. 📍 Your city or state\n\nOr type "show all firms" to browse manually.`,
       }]);
-      setIsLoading(false);
-    }, 1500);
+      setQuickChips(['Corporate firm in Delhi', 'IP firm in Mumbai', 'Criminal firm in Bangalore', 'Show all firms']);
+    }
+
+    setIsLoading(false);
   };
 
   const handleBook = (firm) => {
@@ -319,10 +402,9 @@ export default function FindLawFirmAI() {
       state: {
         lawyer: {
           ...firm,
-          // Map firm specific fields to what booking page expects
           consultation_fee: firm.feeMin || 5000,
-          fee: firm.feeRange || "₹5,000 - ₹15,000",
-          specialization: firm.practiceAreas?.[0] || "Corporate Law"
+          fee: firm.feeRange || '₹5,000 - ₹15,000',
+          specialization: firm.practiceAreas?.[0] || 'Corporate Law',
         }
       }
     });
@@ -330,151 +412,270 @@ export default function FindLawFirmAI() {
 
   return (
     <WaveLayout activePage="find-law-firm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
+      <div
+        className="flex bg-black text-white overflow-hidden"
+        style={{ height: 'calc(100dvh - 64px)' }}
+      >
+        {/* ── Left: Chat Panel ── */}
+        <div className={`flex flex-col transition-all duration-500
+          ${mobileView === 'results' ? 'hidden lg:flex' : 'flex'}
+          ${recommendedFirms.length > 0 ? 'w-full lg:w-[52%]' : 'w-full'}
+          border-r border-slate-800/60`}>
 
-        <div className="text-center mb-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-full mb-6"
-          >
-            <Sparkles className="w-4 h-4 text-indigo-600" />
-            <span className="text-sm font-medium text-indigo-600 dark:text-indigo-300">AI Firm Matching</span>
-          </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-bold text-slate-900 dark:text-white mb-4"
-          >
-            Connect with  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Legal Excellence</span>
-          </motion.h1>
-        </div>
+          {/* Top bar */}
+          <div className="shrink-0 h-14 border-b border-slate-800/60 bg-black/80 backdrop-blur-sm px-5 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-800 flex items-center justify-center shadow-md shadow-indigo-600/20">
+                <Building2 className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-white tracking-wide">AI FIRM MATCHING</h1>
+                <p className="text-[10px] text-slate-500 font-medium">Describe your need · find the right firm</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {recommendedFirms.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setMobileView('results')}
+                    className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600 text-white text-xs font-bold shadow-lg shadow-indigo-600/30"
+                  >
+                    {recommendedFirms.length} Matches <ArrowRight className="w-3 h-3" />
+                  </button>
+                  <span className="hidden lg:inline text-xs font-bold bg-slate-900 text-slate-400 border border-slate-700 px-2.5 py-1 rounded-full">
+                    {recommendedFirms.length} matches
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
 
-        <div className="grid lg:grid-cols-12 gap-8 h-[600px]">
-          {/* Chat Interface */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className={`transition-all duration-500 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-slate-800 shadow-xl shadow-blue-900/5 dark:shadow-none rounded-3xl flex flex-col overflow-hidden ${showRecommendations ? 'lg:col-span-7' : 'lg:col-span-12'}`}
-          >
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {messages.map((msg, idx) => (
-                <ChatMessage key={idx} message={msg} isBot={msg.role === 'assistant'} />
-              ))}
-              {isLoading && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
-                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-6">
+            {messages.map((msg, idx) => (
+              <ChatMessage key={idx} message={msg} isBot={msg.role === 'assistant'} />
+            ))}
+            {isLoading && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-slate-700 flex items-center justify-center shadow-md shrink-0">
+                  <Bot className="w-4 h-4 text-slate-200" />
+                </div>
+                <div className="bg-slate-900 border border-slate-800 rounded-3xl rounded-tl-sm px-5 py-4 flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    {[0, 150, 300].map(d => (
+                      <div key={d} className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                    ))}
                   </div>
-                  <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl rounded-tl-none p-4 shadow-sm">
-                    <div className="flex gap-1.5">
-                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
+                  <span className="text-xs text-slate-500 font-medium">Matching firms...</span>
+                </div>
+              </motion.div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Input Area */}
+          <div className="px-4 pb-6 pt-3 bg-gradient-to-t from-black via-black/90 to-transparent">
+            {/* Typing-suggestion chips — real-time from KB */}
+            {typingChips.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {typingChips.map((chip, i) => (
+                  <button key={i} onClick={() => handleSendMessage(chip)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-indigo-800/50 bg-indigo-950/40 text-indigo-400 hover:border-indigo-500 hover:text-indigo-300 text-xs font-medium transition-all hover:scale-[1.02]">
+                    <Sparkles className="w-3 h-3" /> {chip}
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Quick chips */}
+            {quickChips.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {quickChips.map((chip, i) => (
+                  <button key={i} onClick={() => handleSendMessage(chip)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-700 bg-slate-900/60 text-slate-400 hover:border-slate-500 hover:text-slate-300 text-xs font-medium transition-all hover:scale-[1.02]">
+                    <ArrowRight className="w-3 h-3" /> {chip}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Follow-up label */}
+            {followUpQueue.length > 0 && followUpIndex < followUpQueue.length && (
+              <p className="text-xs text-slate-400 mb-2 pl-1">{followUpQueue[followUpIndex].text}</p>
+            )}
+
+            <div className="relative flex items-center gap-2 p-1.5 pl-5 bg-slate-900/80 border border-slate-700/60 rounded-full shadow-xl focus-within:border-slate-500 transition-all backdrop-blur-2xl" style={{ outline: 'none' }}>
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => { setInputMessage(e.target.value); if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current); if (e.target.value.length > 2 && knowledgeBase) { suggestDebounceRef.current = setTimeout(() => setTypingChips(getSuggestiveChips(knowledgeBase, e.target.value, memory)), 280); } else { setTypingChips([]); } }}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder={isListening ? 'Listening...' : followUpQueue[followUpIndex]?.text || 'Describe your legal requirement...'}
+                className="flex-1 bg-transparent border-none text-white placeholder-slate-600 font-medium py-2 text-sm"
+                style={{ outline: 'none', boxShadow: 'none' }}
+              />
+              <button
+                onClick={() => setShowVoiceMode(true)}
+                title="Voice Mode"
+                className="p-2.5 rounded-full transition-all text-slate-500 hover:text-indigo-400 hover:bg-indigo-400/10"
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleSendMessage()}
+                disabled={!inputMessage.trim() || isLoading}
+                className={`p-3 rounded-full transition-all duration-300 transform ${!inputMessage.trim() || isLoading
+                  ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed scale-90'
+                  : 'bg-indigo-500 hover:bg-indigo-400 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] hover:scale-105 active:scale-95'
+                }`}
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between mt-3">
+              <p className="text-[10px] uppercase tracking-widest text-slate-600 font-semibold opacity-70">
+                AI-Powered Matching · Verified Firms · India
+              </p>
+              <button
+                onClick={() => setShowFAQ(f => !f)}
+                className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-slate-300 transition-colors font-semibold uppercase tracking-widest"
+              >
+                <HelpCircle className="w-3 h-3" /> FAQ
+              </button>
+            </div>
+
+            {/* FAQ Accordion */}
+            <AnimatePresence>
+              {showFAQ && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.28 }}
+                  className="overflow-hidden mt-3"
+                >
+                  <div className="bg-slate-900/60 border border-slate-800 rounded-2xl px-5 py-2">
+                    <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold py-3 border-b border-slate-800">Frequently Asked Questions</p>
+                    {FIRM_FAQ.map((faq, i) => <FAQItem key={i} faq={faq} index={i} />)}
                   </div>
                 </motion.div>
               )}
-              <div ref={messagesEndRef} />
-            </div>
+            </AnimatePresence>
+          </div>
+        </div>
 
-            <div className="p-4 bg-white/50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-700">
-              <div className="flex gap-3 relative">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Describe your legal requirements..."
-                  className="flex-1 pl-6 pr-14 py-4 bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
-                />
-                <Button
-                  onClick={toggleListening}
-                  variant="ghost"
-                  className={`absolute right-14 top-2 h-10 w-10 p-0 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 ${isListening ? 'text-red-500' : 'text-slate-400'}`}
-                >
-                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </Button>
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!inputMessage.trim() || isLoading}
-                  className="absolute right-2 top-2 h-10 w-10 p-0 rounded-xl bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20"
-                >
-                  <Send className="w-4 h-4 text-white" />
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Recommendations Interface */}
-          <AnimatePresence>
-            {showRecommendations && (
-              <motion.div
-                initial={{ opacity: 0, x: 20, width: 0 }}
-                animate={{ opacity: 1, x: 0, width: 'auto' }}
-                exit={{ opacity: 0, x: 20, width: 0 }}
-                className="lg:col-span-5 space-y-4 overflow-y-auto pr-1"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-amber-500" /> Matches Found
-                  </h3>
-                  <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold px-2 py-1 rounded-full">
-                    {recommendedFirms.length} Firms
+        {/* ── Right: Firm Matches Panel ── */}
+        <AnimatePresence>
+          {recommendedFirms.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, x: 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 40 }}
+              className={`flex flex-col flex-1 bg-black overflow-hidden
+                ${mobileView === 'results' ? 'flex' : 'hidden lg:flex'}`}
+            >
+              <div className="shrink-0 px-5 py-4 border-b border-slate-800/60 h-14 flex items-center justify-between">
+                <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-indigo-400" />
+                  TOP MATCHES
+                  <span className="ml-1 text-[10px] bg-slate-900 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-bold">
+                    {recommendedFirms.length} Found
                   </span>
+                </h3>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setMobileView('chat')}
+                    className="lg:hidden flex items-center gap-1.5 text-slate-400 text-xs font-semibold hover:text-white transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" /> Chat
+                  </button>
+                  {/* X / Close button — all screens */}
+                  <button
+                    onClick={() => { setRecommendedFirms([]); setMobileView('chat'); setQuickChips([]); setFollowUpQueue([]); }}
+                    title="Dismiss results"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
+              </div>
 
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {recommendedFirms.map((firm, index) => (
                   <motion.div
-                    key={firm.id}
+                    key={firm.id || index}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-lg shadow-blue-900/5 dark:shadow-blue-900/20 rounded-2xl p-0 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all group"
+                    transition={{ delay: index * 0.06 }}
+                    className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
+                    onClick={() => setSelectedFirm(firm)}
                   >
-                    <div className="h-32 relative">
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent z-10" />
-                      <img src={firm.image} alt={firm.name} className="w-full h-full object-cover" />
-                      <div className="absolute bottom-3 left-4 z-20">
-                        <h4 className="font-bold text-white shadow-sm">{firm.name}</h4>
-                        <p className="text-slate-200 text-xs flex items-center gap-1"><MapPin className="w-3 h-3" /> {firm.city}</p>
+                    {/* Header */}
+                    <div className="relative h-24 bg-gradient-to-b from-slate-800 to-black">
+                      <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, white 0, white 1px, transparent 0, transparent 50%)', backgroundSize: '12px 12px' }} />
+                      <span className="absolute top-2 right-3 text-white/10 font-black text-xs tracking-widest uppercase select-none">LXWYER UP</span>
+                      <div className="absolute bottom-3 left-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center shadow-lg ring-4 ring-slate-900">
+                          <Building2 className="w-6 h-6 text-white" />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="p-4">
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {firm.practiceAreas.slice(0, 2).map((area, i) => (
-                          <span key={i} className="text-xs font-medium text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded">{area}</span>
+                    {/* Body */}
+                    <div className="px-4 pb-4 pt-3">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-bold text-white text-sm">{firm.name}</h4>
+                          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3" /> {firm.city}{firm.state ? `, ${firm.state}` : ''}
+                          </p>
+                        </div>
+                        {firm.lawyersCount > 0 && (
+                          <span className="text-[9px] font-bold px-2 py-0.5 bg-slate-800 text-slate-400 border border-slate-700 rounded-full">
+                            {firm.lawyersCount} lawyers
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Practice areas */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {(firm.practiceAreas || []).slice(0, 3).map((area, i) => (
+                          <span key={i} className="text-[10px] font-medium px-2.5 py-0.5 rounded-full bg-indigo-900/30 text-indigo-400 border border-indigo-800/40">{area}</span>
                         ))}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedFirm(firm)}
-                          className="text-xs w-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedFirm(firm); }}
+                          className="py-2 rounded-xl border border-slate-700 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition-colors"
                         >
                           Details
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleBook(firm)}
-                          className="text-xs w-full bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20"
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleBook(firm); }}
+                          className="py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors flex items-center justify-center gap-1"
                         >
-                          Book Now <ArrowRight className="w-3 h-3 ml-1" />
-                        </Button>
+                          Book Now <ArrowRight className="w-3 h-3" />
+                        </button>
                       </div>
                     </div>
                   </motion.div>
                 ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+
+                {/* Browse all CTA */}
+                <button
+                  onClick={() => navigate('/find-lawfirm/manual')}
+                  className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 bg-slate-900 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors border border-slate-800"
+                >
+                  Browse all law firms <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Firm Detail Modal */}
+      {/* ── Firm Detail Modal ── */}
       <AnimatePresence>
         {selectedFirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -483,75 +684,75 @@ export default function FindLawFirmAI() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedFirm(null)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
-
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-2xl bg-slate-950 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
             >
-              <div className="relative h-64">
-                <img
-                  src={selectedFirm.image}
-                  alt={selectedFirm.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+              {/* Modal header */}
+              <div className="relative h-48 bg-gradient-to-br from-indigo-900/60 to-slate-900">
+                <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, white 0, white 1px, transparent 0, transparent 50%)', backgroundSize: '12px 12px' }} />
                 <button
                   onClick={() => setSelectedFirm(null)}
-                  className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 backdrop-blur-sm rounded-full text-white transition-colors"
+                  className="absolute top-4 right-4 p-2 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full text-white transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
-
-                <div className="absolute bottom-6 left-8 right-8 text-white">
-                  <h2 className="text-3xl font-bold mb-2">{selectedFirm.name}</h2>
-                  <div className="flex items-center gap-4 text-slate-200">
-                    <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {selectedFirm.city}, {selectedFirm.state}</span>
-                    <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> {selectedFirm.lawyersCount} Lawyers</span>
-                    <span className="flex items-center gap-1.5"><Star className="w-4 h-4 fill-amber-400 text-amber-400" /> 4.9 Rating</span>
+                <div className="absolute bottom-6 left-6">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 flex items-center justify-center shadow-xl mb-3">
+                    <Building2 className="w-7 h-7 text-white" />
                   </div>
+                  <h2 className="text-2xl font-bold text-white">{selectedFirm.name}</h2>
+                  <p className="text-slate-400 text-sm flex items-center gap-1.5 mt-1">
+                    <MapPin className="w-3.5 h-3.5" /> {selectedFirm.city}{selectedFirm.state ? `, ${selectedFirm.state}` : ''}
+                    {selectedFirm.lawyersCount > 0 && <span className="ml-2">· {selectedFirm.lawyersCount} lawyers</span>}
+                  </p>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-3 gap-8 p-8">
-                <div className="md:col-span-2 space-y-8">
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">About the Firm</h3>
-                    <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedFirm.description}</p>
-                  </div>
+              <div className="p-6 space-y-5">
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">About the Firm</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed">{selectedFirm.description}</p>
+                </div>
 
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Practice Areas</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedFirm.practiceAreas.map((area, idx) => (
-                        <div key={idx} className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-lg border border-blue-100 dark:border-blue-800">
-                          {area}
-                        </div>
-                      ))}
-                    </div>
+                <div>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">Practice Areas</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {(selectedFirm.practiceAreas || []).map((area, idx) => (
+                      <span key={idx} className="px-3 py-1.5 bg-indigo-900/30 text-indigo-300 text-xs font-medium rounded-lg border border-indigo-800/40">{area}</span>
+                    ))}
                   </div>
                 </div>
 
-                <div className="space-y-6">
-                  <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border border-indigo-100 dark:border-indigo-800">
-                    <h3 className="font-bold text-indigo-900 dark:text-indigo-300 mb-2">Book Consultation</h3>
-                    <p className="text-sm text-indigo-700 dark:text-indigo-400 mb-4">Schedule a meeting with senior partners or specialized teams.</p>
-                    <Button
-                      onClick={() => handleBook(selectedFirm)}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20"
-                    >
-                      Book Consultation
-                    </Button>
-                  </div>
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <button
+                    onClick={() => { setSelectedFirm(null); }}
+                    className="py-3 rounded-xl border border-slate-700 text-slate-300 text-sm font-semibold hover:bg-slate-800 transition-colors"
+                  >
+                    Close
+                  </button>
+                  <button
+                    onClick={() => { setSelectedFirm(null); handleBook(selectedFirm); }}
+                    className="py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                  >
+                    Book Consultation <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+      <VoiceModeOverlay
+        open={showVoiceMode}
+        onClose={() => setShowVoiceMode(false)}
+        onSend={(text) => handleSendMessage(text)}
+        accentColor="#6366f1"
+      />
     </WaveLayout>
   );
 }

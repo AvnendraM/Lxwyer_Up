@@ -43,7 +43,7 @@ export default function UserLoginPage() {
 
         {/* Back Button */}
         <button
-          onClick={() => navigate('/role-selection')}
+          onClick={() => navigate('/register')}
           className="absolute top-8 left-8 flex items-center space-x-2 text-slate-500 hover:text-blue-600 transition-colors font-medium bg-white/50 px-4 py-2 rounded-full backdrop-blur-md border border-white/60 hover:shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />

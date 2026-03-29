@@ -1,174 +1,190 @@
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Scale, Building2, User, ArrowRight, Sparkles, Search } from 'lucide-react';
-import NavigationHeader from '../components/NavigationHeader';
-import { WaveLayout } from '../components/WaveLayout';
-import { Button } from '../components/ui/button';
+import { User, Building2, ArrowRight, ArrowLeft, ShieldCheck, Lock, Star } from 'lucide-react';
+import { Navbar } from '../components/Navbar';
 
 export default function UserGetStarted() {
   const navigate = useNavigate();
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  // ── CountUp hook ──────────────────────────────────────
+  function useCountUp(target, duration = 1500, delay = 400) {
+    const [count, setCount] = useState(0);
+    const raf = useRef(null);
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        const start = performance.now();
+        const step = (now) => {
+          const elapsed = now - start;
+          const progress = Math.min(elapsed / duration, 1);
+          // easeOutQuart
+          const ease = 1 - Math.pow(1 - progress, 4);
+          setCount(Math.floor(ease * target));
+          if (progress < 1) raf.current = requestAnimationFrame(step);
+          else setCount(target);
+        };
+        raf.current = requestAnimationFrame(step);
+      }, delay);
+      return () => { clearTimeout(timer); cancelAnimationFrame(raf.current); };
+    }, [target, duration, delay]);
+    return count;
+  }
+
+  function StatItem({ target, suffix, label, delay }) {
+    const count = useCountUp(target, 1400, delay);
+    const formatted = count.toLocaleString('en-IN');
+    return (
+      <div className="text-center">
+        <p className="text-lg font-black text-white leading-none tabular-nums">
+          {formatted}{suffix}
+        </p>
+        <p className="text-[11px] text-white/25 mt-1 tracking-wide">{label}</p>
+      </div>
+    );
+  }
 
   return (
-    <WaveLayout>
-      <div className="min-h-screen pt-28 pb-20 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Header */}
+    <div
+      className="min-h-screen bg-black text-white flex flex-col overflow-hidden"
+      style={{ fontFamily: "'Outfit', sans-serif" }}
+    >
+      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&display=swap" rel="stylesheet" />
+
+      <Navbar minimal />
+
+      {/* ── Hero Image Banner ── */}
+      <div className="relative h-[32vh] md:h-[40vh] overflow-hidden">
+        <img
+          src="/law-office-hero.png"
+          alt="Legal professionals"
+          className="w-full h-full object-cover object-[center_30%]"
+        />
+        {/* Gradient overlays — stronger to blend bright image into dark page */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/20 to-black" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
+        {/* Subtle color tint to feel more on-brand */}
+        <div className="absolute inset-0 bg-blue-950/20" />
+
+        {/* Centered badge over image */}
+        <div className="absolute inset-0 flex items-center justify-center">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-16"
+            transition={{ duration: 0.5 }}
+            className="text-center"
           >
-            <div className="flex items-center justify-center mb-6">
-              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center shadow-sm">
-                <Scale className="w-8 h-8 text-blue-600" />
-              </div>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/50 border border-white/10 backdrop-blur-md mb-3">
+              <span className="text-[10px] tracking-[0.25em] uppercase text-blue-400 font-bold">India's First Legal Ecosystem</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-white mb-6 font-outfit">Get Started with Legal Assistance</h1>
-            <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">Choose how you want to find legal help and connect with the right experts.</p>
-          </motion.div>
-
-          {/* Options */}
-          <div className="grid md:grid-cols-2 gap-8 relative z-10">
-            {/* Option 1: Independent Lawyer */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white/80 dark:bg-slate-950/60 backdrop-blur-xl border border-white/60 dark:border-white/10 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-              <div className="relative z-10">
-                <div className="flex items-center justify-center mb-8">
-                  <div className="w-20 h-20 bg-blue-50 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
-                    <User className="w-10 h-10 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-3">I Want a Lawyer</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-center mb-8">Connect with verified independent lawyers across India for specialized legal representation.</p>
-
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-start gap-3 bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm font-medium pt-0.5">Browse verified lawyers by specialization</p>
-                  </div>
-                  <div className="flex items-start gap-3 bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm font-medium pt-0.5">Direct consultation with legal experts</p>
-                  </div>
-                  <div className="flex items-start gap-3 bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm font-medium pt-0.5">Flexible pricing and consultation options</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => navigate('/find-lawyer/ai')}
-                    className="w-full h-auto py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 group/btn"
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    Find with AI Assistant
-                    <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                  </Button>
-
-                  <Button
-                    onClick={() => navigate('/find-lawyer/manual')}
-                    variant="outline"
-                    className="w-full h-auto py-4 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 group/btn"
-                  >
-                    <Search className="w-5 h-5" />
-                    Browse Manually
-                    <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Option 2: Law Firm */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white/80 dark:bg-slate-950/60 backdrop-blur-xl border border-white/60 dark:border-white/10 rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all group relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-              <div className="relative z-10">
-                <div className="flex items-center justify-center mb-8">
-                  <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
-                    <Building2 className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
-                  </div>
-                </div>
-
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white text-center mb-3">I Want a Law Firm</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-center mb-8">Join established law firms with comprehensive legal services and team-based support.</p>
-
-                <div className="space-y-4 mb-8">
-                  <div className="flex items-start gap-3 bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <div className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm font-medium pt-0.5">Access to team of specialized lawyers</p>
-                  </div>
-                  <div className="flex items-start gap-3 bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <div className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm font-medium pt-0.5">Comprehensive case management</p>
-                  </div>
-                  <div className="flex items-start gap-3 bg-white/50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800/50">
-                    <div className="w-6 h-6 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <div className="w-2 h-2 bg-indigo-600 rounded-full"></div>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm font-medium pt-0.5">Established reputation and resources</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Button
-                    onClick={() => navigate('/find-lawfirm/ai')}
-                    className="w-full h-auto py-4 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 group/btn"
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    Find with AI Assistant
-                    <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                  </Button>
-
-                  <Button
-                    onClick={() => navigate('/find-lawfirm/manual')}
-                    variant="outline"
-                    className="w-full h-auto py-4 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-all flex items-center justify-center gap-2 group/btn"
-                  >
-                    <Search className="w-5 h-5" />
-                    Browse Law Firms
-                    <ArrowRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform" />
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Bottom Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-12 text-center relative z-10"
-          >
-            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium bg-white/50 dark:bg-slate-900/50 inline-block px-4 py-2 rounded-full backdrop-blur-sm border border-white/60 dark:border-white/10">
-              Not sure which option to choose? Our AI assistant can help you decide!
-            </p>
+            <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight drop-shadow-2xl">
+              Who are you looking for?
+            </h1>
           </motion.div>
         </div>
       </div>
-    </WaveLayout>
+
+      {/* ── Cards ── */}
+      <main className="flex-1 flex flex-col items-center px-5 py-10 relative z-10">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl mb-8">
+          {[
+            {
+              id: 'lawyer',
+              Icon: User,
+              sup: 'Individual Advocate',
+              title: 'Find a Lawyer',
+              sub: 'Search 1,000+ verified lawyers by specialization, city & budget.',
+              path: '/find-lawyer/manual',
+              btnClass: 'bg-blue-600 hover:bg-blue-700',
+              borderHover: 'hover:border-blue-500/50',
+              glow: 'hover:shadow-[0_0_50px_-12px_rgba(59,130,246,0.4)]',
+              accent: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+              delay: 0,
+            },
+            {
+              id: 'firm',
+              Icon: Building2,
+              sup: 'Legal Establishment',
+              title: 'Find a Law Firm',
+              sub: 'Discover top-rated firms with full specialist teams.',
+              path: '/find-lawfirm/manual',
+              btnClass: 'bg-slate-700 hover:bg-slate-600',
+              borderHover: 'hover:border-slate-500/50',
+              glow: 'hover:shadow-[0_0_50px_-12px_rgba(100,116,139,0.3)]',
+              accent: 'bg-slate-700/30 border-slate-600/30 text-slate-300',
+              delay: 0.1,
+            },
+          ].map(({ id, Icon, sup, title, sub, path, btnClass, borderHover, glow, accent, delay }) => (
+            <motion.div
+              key={id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay }}
+              onClick={() => navigate(path)}
+              className={`group cursor-pointer rounded-2xl bg-white/[0.03] border border-white/[0.07] ${borderHover} ${glow} transition-all duration-300 hover:-translate-y-1 p-7 flex flex-col`}
+            >
+              {/* Icon */}
+              <div className={`w-11 h-11 rounded-xl border flex items-center justify-center mb-5 ${accent}`}>
+                <Icon className="w-5 h-5" strokeWidth={1.5} />
+              </div>
+
+              {/* Text */}
+              <p className="text-[10px] tracking-[0.2em] uppercase text-white/30 font-semibold mb-1">{sup}</p>
+              <h2 className="text-xl font-black text-white mb-2">{title}</h2>
+              <p className="text-sm text-white/35 leading-relaxed mb-6 font-light">{sub}</p>
+
+              {/* Button */}
+              <button
+                className={`mt-auto w-full py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 ${btnClass} transition-colors`}
+              >
+                {title}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* ── Trust strip ── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="flex flex-wrap justify-center gap-x-6 gap-y-2 mb-6"
+        >
+          {[
+            { Icon: ShieldCheck, text: 'Bar Council Verified' },
+            { Icon: Lock, text: 'End-to-end Encrypted' },
+            { Icon: Star, text: 'Free Consultation' },
+          ].map(({ Icon, text }, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <Icon className="w-3 h-3 text-blue-500/40" strokeWidth={1.5} />
+              <span className="text-[11px] text-white/25">{text}</span>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* Stats strip */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+          className="flex flex-wrap justify-center gap-x-10 gap-y-4 mb-8"
+        >
+          <StatItem target={1000} suffix="+" label="Verified Lawyers" delay={500} />
+          <StatItem target={10000} suffix="+" label="Cases Resolved" delay={600} />
+          <StatItem target={3} suffix="+" label="States Covered" delay={700} />
+        </motion.div>
+
+        {/* Back link */}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-1.5 text-xs text-white/20 hover:text-white/50 transition-colors group"
+        >
+          <ArrowLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
+          Back to Home
+        </button>
+      </main>
+    </div>
   );
 }
