@@ -115,9 +115,14 @@ async def submit_firm_lawyer_application_legacy(application: FirmLawyerApplicati
 app.include_router(api_router)
 
 # Mount uploads directory to serve files
-if not os.path.exists(ROOT_DIR / "uploads"):
-    os.makedirs(ROOT_DIR / "uploads")
-app.mount("/uploads", StaticFiles(directory=ROOT_DIR / "uploads"), name="uploads")
+# On Vercel (read-only filesystem) this will be skipped gracefully
+try:
+    uploads_dir = ROOT_DIR / "uploads"
+    if not os.path.exists(uploads_dir):
+        os.makedirs(uploads_dir)
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+except Exception:
+    pass  # Vercel serverless: filesystem is read-only, uploads served via cloud storage
 
 # CORS — restrict to known origins in production
 # Update ALLOWED_ORIGIN env var when you go live
@@ -150,10 +155,15 @@ logger = logging.getLogger(__name__)
 
 import asyncio
 
+# VERCEL env var is automatically set to "1" on Vercel
+_IS_VERCEL = os.environ.get("VERCEL") == "1"
+
 @app.on_event("startup")
 async def startup_event():
-    from services.scheduler import run_scheduler
-    asyncio.create_task(run_scheduler())
+    # Background scheduler cannot run in Vercel serverless (no persistent process)
+    if not _IS_VERCEL:
+        from services.scheduler import run_scheduler
+        asyncio.create_task(run_scheduler())
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

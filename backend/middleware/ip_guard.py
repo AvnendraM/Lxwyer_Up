@@ -12,9 +12,12 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-# Default: localhost only. Override via env var for extra IPs.
+# Default: localhost only.
+# Set ADMIN_ALLOWED_IPS=* in production (Vercel) to allow all IPs,
+# or provide a comma-separated list of specific IPs.
 _raw = os.environ.get("ADMIN_ALLOWED_IPS", "127.0.0.1,::1,localhost")
-ALLOWED_IPS: set[str] = {ip.strip() for ip in _raw.split(",") if ip.strip()}
+_ALLOW_ALL_IPS: bool = _raw.strip() == "*"
+ALLOWED_IPS: set[str] = set() if _ALLOW_ALL_IPS else {ip.strip() for ip in _raw.split(",") if ip.strip()}
 
 # Routes that require local-only access
 PROTECTED_PREFIXES = ("/api/admin", "/api/monitor")
@@ -39,14 +42,16 @@ class IPGuardMiddleware(BaseHTTPMiddleware):
 
         # Only check admin / monitor routes
         if any(path.startswith(prefix) for prefix in PROTECTED_PREFIXES):
-            client_ip = _get_client_ip(request)
-            if client_ip not in ALLOWED_IPS:
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "detail": "Access restricted to authorised networks.",
-                        "code": "IP_NOT_ALLOWED",
-                    },
-                )
+            # If * is set, allow everyone (production/Vercel mode)
+            if not _ALLOW_ALL_IPS:
+                client_ip = _get_client_ip(request)
+                if client_ip not in ALLOWED_IPS:
+                    return JSONResponse(
+                        status_code=403,
+                        content={
+                            "detail": "Access restricted to authorised networks.",
+                            "code": "IP_NOT_ALLOWED",
+                        },
+                    )
 
         return await call_next(request)
