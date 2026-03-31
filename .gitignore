@@ -68,3 +68,5 @@ check_db.py
 seed_db.sh
 start_all.sh
 _legal_assistant_tmp/
+.vercel
+.env*.local

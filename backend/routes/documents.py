@@ -10,8 +10,11 @@ from services.database import db
 from routes.auth import get_current_user
 
 UPLOAD_DIR = Path(__file__).parent.parent / "uploads"
-if not UPLOAD_DIR.exists():
-    UPLOAD_DIR.mkdir(parents=True)
+try:
+    if not UPLOAD_DIR.exists():
+        UPLOAD_DIR.mkdir(parents=True)
+except Exception:
+    pass  # In Serverless environments like Vercel, filesystem is read-only
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 

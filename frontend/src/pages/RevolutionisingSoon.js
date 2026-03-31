@@ -62,7 +62,7 @@ const VisionaryForm = memo(function VisionaryForm() {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="form-grid-2">
         <div>
           <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Full Name *</label>
           <input name="name" value={form.name} onChange={handleChange} placeholder="Your name" required style={inp}
@@ -74,7 +74,7 @@ const VisionaryForm = memo(function VisionaryForm() {
             onFocus={e => e.target.style.borderColor = '#2563eb'} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
         </div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="form-grid-2">
         <div>
           <label style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>Phone</label>
           <input name="phone" value={form.phone} onChange={handleChange} placeholder="+91 00000 00000" style={inp}
@@ -174,7 +174,7 @@ export default function RevolutionisingSoon() {
         @keyframes floatOrb { 0%,100% { transform:translate3d(0,0,0); } 50% { transform:translate3d(0,-16px,0); } }
         @keyframes rsRingPulse {
           0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.6); }
-          70%  { box-shadow: 0 0 0 8px rgba(37,99,235,0); }
+          70%  { box-shadow: 0 0 0 10px rgba(37,99,235,0); }
           100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
         }
         /* Circle burst transition */
@@ -186,6 +186,121 @@ export default function RevolutionisingSoon() {
         .rs-glass {
           backdrop-filter: blur(20px) saturate(1.5);
           -webkit-backdrop-filter: blur(20px) saturate(1.5);
+        }
+
+        /* ── Form grid: 2-col on desktop, 1-col on mobile ── */
+        .form-grid-2 {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+
+        /* ── Signup card: side-by-side on desktop, stacked on mobile ── */
+        .rs-card {
+          display: flex;
+          width: 100%;
+          max-width: 880px;
+          border-radius: 22px;
+          overflow: hidden;
+          border: 1px solid rgba(255,255,255,0.12);
+          box-shadow: 0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(37,99,235,0.15), inset 0 1px 0 rgba(255,255,255,0.08);
+          flex-direction: row;
+        }
+        .rs-card-left {
+          flex: 0 0 55%;
+          background: rgba(255,255,255,0.88);
+          backdrop-filter: blur(26px) saturate(1.8);
+          -webkit-backdrop-filter: blur(26px) saturate(1.8);
+          border-right: 1px solid rgba(255,255,255,0.18);
+          padding: clamp(2rem,4vw,3.2rem);
+          display: flex;
+          flex-direction: column;
+        }
+        .rs-card-right {
+          flex: 1;
+          background: rgba(5,12,40,0.55);
+          backdrop-filter: blur(26px) saturate(1.6);
+          -webkit-backdrop-filter: blur(26px) saturate(1.6);
+          border-left: 1px solid rgba(255,255,255,0.06);
+          padding: clamp(2rem,4vw,3.2rem);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          position: relative;
+          overflow: hidden;
+        }
+
+        /* ── Explore Demo button — 25% bigger ── */
+        .rs-demo-btn {
+          position: absolute;
+          bottom: 3%;
+          left: 50%;
+          transform: translate3d(calc(-50% - 38px), 0, 0);
+          z-index: 10;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          /* 25% bigger: was padding:6px 16px / font:0.68rem / icon:10px */
+          padding: 7.5px 20px;
+          border-radius: 10px;
+          border: 1.5px solid rgba(37,99,235,0.7);
+          cursor: pointer;
+          font-size: 0.85rem;
+          font-weight: 600;
+          font-family: inherit;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
+          color: #fff;
+          background: rgba(0,0,0,0.38);
+          backdrop-filter: blur(16px) saturate(1.6);
+          -webkit-backdrop-filter: blur(16px) saturate(1.6);
+          box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+          transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1), background 0.2s ease, box-shadow 0.2s ease;
+          white-space: nowrap;
+        }
+        .rs-demo-btn:hover {
+          transform: translate3d(calc(-50% - 38px), -2px, 0) scale(1.06);
+          background: rgba(37,99,235,0.18);
+          box-shadow: 0 0 22px rgba(37,99,235,0.35);
+        }
+
+        /* ── Mobile overrides ── */
+        @media (max-width: 700px) {
+          .rs-card {
+            flex-direction: column;
+            border-radius: 16px;
+            max-width: 100%;
+          }
+          .rs-card-left {
+            flex: none;
+            border-right: none;
+            border-bottom: 1px solid rgba(255,255,255,0.18);
+          }
+          .rs-card-right {
+            flex: none;
+            border-left: none;
+            min-height: 260px;
+          }
+          .form-grid-2 {
+            grid-template-columns: 1fr;
+          }
+          .rs-demo-btn {
+            left: 50%;
+            transform: translate3d(-50%, 0, 0);
+            bottom: 4%;
+            font-size: 0.78rem;
+            padding: 7px 18px;
+          }
+          .rs-demo-btn:hover {
+            transform: translate3d(-50%, -2px, 0) scale(1.04);
+          }
+        }
+
+        @media (max-width: 400px) {
+          .rs-demo-btn {
+            font-size: 0.72rem;
+            padding: 6px 14px;
+          }
         }
       `}</style>
 
@@ -214,7 +329,7 @@ export default function RevolutionisingSoon() {
       <div style={STAR_STYLE} aria-hidden />
 
       <section style={{
-        position: 'relative', width: '100%', height: '100vh', background: '#000', zIndex: 1,
+        position: 'relative', width: '100%', height: '100dvh', background: '#000', zIndex: 1,
       }}>
         {/* Lxwyer Up — glass header */}
         <div style={{
@@ -247,34 +362,16 @@ export default function RevolutionisingSoon() {
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(0,0,10,0.72) 0%,transparent 28%)', pointerEvents: 'none' }} />
         </div>
 
-        {/* Explore Demo button — near bottom, 1 cm left of center */}
+        {/* ── Explore Demo button — 25% bigger, centered on mobile ── */}
         <button
-          onMouseEnter={() => setBtnHover(true)}
-          onMouseLeave={() => setBtnHover(false)}
+          className="rs-demo-btn"
           onClick={handleDemo}
           style={{
-            position: 'absolute', bottom: '3%', left: '50%',
-            transform: btnHover
-              ? 'translate3d(calc(-50% - 38px), -2px, 0) scale(1.06)'
-              : 'translate3d(calc(-50% - 38px), 0, 0)',
-            zIndex: 10,
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '6px 16px', borderRadius: 8,
-            border: '1.5px solid rgba(37,99,235,0.7)',
-            cursor: 'pointer',
-            fontSize: '0.68rem', fontWeight: 600, fontFamily: 'inherit',
-            letterSpacing: '0.1em', textTransform: 'uppercase', color: '#fff',
-            background: btnHover ? 'rgba(37,99,235,0.18)' : 'rgba(0,0,0,0.38)',
-            backdropFilter: 'blur(16px) saturate(1.6)',
-            WebkitBackdropFilter: 'blur(16px) saturate(1.6)',
-            boxShadow: btnHover ? '0 0 18px rgba(37,99,235,0.35)' : '0 4px 24px rgba(0,0,0,0.4)',
             animation: mounted ? 'rsFadeUp 0.7s ease 1s both, rsRingPulse 2.5s ease-out 2.2s infinite' : 'none',
-            transition: 'transform 0.28s cubic-bezier(0.34,1.56,0.64,1), background 0.2s ease, box-shadow 0.2s ease',
             opacity: mounted ? 1 : 0,
-            whiteSpace: 'nowrap',
           }}
         >
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
             <circle cx="12" cy="12" r="9" stroke="rgba(37,99,235,0.85)" strokeWidth="1.5" />
             <polygon points="10 7.5 17 12 10 16.5" fill="white" />
           </svg>
@@ -287,8 +384,8 @@ export default function RevolutionisingSoon() {
       ══════════════════════════════════════════════ */}
       <section style={{
         position: 'relative', background: 'rgba(3,8,24,0.92)', zIndex: 1,
-        minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: 'clamp(3rem,6vw,5rem) clamp(1.5rem,4vw,3rem)',
+        minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: 'clamp(3rem,6vw,5rem) clamp(1rem,4vw,3rem)',
       }}>
 
         {/* Ambient glow blobs */}
@@ -298,30 +395,16 @@ export default function RevolutionisingSoon() {
         {/* ─── THE CARD (Realize layout) ─── */}
         <div
           ref={signupRef}
-          className="rs-reveal"
-          style={{
-            display: 'flex', width: '100%', maxWidth: 880,
-            borderRadius: 22, overflow: 'hidden',
-            border: '1px solid rgba(255,255,255,0.12)',
-            boxShadow: '0 40px 100px rgba(0,0,0,0.7), 0 0 0 1px rgba(37,99,235,0.15), inset 0 1px 0 rgba(255,255,255,0.08)',
-          }}
+          className="rs-reveal rs-card"
         >
           {/* LEFT: frosted glass form panel */}
-          <div style={{
-            flex: '0 0 55%',
-            background: 'rgba(255,255,255,0.88)',
-            backdropFilter: 'blur(26px) saturate(1.8)',
-            WebkitBackdropFilter: 'blur(26px) saturate(1.8)',
-            borderRight: '1px solid rgba(255,255,255,0.18)',
-            padding: 'clamp(2.2rem,4vw,3.2rem)',
-            display: 'flex', flexDirection: 'column',
-          }}>
+          <div className="rs-card-left">
             {/* Brand — text only, once */}
             <p style={{ fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', marginBottom: '1.8rem', letterSpacing: '0.01em' }}>
               Lxwyer Up
             </p>
 
-            <h2 style={{ fontSize: 'clamp(1.5rem,2.6vw,2rem)', fontWeight: 800, color: '#0f172a', lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
+            <h2 style={{ fontSize: 'clamp(1.4rem,2.6vw,2rem)', fontWeight: 800, color: '#0f172a', lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
               Sign up for<br />Early Access
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.85rem', lineHeight: 1.7, marginBottom: '1.8rem', maxWidth: 340 }}>
@@ -332,16 +415,7 @@ export default function RevolutionisingSoon() {
           </div>
 
           {/* RIGHT: dark glass brand panel */}
-          <div style={{
-            flex: 1,
-            background: 'rgba(5,12,40,0.55)',
-            backdropFilter: 'blur(26px) saturate(1.6)',
-            WebkitBackdropFilter: 'blur(26px) saturate(1.6)',
-            borderLeft: '1px solid rgba(255,255,255,0.06)',
-            padding: 'clamp(2.2rem,4vw,3.2rem)',
-            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-            position: 'relative', overflow: 'hidden',
-          }}>
+          <div className="rs-card-right">
             {/* Decorative rings */}
             <div style={{ position: 'absolute', top: '50%', left: '50%', width: 340, height: 340, borderRadius: '50%', border: '1px solid rgba(37,99,235,0.1)', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', top: '50%', left: '50%', width: 500, height: 500, borderRadius: '50%', border: '1px solid rgba(37,99,235,0.05)', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }} />
@@ -352,7 +426,7 @@ export default function RevolutionisingSoon() {
               <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.35em', textTransform: 'uppercase', color: 'rgba(147,197,253,0.55)', marginBottom: '1rem' }}>
                 For Visionaries
               </p>
-              <h3 style={{ fontSize: 'clamp(1.5rem,2.5vw,2.1rem)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em', color: '#fff', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: 'clamp(1.4rem,2.5vw,2.1rem)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.02em', color: '#fff', marginBottom: '1rem' }}>
                 Revolutionise<br />
                 <span style={{
                   backgroundImage: 'linear-gradient(135deg,#93c5fd,#60a5fa,#818cf8)',
@@ -381,7 +455,7 @@ export default function RevolutionisingSoon() {
               </div>
             </div>
 
-            <p style={{ fontSize: 10, color: 'rgba(148,163,184,0.22)', letterSpacing: '0.15em', textTransform: 'uppercase', position: 'relative', zIndex: 2 }}>
+            <p style={{ fontSize: 10, color: 'rgba(148,163,184,0.22)', letterSpacing: '0.15em', textTransform: 'uppercase', position: 'relative', zIndex: 2, marginTop: '1.5rem' }}>
               Made in India — AI-Powered
             </p>
           </div>
@@ -400,7 +474,7 @@ export default function RevolutionisingSoon() {
           }}>
             <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#3b82f6', boxShadow: '0 0 6px #3b82f6' }} />
             <span style={{
-              fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase',
+              fontSize: 'clamp(0.6rem,1.5vw,0.72rem)', fontWeight: 700, letterSpacing: '0.28em', textTransform: 'uppercase',
               background: 'linear-gradient(90deg,#93c5fd,#60a5fa,#818cf8)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               backgroundClip: 'text', backgroundSize: '200% auto',
