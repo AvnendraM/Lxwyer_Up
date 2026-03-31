@@ -7,7 +7,7 @@ node_modules
 **/uploads
 mongodb-macos-aarch64*
 start_db
-data
+/data
 _legal_assistant_tmp
 .git
 *.zip
