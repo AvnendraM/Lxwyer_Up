@@ -366,7 +366,7 @@ const rays = [
     { angle: 270, len: 300, w: 1 },
 ];
 
-const ScalesOfJusticeIntro = React.memo(() => {
+const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
     const ref = useRef(null);
     const { scrollYProgress } = useScroll({
         target: ref,
@@ -402,8 +402,14 @@ const ScalesOfJusticeIntro = React.memo(() => {
                         y: yVal,
                         filter: filterVal,
                     }}
-                    className="relative flex flex-col items-center gap-6"
+                    className="relative flex flex-col items-center gap-6 w-full"
                 >
+                    <motion.div
+                        initial={justTransitioned ? { opacity: 0, scale: 0.8, filter: 'blur(10px)' } : false}
+                        animate={justTransitioned ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : false}
+                        transition={{ duration: 1.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+                        className="relative flex flex-col items-center justify-center w-full"
+                    >
                     {/* Radiating rays toward center */}
                     {rays.map((ray, i) => {
                         const rad = (ray.angle * Math.PI) / 180;
@@ -629,10 +635,9 @@ const ScalesOfJusticeIntro = React.memo(() => {
                         Lxwyer Up
                     </h2>
                     <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors" style={{ position: 'relative', zIndex: 5 }}>Scroll to explore</p>
+                    </motion.div>
                 </motion.div>
             </div >
-
-
         </section >
     );
 });
@@ -2034,7 +2039,7 @@ const LandingPageWave = () => {
             <FloatingEmergencyButton />
             <div className="relative" style={{ zIndex: 2 }}>
                 <NavbarWave />
-                <ScalesOfJusticeIntro />
+                <ScalesOfJusticeIntro justTransitioned={justTransitioned} />
                 <HeroSection />
                 <RevolutionScrollSection />
                 <ExplosionSpacer />

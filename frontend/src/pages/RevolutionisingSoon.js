@@ -353,19 +353,6 @@ export default function RevolutionisingSoon() {
           gap:0,
         }}>
 
-          {/* Brand name above */}
-          <div style={{
-            fontSize:'clamp(0.7rem,1.8vw,0.95rem)',
-            fontWeight:700,
-            letterSpacing:'0.24em',
-            textTransform:'uppercase',
-            color:'rgba(148,163,184,0.4)',
-            marginBottom:'clamp(1.2rem,4vh,2rem)',
-            opacity: mounted ? 1 : 0,
-            transform: mounted ? 'translateY(0)' : 'translateY(-8px)',
-            transition: 'all 1.0s cubic-bezier(0.2, 0.8, 0.2, 1) 0.2s',
-          }}>Lxwyer Up</div>
-
           {/* COMING SOON + Mirror reflection block */}
           <div style={{ position:'relative', display:'flex', flexDirection:'column', alignItems:'center' }}>
 
