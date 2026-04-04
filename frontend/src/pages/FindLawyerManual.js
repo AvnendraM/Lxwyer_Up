@@ -619,7 +619,7 @@ export default function FindLawyerManual() {
                   </div>
                   {/* Verified badge */}
                   {selectedLawyer.verified && (
-                    <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-semibold rounded-lg border border-blue-100 dark:border-blue-800 shrink-0">
+                    <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-semibold rounded-lg border border-green-100 dark:border-green-800 shrink-0">
                       <Check className="w-4 h-4" /> Verified
                     </span>
                   )}
@@ -676,50 +676,62 @@ export default function FindLawyerManual() {
 
                   {/* Achievements Section */}
                   {selectedLawyer?.achievements && Array.isArray(selectedLawyer.achievements) && selectedLawyer.achievements.length > 0 && (
-                    <div className="p-6 sm:p-8 bg-gradient-to-br from-blue-50/50 to-indigo-100/50 dark:from-[#05101a] dark:to-[#030a10] rounded-3xl border border-blue-200/50 dark:border-blue-500/20 shadow-inner relative overflow-hidden">
+                    <div className="p-6 sm:p-8 bg-gradient-to-br from-amber-50/50 to-yellow-100/50 dark:from-[#151005] dark:to-[#0a0802] rounded-3xl border border-yellow-200/50 dark:border-yellow-500/20 shadow-inner relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                        <Award className="w-48 h-48 text-blue-500" />
+                        <Award className="w-48 h-48 text-yellow-500" />
                       </div>
 
-                      <h3 className="text-base font-black text-blue-900 dark:text-blue-400 uppercase tracking-widest mb-5 flex items-center gap-3 relative z-10">
-                        <Award className="w-5 h-5 text-blue-500" />
+                      <h3 className="text-base font-black text-yellow-800 dark:text-yellow-400 uppercase tracking-widest mb-5 flex items-center gap-3 relative z-10">
+                        <Award className="w-5 h-5 text-yellow-500" />
                         Milestones & Achievements
-                        <div className="h-px flex-1 bg-gradient-to-r from-blue-200/50 dark:from-blue-500/20 to-transparent" />
+                        <div className="h-px flex-1 bg-gradient-to-r from-yellow-200/50 dark:from-yellow-500/20 to-transparent" />
                       </h3>
 
                       <div className="space-y-4 relative z-10">
                         {[...selectedLawyer.achievements].sort((a, b) => b.pinned - a.pinned).map(ach => (
                           <div key={ach.id}
-                            className={`rounded-2xl border p-5 flex gap-5 items-center relative overflow-hidden transition-all shadow-sm hover:shadow-md ${ach.pinned
-                                ? 'bg-gradient-to-r from-white to-blue-50/50 dark:from-[#05101a] dark:to-[#030a10] border-blue-300 dark:border-blue-500/40 shadow-blue-500/5'
-                                : 'bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md border-blue-100 dark:border-blue-500/10 hover:border-blue-300/50 dark:hover:border-blue-500/30'
+                            className={`rounded-2xl border p-5 flex gap-5 items-center relative overflow-hidden transition-all shadow-sm hover:shadow-md group cursor-default ${ach.pinned
+                                ? 'bg-gradient-to-r from-white to-yellow-50/50 dark:from-[#151005] dark:to-[#0a0802] border-yellow-300 dark:border-yellow-500/40 shadow-yellow-500/5'
+                                : 'bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md border-amber-100 dark:border-yellow-500/10 hover:border-yellow-300/50 dark:hover:border-yellow-500/30'
                               }`}
                           >
+                            {/* Shine Effect Hover */}
+                            <div className="absolute inset-0 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/50 dark:via-white/10 to-transparent -skew-x-12 z-0 pointer-events-none" style={{ animation: "none" }}
+                                 onMouseEnter={(e) => { e.currentTarget.style.animation = 'shimmer 1.5s infinite'; }}
+                                 onMouseLeave={(e) => { e.currentTarget.style.animation = 'none'; }}
+                            />
+
+                            <style>{`
+                              @keyframes shimmer {
+                                100% { transform: translateX(200%); }
+                              }
+                            `}</style>
+                            
                             {ach.photo ? (
                               <img
                                 src={ach.photo.startsWith('http') || ach.photo.startsWith('data:') ? ach.photo : `${API.replace('/api', '')}${ach.photo}`}
                                 alt="achievement"
-                                className="w-52 h-52 rounded-2xl object-cover shrink-0 border border-blue-200 dark:border-blue-500/30 shadow-sm cursor-pointer hover:scale-[1.02] transition-transform"
+                                className="w-52 h-52 rounded-2xl object-cover shrink-0 border border-yellow-200 dark:border-yellow-500/30 shadow-sm cursor-pointer hover:scale-[1.02] transition-transform relative z-10"
                                 onClick={() => setExpandedImage(ach.photo.startsWith('http') || ach.photo.startsWith('data:') ? ach.photo : `${API.replace('/api', '')}${ach.photo}`)}
                               />
                             ) : (
-                              <div className="w-52 h-52 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 border border-blue-200 dark:border-blue-700/50 shadow-inner">
-                                <Award className="w-16 h-16 text-blue-500 dark:text-blue-400 drop-shadow-sm" />
+                              <div className="w-52 h-52 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/40 dark:to-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 shadow-inner relative z-10">
+                                <Award className="w-16 h-16 text-yellow-500 dark:text-yellow-400 drop-shadow-sm" />
                               </div>
                             )}
-                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                            <div className="flex-1 min-w-0 flex flex-col justify-center relative z-10">
                               <div className="flex items-start justify-between gap-2 mb-2">
-                                <p className="font-bold text-xl leading-snug text-slate-900 dark:text-blue-50">
+                                <p className="font-bold text-xl leading-snug text-slate-900 dark:text-yellow-50">
                                   {ach.title}
                                 </p>
                                 {ach.pinned && (
-                                  <span className="shrink-0 flex items-center gap-1.5 text-[10px] font-black text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2.5 py-1 rounded-full tracking-wider uppercase border border-blue-200 dark:border-blue-800/50">
+                                  <span className="shrink-0 flex items-center gap-1.5 text-[10px] font-black text-yellow-700 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/40 px-2.5 py-1 rounded-full tracking-wider uppercase border border-yellow-200 dark:border-yellow-800/50">
                                     <Star className="w-3 h-3 fill-current" /> Featured
                                   </span>
                                 )}
                               </div>
                               {ach.date && (
-                                <p className="text-[13px] font-medium text-blue-700/70 dark:text-blue-500/60 flex items-center gap-1.5">
+                                <p className="text-[13px] font-medium text-yellow-700/70 dark:text-yellow-500/60 flex items-center gap-1.5">
                                   <Calendar className="w-3.5 h-3.5" /> {ach.date}
                                 </p>
                               )}
@@ -776,7 +788,13 @@ export default function FindLawyerManual() {
                     {/* Consultation Fee */}
                     <div className="flex items-center gap-4 px-5 py-4">
                       <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest w-36 shrink-0">Consultation Fee</span>
-                      <span className="text-base font-semibold text-slate-900 dark:text-white">{selectedLawyer.fee || '—'}</span>
+                      <span className="text-base font-semibold text-slate-900 dark:text-white">
+                        {(() => {
+                          const f = selectedLawyer.fee || selectedLawyer.consultation_fee || selectedLawyer.feeMin || selectedLawyer.price || selectedLawyer.fee_range || '—';
+                          if (f === '—') return f;
+                          return typeof f === 'number' ? `₹${f}` : String(f).startsWith('₹') ? f : `₹${f}`;
+                        })()}
+                      </span>
                     </div>
 
                     {/* Consultation Type */}
