@@ -59,9 +59,9 @@ def send_waitlist_notification(name: str, email: str, message: str = "", phone: 
     user_msg.attach(MIMEText(user_body, 'html'))
     
     try:
-        # Connect to Gmail SMTP server
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
+        # Connect to Gmail SMTP server using SSL to avoid port 587 blocks and set 3s timeout
+        import smtplib
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=3)
         server.login(SMTP_EMAIL, SMTP_PASSWORD)
         
         # Send both emails
