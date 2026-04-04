@@ -11,6 +11,7 @@ const HIDDEN_ON = new Set([
 const HAS_OWN_BACK = new Set([
   '/find-lawyer/ai', '/find-lawyer/manual',
   '/lxwyerai', '/lxwyerai-premium',
+  '/book-consultation-signup'
 ]);
 
 export default function GlobalBackButton() {
@@ -19,6 +20,7 @@ export default function GlobalBackButton() {
 
   if (HIDDEN_ON.has(location.pathname)) return null;
   if (HAS_OWN_BACK.has(location.pathname)) return null;
+  if (location.pathname.startsWith('/booking/')) return null;
 
   return (
     <button
