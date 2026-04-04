@@ -98,7 +98,8 @@ export const Navbar = ({ hideLinks = false, minimal = false }) => {
         <div className="flex justify-between items-center h-14">
 
           {/* Logo */}
-          <Link to="/" className="flex items-center">
+          <Link to="/" className="flex items-center gap-2">
+            <img src="/logo.png" alt="Lxwyer Up Logo" className="w-8 h-8 object-contain rounded" />
             <span className="text-base md:text-lg font-bold tracking-tight text-slate-900 dark:text-white font-['Outfit'] select-none">
               Lxwyer Up
             </span>
