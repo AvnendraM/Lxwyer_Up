@@ -253,6 +253,7 @@ const DOT_COLORS = {
 };
 
 function FeatureCard({ feature, index }) {
+  const { lang } = useLang();
   const c = COLOR[feature.color] || COLOR.blue;
   const glow = GLOW_VAR[feature.color] || GLOW_VAR.blue;
 
