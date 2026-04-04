@@ -46,12 +46,22 @@ function LawyerCard({ lawyer, index = 0, onProfileClick, onBookClick }) {
 
   const charge30 = lawyer.charge_30min || lawyer.consultation_fee_30min;
   const charge60 = lawyer.charge_60min || lawyer.consultation_fee_60min;
-  const feeRange = lawyer.fee_range || lawyer.consultation_fee;
-  const feeLabel = charge30
-    ? `₹${charge30} / 30m`
-    : charge60
-    ? `₹${charge60} / hr`
-    : feeRange || null;
+  const fallback = lawyer.fee_range || lawyer.consultation_fee || lawyer.feeMin || lawyer.price || lawyer.fee;
+  
+  let fee30 = charge30;
+  let fee60 = charge60;
+  if (!fee60 && fallback) {
+    const rawVal = String(fallback).split('-')[0].replace(/[^0-9]/g, '');
+    const num = parseInt(rawVal, 10);
+    if (!isNaN(num)) {
+       fee60 = num; 
+       if (!fee30) fee30 = Math.ceil(num / 2);
+    }
+  } else if (fee60 && !fee30) {
+    fee30 = Math.ceil(fee60 / 2);
+  } else if (fee30 && !fee60) {
+    fee60 = fee30 * 2;
+  }
 
   const courts = (lawyer.court_experience || lawyer.courts || [])
     .slice(0, 2)
@@ -248,14 +258,14 @@ function LawyerCard({ lawyer, index = 0, onProfileClick, onBookClick }) {
             <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginTop: 2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Location</div>
           </div>
 
-          {feeLabel && (
+          {(fee30 || fee60 || fallback) && (
             <>
               <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.07)' }} />
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: colors.accent, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
-                  {feeLabel}
+              <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: colors.accent, letterSpacing: '-0.01em', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                  {fee30 ? <div>₹{fee30}/30m</div> : <div>{fallback}</div>}
+                  {fee60 && <div>₹{fee60}/1h</div>}
                 </div>
-                <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginTop: 2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Fee</div>
               </div>
             </>
           )}

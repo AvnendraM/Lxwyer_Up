@@ -431,6 +431,8 @@ export default function FindLawyerManual() {
                       className="w-full p-2.5 bg-slate-50 dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 dark:focus:border-[#555]"
                     >
                       <option value="">Any Price</option>
+                      <option value="1000">Under ₹1,000</option>
+                      <option value="3000">Under ₹3,000</option>
                       <option value="5000">Under ₹5,000</option>
                       <option value="10000">Under ₹10,000</option>
                       <option value="20000">Under ₹20,000</option>
@@ -790,7 +792,36 @@ export default function FindLawyerManual() {
                       <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest w-36 shrink-0">Consultation Fee</span>
                       <span className="text-base font-semibold text-slate-900 dark:text-white">
                         {(() => {
-                          const f = selectedLawyer.fee || selectedLawyer.consultation_fee || selectedLawyer.feeMin || selectedLawyer.price || selectedLawyer.fee_range || '—';
+                          const p30 = selectedLawyer.charge_30min || selectedLawyer.consultation_fee_30min;
+                          const p60 = selectedLawyer.charge_60min || selectedLawyer.consultation_fee_60min;
+                          const fallback = selectedLawyer.fee || selectedLawyer.consultation_fee || selectedLawyer.feeMin || selectedLawyer.price || selectedLawyer.fee_range;
+
+                          let fee30 = p30;
+                          let fee60 = p60;
+                          
+                          if (!fee60 && fallback) {
+                            const rawVal = String(fallback).split('-')[0].replace(/[^0-9]/g, '');
+                            const num = parseInt(rawVal, 10);
+                            if (!isNaN(num)) {
+                               fee60 = num; 
+                               if (!fee30) fee30 = Math.ceil(num / 2);
+                            }
+                          } else if (fee60 && !fee30) {
+                            fee30 = Math.ceil(fee60 / 2);
+                          } else if (fee30 && !fee60) {
+                            fee60 = fee30 * 2;
+                          }
+
+                          if (fee30 || fee60) {
+                            return (
+                              <div className="flex items-center gap-3">
+                                {fee30 && <span className="bg-slate-100 dark:bg-[#222] text-slate-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#333] text-sm tracking-wide font-bold">₹{fee30} <span className="text-xs font-medium opacity-80">/ 30m</span></span>}
+                                {fee60 && <span className="bg-slate-100 dark:bg-[#222] text-slate-800 dark:text-slate-200 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-[#333] text-sm tracking-wide font-bold">₹{fee60} <span className="text-xs font-medium opacity-80">/ 1h</span></span>}
+                              </div>
+                            );
+                          }
+
+                          const f = fallback || '—';
                           if (f === '—') return f;
                           return typeof f === 'number' ? `₹${f}` : String(f).startsWith('₹') ? f : `₹${f}`;
                         })()}
