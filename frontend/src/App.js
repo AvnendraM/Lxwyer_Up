@@ -94,6 +94,16 @@ const ProtectedRoute = ({ children, requiredType }) => {
 /* AnimatedRoutes — must be inside BrowserRouter so useLocation works */
 function AnimatedRoutes({ user }) {
   const location = useLocation();
+
+  // Fire GA4 page_view on every route change (React SPA support)
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag('config', 'G-FF488YE3X7', {
+        page_path: location.pathname + location.search,
+      });
+    }
+  }, [location]);
+
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>

@@ -25,8 +25,24 @@ const VisionaryForm = memo(function VisionaryForm() {
           message: form.message
         }),
       });
-      if (!response.ok) throw new Error('Submission failed');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        const detail = errData?.detail || '';
+        if (detail.toLowerCase().includes('already registered')) {
+          setStatus('already_registered');
+        } else {
+          setStatus('error');
+        }
+        return;
+      }
       setStatus('success');
+      // Fire GA4 event
+      if (window.gtag) {
+        window.gtag('event', 'waitlist_signup', {
+          event_category: 'engagement',
+          event_label: form.role,
+        });
+      }
     } catch { setStatus('error'); }
   };
 
@@ -94,7 +110,8 @@ const VisionaryForm = memo(function VisionaryForm() {
       }}>
         {status === 'loading' ? 'Sending…' : 'Join the Movement →'}
       </button>
-      {status === 'error' && <p style={{ fontSize: '0.8rem', color: '#ef4444', textAlign: 'center' }}>Something went wrong. Try again.</p>}
+      {status === 'error' && <p style={{ fontSize: '0.8rem', color: '#ef4444', textAlign: 'center' }}>Something went wrong. Please try again.</p>}
+      {status === 'already_registered' && <p style={{ fontSize: '0.8rem', color: '#f59e0b', textAlign: 'center' }}>✉️ This email is already registered! We'll reach out when we launch.</p>}
       <p style={{ fontSize: '0.75rem', color: '#94a3b8', textAlign: 'center', marginTop: 2 }}>
         Questions? <a href="mailto:avnendram.7@gmail.com" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>avnendram.7@gmail.com</a>
       </p>
