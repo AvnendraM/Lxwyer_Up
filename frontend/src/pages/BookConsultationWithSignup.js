@@ -42,7 +42,8 @@ export default function BookConsultationWithSignup() {
     date: '',
     time: '',
     description: '',
-    consultationType: 'video'
+    consultationType: 'video',
+    duration: '60'
   });
 
   const [paymentData, setPaymentData] = useState({
@@ -168,8 +169,8 @@ export default function BookConsultationWithSignup() {
       password: `google_${Date.now()}`, // placeholder, won't be used
       _googleToken: googleData.accessToken,
     }));
-    setStep(2);
-    toast.success('Google account connected! Continue to booking.');
+    setStep(3);
+    toast.success('Google account connected! Continue to payment.');
   };
 
   const handleBookingSubmit = (e) => {
@@ -178,7 +179,7 @@ export default function BookConsultationWithSignup() {
       toast.error('Please select date and time');
       return;
     }
-    setStep(3);
+    setStep(2);
   };
 
   const handlePaymentSubmit = async (e) => {
@@ -217,16 +218,19 @@ export default function BookConsultationWithSignup() {
         }
       }
 
+      const finalFee = bookingData.duration === '30' ? Math.ceil(consultationFee / 2) : consultationFee;
+
       const bookingPayload = {
         lawyer_id: selectedLawyer.id,
         lawyer_name: selectedLawyer.name || selectedLawyer.full_name || '',
         lawyer_photo: selectedLawyer.photo || '',
-        consultation_fee: consultationFee,   // lawyer's listed fee (even for free trial)
+        consultation_fee: finalFee,   // lawyer's listed fee (even for free trial)
         date: bookingData.date,
         time: bookingData.time,
         consultation_type: bookingData.consultationType,
+        duration: parseInt(bookingData.duration, 10) || 60,
         description: bookingData.description,
-        amount: consultationFee,
+        amount: finalFee,
         status: 'pending',
         payment_status: 'paid',
         payment_method: 'card',
@@ -262,7 +266,7 @@ export default function BookConsultationWithSignup() {
       <OtpVerificationModal
         isOpen={otpModalOpen}
         onClose={() => setOtpModalOpen(false)}
-        onVerified={() => { setOtpModalOpen(false); setStep(2); }}
+        onVerified={() => { setOtpModalOpen(false); setStep(3); }}
         email={signupData.email}
         phone={signupData.phone}
       />
@@ -293,8 +297,8 @@ export default function BookConsultationWithSignup() {
               <div className="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-white/60 dark:border-slate-800 rounded-3xl p-6 shadow-sm">
                 <div className="flex lg:flex-col justify-between lg:gap-8">
                   {[
-                    { num: 1, labelKey: 'bcs_step_signup', icon: User },
-                    { num: 2, labelKey: 'bcs_step_booking', icon: Calendar },
+                    { num: 1, labelKey: 'bcs_step_booking', icon: Calendar },
+                    { num: 2, labelKey: 'bcs_step_signup', icon: User },
                     { num: 3, labelKey: 'bcs_step_payment', icon: CreditCard },
                     { num: 4, labelKey: 'bcs_step_confirm', icon: Check }
                   ].map((s) => (
@@ -377,8 +381,8 @@ export default function BookConsultationWithSignup() {
                 className="bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-white/80 dark:border-white/10 rounded-3xl p-8 md:p-10 shadow-xl shadow-slate-200/50 dark:shadow-none h-full"
               >
 
-                {/* Step 1: Signup Form */}
-                {step === 1 && (
+                {/* Step 2: Signup Form */}
+                {step === 2 && (
                   <div className="max-w-lg mx-auto">
                     <div className="mb-8">
                       <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-outfit">{t('bcs_create_acc')}</h2>
@@ -463,7 +467,7 @@ export default function BookConsultationWithSignup() {
 
                       <div className="pt-4">
                         <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg shadow-blue-500/25 py-6 rounded-xl text-lg font-semibold">
-                          {t('bcs_continue')} <ArrowRight className="w-5 h-5 ml-2" />
+                          {t('bcs_proceed_pay')} <ArrowRight className="w-5 h-5 ml-2" />
                         </Button>
                       </div>
 
@@ -481,8 +485,8 @@ export default function BookConsultationWithSignup() {
                   </div>
                 )}
 
-                {/* Step 2: Booking Details */}
-                {step === 2 && (
+                {/* Step 1: Booking Details */}
+                {step === 1 && (
                   <div className="max-w-lg mx-auto">
                     <div className="mb-8">
                       <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 font-outfit">{t('bcs_select_time')}</h2>
@@ -552,6 +556,45 @@ export default function BookConsultationWithSignup() {
                         })()}
                       </div>
 
+                      {/* Consultation Duration */}
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 ml-1 mb-3">Consultation Duration</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setBookingData({ ...bookingData, duration: '30' })}
+                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${bookingData.duration === '30'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 shadow-sm'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/50 bg-white dark:bg-slate-900/50'
+                              }`}
+                          >
+                            <div className="text-xl mb-1">⏱️</div>
+                            <div className={`text-sm font-semibold ${bookingData.duration === '30' ? 'text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                              30 Minutes
+                            </div>
+                            <div className={`text-xs font-bold mt-1 ${bookingData.duration === '30' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                              ₹{Math.ceil(consultationFee / 2)}
+                            </div>
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setBookingData({ ...bookingData, duration: '60' })}
+                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-1 ${bookingData.duration === '60'
+                              ? 'border-blue-500 bg-blue-50 dark:bg-blue-500/10 shadow-sm'
+                              : 'border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-500/50 bg-white dark:bg-slate-900/50'
+                              }`}
+                          >
+                            <div className="text-xl mb-1">⏳</div>
+                            <div className={`text-sm font-semibold ${bookingData.duration === '60' ? 'text-blue-700 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'}`}>
+                              1 Hour
+                            </div>
+                            <div className={`text-xs font-bold mt-1 ${bookingData.duration === '60' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                              ₹{consultationFee}
+                            </div>
+                          </button>
+                        </div>
+                      </div>
 
                       <div className="grid md:grid-cols-2 gap-6">
                         <div className="space-y-1">
@@ -605,7 +648,7 @@ export default function BookConsultationWithSignup() {
 
                       <div className="pt-4">
                         <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg shadow-blue-500/25 py-6 rounded-xl text-lg font-semibold">
-                          {t('bcs_proceed_pay')} <ArrowRight className="w-5 h-5 ml-2" />
+                          {t('bcs_continue')} <ArrowRight className="w-5 h-5 ml-2" />
                         </Button>
                       </div>
                     </form>
