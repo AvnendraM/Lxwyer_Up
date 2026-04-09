@@ -471,7 +471,7 @@ export default function QuickChat({ embedded = false, darkMode: darkModeProp }) 
             >
               <Trash2 size={16} /> Clear Chat
             </button>
-            <button onClick={() => navigate('/')} className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl ${dm ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'} transition-all text-sm font-medium`}>
+            <button onClick={() => navigate('/home')} className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl ${dm ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'} transition-all text-sm font-medium`}>
               <ArrowLeft size={16} /> Back to Home
             </button>
           </div>

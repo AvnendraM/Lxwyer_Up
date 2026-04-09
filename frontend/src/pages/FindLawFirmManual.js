@@ -537,6 +537,7 @@ export default function FindLawFirmManual() {
                       state: {
                         lawyer: {
                           ...selectedFirm,
+                          photo: selectedFirm.image,
                           // Map firm specific fields to what booking page expects
                           consultation_fee: selectedFirm.consultation_fee || selectedFirm.feeMin || 5000,
                           fee: selectedFirm.feeRange || "₹5,000 - ₹15,000",

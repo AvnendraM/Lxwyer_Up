@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Scale, LogOut, LayoutDashboard, Calendar, MessageSquare, FileText, Send, User, Clock, MapPin, Shield, FileCheck, Mic, CheckCircle, Search, Gavel, AlertTriangle, ListChecks, BookOpen, TrendingUp, Video, Moon, Sun, Sparkles, Bell, X, Briefcase, RefreshCw, Camera, HelpCircle, Zap, Filter, ChevronDown, ChevronUp, ExternalLink, PhoneCall, Star, Download, Share2, Archive } from 'lucide-react';
+import { Scale, LogOut, LayoutDashboard, Calendar, MessageSquare, FileText, Send, User, Clock, MapPin, Shield, FileCheck, Mic, CheckCircle, Search, Gavel, AlertTriangle, ListChecks, BookOpen, TrendingUp, Video, Moon, Sun, Sparkles, Bell, X, Briefcase, RefreshCw, Camera, HelpCircle, Zap, Filter, ChevronDown, ChevronUp, ExternalLink, PhoneCall, Star, Download, Share2, Archive, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
 import UserHowToUseModal from '../components/dashboard/user/HowToUseModal';
+import LawyerCard from '../components/LawyerCard';
 
 // Legal Analysis Card Component
 const LegalAnalysisCard = ({ icon: Icon, title, content, borderColor, bgColor, darkMode }) => (
@@ -16,35 +17,6 @@ const LegalAnalysisCard = ({ icon: Icon, title, content, borderColor, bgColor, d
     </div>
     <h4 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'} mb-1`}>{title}</h4>
     <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>{content}</p>
-  </div>
-);
-
-// Lawyer Recommendation Card Component
-const LawyerCard = ({ name, specialization, experience, successRate, location, hourlyRate, onBook, darkMode }) => (
-  <div className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} rounded-xl p-5 border shadow-md hover:shadow-lg transition-all`}>
-    <div className="flex items-center space-x-3 mb-4">
-      <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-900 rounded-full flex items-center justify-center shadow-md">
-        <User className="w-7 h-7 text-white" />
-      </div>
-      <div>
-        <h4 className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{name}</h4>
-      </div>
-    </div>
-    <div className="space-y-2 mb-4">
-      <p className="text-sm text-blue-600 font-medium">{specialization}</p>
-      <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>{experience} yrs • {successRate}% success</p>
-      <p className={`text-sm ${darkMode ? 'text-slate-500' : 'text-gray-500'} flex items-center`}>
-        <MapPin className="w-3 h-3 mr-1" />{location} • <span className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'} ml-1`}>₹{hourlyRate}/hr</span>
-      </p>
-    </div>
-    <div className="flex gap-2">
-      <Button onClick={onBook} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
-        Book Appointment
-      </Button>
-      <Button variant="outline" className={`${darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-gray-300'} rounded-lg px-3`}>
-        <Video className={`w-4 h-4 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`} />
-      </Button>
-    </div>
   </div>
 );
 
@@ -232,6 +204,7 @@ export default function UserDashboard() {
   const [bookingNote, setBookingNote] = useState('');
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingType, setBookingType] = useState('video');
+  const [lawyersLoaded, setLawyersLoaded] = useState(false);
   // Cancel booking confirm
   const [cancelBookingId, setCancelBookingId] = useState(null);
   // Reschedule response state (user responding to lawyer's reschedule)
@@ -332,8 +305,18 @@ export default function UserDashboard() {
   const getToken = () => sessionStorage.getItem('token') || localStorage.getItem('token');
   const token = getToken(); // kept for compatibility in places that still use it directly
 
+  // Safely extract a string from an API error (FastAPI 422 returns detail as array of objects)
+  const getErrMsg = (err, fallback = 'Something went wrong') => {
+    const d = err?.response?.data?.detail;
+    if (!d) return fallback;
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) return d.map(e => e?.msg || String(e)).join(', ');
+    if (typeof d === 'object') return d.msg || JSON.stringify(d);
+    return String(d);
+  };
 
   const fetchData = useCallback(async () => {
+
     const tok = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!tok) return;
     const headers = { Authorization: `Bearer ${tok}` };
@@ -349,13 +332,14 @@ export default function UserDashboard() {
         axios.get(`${API}/messages/eligible-contacts`, { headers }),
       ]);
 
-    // Smart extract: handles both [] and {cases:[]} / {bookings:[]} / {documents:[]}
+    // Smart extract: handles both [] and {cases:[]} / {bookings:[]}
+    // IMPORTANT: returns null (not the raw object) to prevent Pydantic errors from being set as state
     const extract = (res, keys) => {
       if (res.status !== 'fulfilled') return null;
       const d = res.value.data;
       if (Array.isArray(d)) return d;
       for (const k of keys) if (d && Array.isArray(d[k])) return d[k];
-      return d;
+      return null; // was `return d` — caused Pydantic error objects to crash React renderer
     };
 
     const casesData = extract(casesRes, ['cases']);
@@ -365,11 +349,62 @@ export default function UserDashboard() {
     const messagesData = extract(messagesRes, ['conversations', 'messages', 'recents']);
     const eligibleData = eligibleRes.status === 'fulfilled' && Array.isArray(eligibleRes.value.data) ? eligibleRes.value.data : [];
 
-    if (casesData) setCases(casesData);
-    if (docsData) setDocuments(docsData);
-    if (bookingsData) setBookings(bookingsData);
-    if (lawyersData) setLawyers(Array.isArray(lawyersData) ? lawyersData : []);
-    if (dashboardRes.status === 'fulfilled') setDashboardData(dashboardRes.value.data);
+    if (Array.isArray(casesData)) setCases(casesData);
+    if (Array.isArray(docsData)) setDocuments(docsData);
+    if (Array.isArray(bookingsData)) setBookings(bookingsData);
+    if (Array.isArray(lawyersData)) {
+      if (lawyersData.length === 0) {
+        // Fallback dummy lawyers so UI is visible during testing when remote DB is empty
+        setLawyers([
+          {
+            id: 'dummy_lawyer_1',
+            name: 'Karan Bajaj',
+            specialization: 'Corporate Law',
+            experience_years: 10,
+            fee_30min: 1500,
+            city: 'Delhi',
+            successRate: 98,
+            photo: 'https://i.pravatar.cc/150?u=karan'
+          },
+          {
+            id: 'dummy_lawyer_2',
+            name: 'Priya Sharma',
+            specialization: 'Corporate Law',
+            experience_years: 8,
+            fee_30min: 1200,
+            city: 'Mumbai',
+            successRate: 95,
+            photo: 'https://i.pravatar.cc/150?u=priya'
+          },
+          {
+            id: 'dummy_lawyer_3',
+            name: 'Rahul Singh',
+            specialization: 'Criminal Law',
+            experience_years: 12,
+            fee_30min: 2000,
+            city: 'Delhi',
+            successRate: 92,
+            photo: 'https://i.pravatar.cc/150?u=rahul'
+          },
+          {
+            id: 'dummy_lawyer_4',
+            name: 'Amit Gupta',
+            specialization: 'Family Law',
+            experience_years: 5,
+            fee_30min: 1000,
+            city: 'Bangalore',
+            successRate: 90,
+            photo: 'https://i.pravatar.cc/150?u=amit'
+          }
+        ]);
+      } else {
+        setLawyers(lawyersData);
+      }
+    }
+    setLawyersLoaded(true);
+    if (dashboardRes.status === 'fulfilled' && dashboardRes.value.data && typeof dashboardRes.value.data === 'object' && !Array.isArray(dashboardRes.value.data) && !dashboardRes.value.data.detail) {
+      setDashboardData(dashboardRes.value.data);
+    }
 
     // Merge eligible contacts with actual message history (eligible-first, then fill in last msg from recents)
     const recents = Array.isArray(messagesData) ? messagesData : [];
@@ -503,7 +538,7 @@ export default function UserDashboard() {
       setBookingDate(''); setBookingTime(''); setBookingNote(''); setBookingType('video');
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to book appointment');
+      toast.error(getErrMsg(err, 'Failed to book appointment'));
     } finally { setBookingLoading(false); }
   };
 
@@ -534,7 +569,7 @@ export default function UserDashboard() {
           : b
       ));
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to accept reschedule');
+      toast.error(getErrMsg(err, 'Failed to accept reschedule'));
     }
   };
 
@@ -553,7 +588,7 @@ export default function UserDashboard() {
       ));
       setShowCounterForm(null); setCounterDate(''); setCounterTime('');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to send counter-proposal');
+      toast.error(getErrMsg(err, 'Failed to send counter-proposal'));
     }
   };
 
@@ -564,14 +599,18 @@ export default function UserDashboard() {
     setCaseLoading(true);
     try {
       const res = await axios.post(`${API}/cases`, {
-        title: newCaseTitle, case_type: newCaseType, description: newCaseDesc,
+        title: newCaseTitle,
+        case_type: newCaseType,
+        description: newCaseDesc || 'No description provided',
+        case_number: `CASE-${Date.now()}`,
+        status: 'active',
       }, { headers: { Authorization: `Bearer ${getToken()}` } });
       setCases(prev => [res.data, ...prev]);
       toast.success('Case created successfully!');
       setShowCaseForm(false);
       setNewCaseTitle(''); setNewCaseType(''); setNewCaseDesc('');
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to create case');
+      toast.error(getErrMsg(err, 'Failed to create case'));
     } finally { setCaseLoading(false); }
   };
 
@@ -626,7 +665,7 @@ export default function UserDashboard() {
       setRatingModal(null); setRatingValue(0); setRatingComment('');
       fetchData();
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to submit review');
+      toast.error(getErrMsg(err, 'Failed to submit review'));
     } finally { setRatingSaving(false); }
   };
 
@@ -696,9 +735,9 @@ export default function UserDashboard() {
               <span className="text-[11px] font-semibold truncate">{item.label}</span>
             </button>
           ))}
-          {/* AI Lawyer — external navigation */}
+          {/* LxwyerAI Premium — external */}
           <button
-            data-testid="chatbot-nav-btn"
+            data-testid="lxwyerai-nav-btn"
             onClick={() => navigate('/lxwyerai-premium')}
             className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all ${darkMode ? 'text-slate-500 hover:bg-slate-800 hover:text-blue-400' : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'}`}
           >
@@ -1069,13 +1108,100 @@ export default function UserDashboard() {
                 </div>
               </div>
 
+              {/* Activity Overview + Legal Tips Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Activity Chart (pure CSS SVG bars) */}
+                <div className={`lg:col-span-3 rounded-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h3 className={`font-bold text-base ${darkMode ? 'text-white' : 'text-gray-900'}`}>Activity Overview</h3>
+                      <p className={`text-xs mt-0.5 ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Your legal activity this week</p>
+                    </div>
+                    <span className={`text-xs px-3 py-1 rounded-full font-medium ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`}>Last 7 days</span>
+                  </div>
+                  {(() => {
+                    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                    // Build per-day activity counts from actual bookings data
+                    const today = new Date();
+                    const dayData = days.map((d, i) => {
+                      const date = new Date(today);
+                      date.setDate(today.getDate() - (6 - i));
+                      const dateStr = date.toISOString().split('T')[0];
+                      const cnt = bookings.filter(b => b.created_at && b.created_at.startsWith(dateStr)).length
+                        + cases.filter(c => c.created_at && c.created_at.startsWith(dateStr)).length;
+                      return { label: d, value: cnt, isToday: i === 6 };
+                    });
+                    const maxVal = Math.max(...dayData.map(d => d.value), 1);
+                    return (
+                      <div className="flex items-end gap-3 h-28">
+                        {dayData.map(({ label, value, isToday }) => (
+                          <div key={label} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full flex items-end justify-center" style={{ height: '80px' }}>
+                              <div
+                                className={`w-full rounded-t-lg transition-all duration-700 ${isToday ? 'bg-blue-500' : darkMode ? 'bg-slate-700 hover:bg-blue-700' : 'bg-blue-100 hover:bg-blue-400'}`}
+                                style={{ height: `${Math.max(((value / maxVal) * 80), 6)}px` }}
+                                title={`${value} action${value !== 1 ? 's' : ''}`}
+                              />
+                            </div>
+                            <span className={`text-[10px] font-semibold ${isToday ? 'text-blue-500' : darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  <div className="flex items-center gap-4 mt-4 pt-4 border-t border-dashed border-opacity-30">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-sm bg-blue-500" />
+                      <span className={`text-[10px] font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Today</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-2.5 h-2.5 rounded-sm ${darkMode ? 'bg-slate-700' : 'bg-blue-100'}`} />
+                      <span className={`text-[10px] font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>This Week</span>
+                    </div>
+                    <span className={`ml-auto text-[11px] font-semibold ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                      {bookings.length + cases.length} total actions
+                    </span>
+                  </div>
+                </div>
+
+                {/* Legal Tips Carousel */}
+                <div className={`lg:col-span-2 rounded-2xl border p-5 flex flex-col ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+                  <h3 className={`font-bold text-base mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>💡 Legal Tips</h3>
+                  {(() => {
+                    const tips = [
+                      { title: 'Know Your FIR Rights', body: 'You have the right to get a free copy of the FIR. Police cannot refuse under Section 154 CrPC.', icon: '⚖️' },
+                      { title: 'Tenant Rights', body: 'A landlord cannot cut water/electricity to evict you. This is illegal under Rent Control Acts.', icon: '🏠' },
+                      { title: 'Consumer Protection', body: 'File complaints online at consumerhelpline.gov.in. Response is mandated within 30 days.', icon: '🛡️' },
+                      { title: 'Bail Eligibility', body: 'Most bailable offences allow you to get bail directly from the police station without a court hearing.', icon: '🔑' },
+                      { title: 'Right to Silence', body: 'You can refuse to answer questions that may incriminate you. You are not bound to be a witness against yourself.', icon: '🤐' },
+                    ];
+                    const idx = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % tips.length;
+                    const tip = tips[idx];
+                    return (
+                      <div className="flex-1 flex flex-col gap-3">
+                        <div className={`flex-1 rounded-xl p-4 ${darkMode ? 'bg-slate-800' : 'bg-blue-50'}`}>
+                          <div className="text-2xl mb-2">{tip.icon}</div>
+                          <h4 className={`font-bold text-sm mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{tip.title}</h4>
+                          <p className={`text-xs leading-relaxed ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>{tip.body}</p>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className={`text-[10px] ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Tip of the day • Indian Law</span>
+                          <button onClick={() => navigate('/lxwyerai-premium')} className="text-[11px] font-bold text-blue-500 hover:text-blue-400 transition-colors">Ask AI →</button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
               {/* Quick Actions */}
               <div className="pb-6">
+
                 <h2 className={`text-lg font-bold mb-4 px-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>Quick Actions</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {[
                     { label: 'Book a Lawyer', icon: Calendar, color: 'from-blue-500 to-blue-600', tab: 'consultation' },
-                    { label: 'AI Legal Help', icon: Sparkles, color: 'from-blue-600 to-blue-800', action: () => navigate('/lxwyerai-premium') },
+                    { label: 'LxwyerAI ✨', icon: Sparkles, color: 'from-blue-600 to-blue-800', action: () => navigate('/lxwyerai-premium') },
                     { label: 'Upload Doc', icon: FileText, color: 'from-slate-700 to-slate-900', tab: 'documents' },
                     { label: 'Open Case', icon: Gavel, color: 'from-blue-900 to-black', tab: 'cases' },
                   ].map(({ label, icon: Icon, color, tab, action }) => (
@@ -1093,41 +1219,169 @@ export default function UserDashboard() {
 
           {/* Consultation Tab */}
           {activeTab === 'consultation' && (
-            <div className={`p-8 ${darkMode ? 'bg-slate-950' : 'bg-white'} min-h-full transition-colors`}>
-              <div className="flex items-center justify-between mb-8">
-                <h1 className={`text-3xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Find Your Legal Expert</h1>
-                <button onClick={() => navigate('/find-lawyer/manual')}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow-lg transition-colors">
-                  <ExternalLink className="w-4 h-4" /> Browse All Lawyers
+            <div className={`p-6 ${darkMode ? 'bg-slate-950' : 'bg-gray-50'} min-h-full`}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Book a Lawyer</h1>
+                  <p className={`text-sm mt-0.5 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Browse verified lawyers and book instantly.</p>
+                </div>
+                <button onClick={() => navigate('/find-lawyer/manual')} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow transition-colors">
+                  <ExternalLink className="w-4 h-4" /> Full Directory
                 </button>
               </div>
 
-              {/* Consultation Options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-                <div className="relative overflow-hidden rounded-3xl shadow-xl cursor-pointer" onClick={() => navigate('/find-lawyer/manual')}>
-                  <img src="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=600" alt="Consultation" className="w-full h-56 object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/80 to-transparent p-6 flex flex-col justify-end">
-                    <div className="flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full mb-3"><Search className="w-5 h-5 text-white" /></div>
-                    <h3 className="text-xl font-bold mb-1 text-white">Browse Lawyers</h3>
-                    <p className="text-gray-200 text-sm mb-3">Filter by specialization, experience and location.</p>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-gray-900 rounded-xl font-semibold text-sm w-fit hover:bg-gray-100 transition-colors">Browse Directory →</div>
-                  </div>
+              {/* Search & Filter */}
+              <div className={`flex flex-wrap gap-3 mb-6 p-4 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'} shadow-sm`}>
+                <div className="relative flex-1 min-w-[180px]">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input value={lawyerSearch} onChange={e => setLawyerSearch(e.target.value)} placeholder="Search by name or specialization..."
+                    className={`w-full pl-9 pr-4 py-2.5 text-sm rounded-xl border outline-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`} />
                 </div>
-                <div className={`relative overflow-hidden rounded-3xl ${darkMode ? 'bg-gradient-to-br from-blue-900 to-black border-blue-900' : 'bg-gradient-to-br from-blue-700 to-black'} p-6 flex flex-col shadow-xl cursor-pointer`} onClick={() => navigate('/find-lawyer/manual')}>
-                  <div className="flex items-center justify-center w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full mb-3"><Sparkles className="w-5 h-5 text-white" /></div>
-                  <h3 className="text-xl font-bold mb-1 text-white">AI Lawyer Match</h3>
-                  <p className="text-blue-100 text-sm mb-4 flex-1">Let our AI find the best lawyer match for your specific situation.</p>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-700 rounded-xl font-semibold text-sm w-fit hover:bg-blue-50 transition-colors">Start Matching →</div>
-                </div>
+                <select value={lawyerFilter} onChange={e => setLawyerFilter(e.target.value)}
+                  className={`px-4 py-2.5 text-sm rounded-xl border outline-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}>
+                  <option value="">All Specializations</option>
+                  {['Criminal', 'Family', 'Property', 'Consumer', 'Corporate', 'Civil', 'Tax', 'Labour', 'Immigration'].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                {(lawyerSearch || lawyerFilter) && (
+                  <button onClick={() => { setLawyerSearch(''); setLawyerFilter(''); }}
+                    className={`px-4 py-2.5 text-sm rounded-xl border font-medium ${darkMode ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>Reset</button>
+                )}
               </div>
 
+              {/* Recommended Lawyers based on last appointment */}
+              {(() => {
+                // Find most recent booking's lawyer ID
+                const lastBooking = bookings.length > 0 ? bookings[0] : null;
+                const lastLawyerId = lastBooking ? (lastBooking.lawyer_id || lastBooking.lawyerId) : null;
+
+                if (!lastLawyerId || lawyers.length === 0) return null;
+
+                const bookedLawyer = lawyers.find(l => (l.id || l._id) === lastLawyerId);
+                const spec = bookedLawyer?.specialization || bookedLawyer?.practice_area;
+                if (!spec) return null;
+
+                const specSearch = spec.toLowerCase();
+                const recommended = lawyers.filter(l => {
+                  const s = (l.specialization || l.practice_area || '').toLowerCase();
+                  return s === specSearch;
+                });
+
+                if (recommended.length === 0) return null;
+
+                return (
+                  <div className="mb-10">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                      <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Recommended for you ({spec})</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-4">
+                      {recommended.slice(0, 3).map((lawyer, idx) => {
+                        const lid = lawyer._id || lawyer.id;
+                        // Format lawyer specifically for LawyerCard component to ensure compatibility
+                        const formattedLawyer = {
+                          ...lawyer,
+                          name: lawyer.full_name || lawyer.name,
+                          experience: lawyer.experience_years || lawyer.experience,
+                          feeMin: lawyer.fee_30min || lawyer.hourly_rate || lawyer.fee
+                        };
+                        return (
+                          <div key={lid} className="relative">
+                            <LawyerCard
+                              lawyer={formattedLawyer}
+                              index={idx}
+                              onProfileClick={() => navigate(`/lawyer/${lid}`)}
+                              onBookClick={() => setBookingLawyer(lawyer)}
+                            />
+                            <div className="absolute -top-3 -right-2 z-10 py-1 px-3 bg-blue-600 text-white text-[10px] font-bold rounded-lg shadow-lg">TOP MATCH</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {recommended.length > 3 && (
+                      <div className="flex justify-center mt-2">
+                        <button onClick={() => navigate('/find-lawyer/manual')} className={`text-sm font-semibold flex items-center gap-1 ${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
+                          View {recommended.length - 3} more <ArrowRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* All Lawyer Cards */}
+              {(() => {
+                const filtered = lawyers.filter(l => {
+                  const name = (l.full_name || l.name || '').toLowerCase();
+                  const spec = (l.specialization || l.practice_area || '').toLowerCase();
+                  const search = lawyerSearch.toLowerCase();
+                  return (!search || name.includes(search) || spec.includes(search)) &&
+                    (!lawyerFilter || spec.includes(lawyerFilter.toLowerCase()));
+                });
+                if (filtered.length === 0) return (
+                  <div className={`text-center py-14 rounded-2xl border mb-8 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-gray-50 border-gray-200'}`}>
+                    <Search className="w-12 h-12 mx-auto mb-3 opacity-20 text-gray-400" />
+                    {!lawyersLoaded ? (
+                      <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Loading lawyers...</p>
+                    ) : lawyers.length === 0 ? (
+                      <>
+                        <p className={`text-sm font-semibold ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>No approved lawyers yet</p>
+                        <p className={`text-xs mt-1 mb-4 ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Lawyers need admin approval before appearing here.</p>
+                        <button onClick={() => navigate('/find-lawyer/manual')} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm shadow">Browse Full Directory</button>
+                      </>
+                    ) : (
+                      <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>No lawyers match your search.</p>
+                    )}
+                  </div>
+                );
+
+                return (
+                  <div className="mb-10">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>All Lawyers</h2>
+                      <span className={`text-xs px-3 py-1 rounded-full font-medium ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`}>{filtered.length} found</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-4">
+                      {filtered.slice(0, 3).map((lawyer, idx) => {
+                        const lid = lawyer._id || lawyer.id;
+                        // Format lawyer specifically for LawyerCard component to ensure compatibility
+                        const formattedLawyer = {
+                          ...lawyer,
+                          name: lawyer.full_name || lawyer.name,
+                          experience: lawyer.experience_years || lawyer.experience,
+                          feeMin: lawyer.fee_30min || lawyer.hourly_rate || lawyer.fee
+                        };
+                        return (
+                          <LawyerCard
+                            key={lid}
+                            lawyer={formattedLawyer}
+                            index={idx}
+                            onProfileClick={() => navigate(`/lawyer/${lid}`)}
+                            onBookClick={() => setBookingLawyer(lawyer)}
+                          />
+                        );
+                      })}
+                    </div>
+                    <div className="flex justify-center mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                      <button onClick={() => navigate('/find-lawyer/manual')} className="px-6 py-3 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white rounded-xl font-semibold text-sm shadow-md transition-colors flex items-center gap-2">
+                        Browse Full Directory <ArrowRight className="w-4 h-4 text-slate-400" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* My Appointments */}
-              <div className="mb-10">
-                <h2 className={`text-xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>My Appointments</h2>
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>My Appointments</h2>
+                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`}>{bookings.length} total</span>
+                </div>
                 {bookings.length === 0 ? (
                   <div className={`text-center py-10 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
                     <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">No appointments yet. Book a lawyer to get started.</p>
+                    <p className="text-sm">No appointments yet. Book a lawyer above.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1135,15 +1389,13 @@ export default function UserDashboard() {
                       const bid = b._id || b.id;
                       const isRescheduledByLawyer = b.status === 'rescheduled_by_lawyer';
                       const isRescheduledByUser = b.status === 'rescheduled_by_user';
-                      // Deadline countdown
                       let deadlineLabel = '';
                       if ((isRescheduledByLawyer || isRescheduledByUser) && b.reschedule_deadline) {
                         const dl = new Date(b.reschedule_deadline);
                         const minsLeft = Math.max(0, Math.round((dl - new Date()) / 60000));
-                        deadlineLabel = minsLeft > 60 ? `${Math.floor(minsLeft/60)}h ${minsLeft%60}m left` : minsLeft > 0 ? `${minsLeft}m left` : 'Expired';
+                        deadlineLabel = minsLeft > 60 ? `${Math.floor(minsLeft / 60)}h left` : minsLeft > 0 ? `${minsLeft}m left` : 'Expired';
                       }
                       const statusColor = b.status === 'confirmed' ? 'bg-green-100 text-green-700' : b.status === 'cancelled' ? 'bg-red-100 text-red-700' : b.status === 'completed' ? 'bg-blue-100 text-blue-700' : isRescheduledByLawyer ? 'bg-amber-100 text-amber-700' : isRescheduledByUser ? 'bg-violet-100 text-violet-700' : 'bg-yellow-100 text-yellow-700';
-                      // Join meet button logic
                       let canJoin = false, meetingEnded = false;
                       if (b.status === 'confirmed' && b.meet_link && b.date && b.time) {
                         try {
@@ -1155,10 +1407,9 @@ export default function UserDashboard() {
                           const meetDate = new Date(`${b.date}T00:00:00`);
                           meetDate.setHours(hours, mins, 0, 0);
                           const now = new Date();
-                          const fiveMinBefore = new Date(meetDate.getTime() - 5 * 60 * 1000);
                           meetingEnded = now > new Date(meetDate.getTime() + 60 * 60 * 1000);
-                          canJoin = now >= fiveMinBefore && !meetingEnded;
-                        } catch {}
+                          canJoin = now >= new Date(meetDate.getTime() - 5 * 60 * 1000) && !meetingEnded;
+                        } catch { }
                       }
                       return (
                         <div key={bid} className={`p-4 rounded-2xl border ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200 shadow-sm'}`}>
@@ -1167,95 +1418,43 @@ export default function UserDashboard() {
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-50 text-blue-600'}`}><Calendar className="w-5 h-5" /></div>
                               <div>
                                 <h4 className={`font-bold text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>{b.lawyer_name || 'Lawyer'}</h4>
-                                <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
-                                  {b.date}{b.time ? ` at ${b.time}` : ''}
-                                  {b.consultation_type ? ` • ${b.consultation_type === 'video' ? '🎥 Video' : b.consultation_type === 'audio' ? '📞 Audio' : '🏛️ In-Person'}` : ''}
-                                </p>
-                                {b.notes && <p className={`text-xs mt-0.5 italic ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{b.notes}</p>}
+                                <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{b.date}{b.time ? ` at ${b.time}` : ''}{b.consultation_type ? ` • ${b.consultation_type === 'video' ? '🎥 Video' : b.consultation_type === 'audio' ? '📞 Audio' : '🏛️ In-Person'}` : ''}</p>
                               </div>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                               <span className={`px-2.5 py-1 rounded-full text-xs font-bold capitalize ${statusColor}`}>{b.status}</span>
-                              {/* Join Meet button */}
-                              {b.status === 'confirmed' && b.meet_link && !meetingEnded && (
-                                canJoin
-                                  ? <a href={b.meet_link} target="_blank" rel="noreferrer" className="px-3 py-1 text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors animate-pulse">🎥 Join Meet</a>
-                                  : <span className={`px-3 py-1 text-xs font-semibold rounded-lg opacity-50 cursor-not-allowed ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`} title="Opens 5 min before meeting">🎥 Join Meet</span>
-                              )}
-                              {/* Rate Lawyer for completed bookings */}
-                              {b.status === 'completed' && !b.rating && (
-                                <button onClick={() => setRatingModal({ bookingId: bid, lawyerName: b.lawyer_name || 'Lawyer' })}
-                                  className="px-3 py-1 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1">
-                                  <Star className="w-3 h-3" /> Rate
-                                </button>
-                              )}
-                              {b.status === 'completed' && b.rating && (
-                                <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 flex items-center gap-1">
-                                  <Star className="w-2.5 h-2.5 fill-blue-500 text-blue-500" /> {b.rating}/5
-                                </span>
-                              )}
-                              {/* Message button for confirmed/completed bookings */}
-                               {(b.status === 'confirmed' || b.status === 'completed') && b.lawyer_id && (
-                                <button
-                                  onClick={() => {
-                                    const lawyerId = b.lawyer_id;
-                                    const lawyerName = b.lawyer_name || 'Lawyer';
-                                    setActiveTab('messages');
-                                    setTimeout(() => {
-                                      handleSelectChat({ other_user_id: lawyerId, id: lawyerId, name: lawyerName, avatar: lawyerName[0]?.toUpperCase() || 'L' });
-                                    }, 100);
-                                  }}
-                                  className="px-3 py-1 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1"
-                                >
-                                  <MessageSquare className="w-3 h-3" /> Message
-                                </button>
-                              )}
-                              {/* Cancel button for pending/confirmed */}
-                              {(b.status === 'pending' || b.status === 'confirmed') && (
-                                <button onClick={() => setCancelBookingId(bid)}
-                                  className="px-3 py-1 text-xs font-semibold text-red-500 border border-red-200 rounded-lg hover:bg-red-50 transition-colors">Cancel</button>
-                              )}
+                              {b.status === 'confirmed' && b.meet_link && !meetingEnded && (canJoin ? <a href={b.meet_link} target="_blank" rel="noreferrer" className="px-3 py-1 text-xs font-semibold bg-blue-500 hover:bg-blue-600 text-white rounded-lg animate-pulse">🎥 Join</a> : <span className={`px-3 py-1 text-xs font-semibold rounded-lg opacity-50 cursor-not-allowed ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`}>🎥 Join</span>)}
+                              {b.status === 'completed' && !b.rating && <button onClick={() => setRatingModal({ bookingId: bid, lawyerName: b.lawyer_name || 'Lawyer' })} className="px-3 py-1 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 flex items-center gap-1"><Star className="w-3 h-3" /> Rate</button>}
+                              {(b.status === 'confirmed' || b.status === 'completed') && b.lawyer_id && <button onClick={() => { setActiveTab('messages'); setTimeout(() => handleSelectChat({ other_user_id: b.lawyer_id, id: b.lawyer_id, name: b.lawyer_name || 'Lawyer', avatar: (b.lawyer_name || 'L')[0]?.toUpperCase() }), 100); }} className="px-3 py-1 text-xs font-semibold text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 flex items-center gap-1"><MessageSquare className="w-3 h-3" /> Message</button>}
+                              {(b.status === 'pending' || b.status === 'confirmed') && <button onClick={() => setCancelBookingId(bid)} className="px-3 py-1 text-xs font-semibold text-red-500 border border-red-200 rounded-lg hover:bg-red-50">Cancel</button>}
                             </div>
                           </div>
-                          {/* ── Lawyer proposed a new time — user must respond ── */}
                           {isRescheduledByLawyer && (
                             <div className={`mt-3 rounded-xl p-3 border ${darkMode ? 'bg-blue-900/20 border-blue-700/40' : 'bg-blue-50 border-blue-200'}`}>
-                              <p className={`text-xs font-bold ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>📅 Lawyer Proposed New Time</p>
-                              <p className={`text-sm font-semibold mt-0.5 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{b.proposed_date} at {b.proposed_time}</p>
-                              {deadlineLabel && <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>⏱ {deadlineLabel} to respond · auto-cancels after deadline</p>}
+                              <p className={`text-xs font-bold ${darkMode ? 'text-blue-300' : 'text-blue-800'}`}>📅 Lawyer Proposed: {b.proposed_date} at {b.proposed_time}</p>
+                              {deadlineLabel && <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>⏱ {deadlineLabel} to respond</p>}
                               {showCounterForm === bid ? (
                                 <div className="mt-2 space-y-2">
-                                  <p className={`text-[11px] font-semibold ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>Your preferred time:</p>
                                   <div className="flex gap-2">
-                                    <input type="date" value={counterDate} onChange={e => setCounterDate(e.target.value)}
-                                      min={new Date().toISOString().split('T')[0]}
-                                      className={`flex-1 text-xs px-2 py-1.5 rounded-lg border outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
-                                    <input type="time" value={counterTime} onChange={e => setCounterTime(e.target.value)}
-                                      className={`flex-1 text-xs px-2 py-1.5 rounded-lg border outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
+                                    <input type="date" value={counterDate} onChange={e => setCounterDate(e.target.value)} min={new Date().toISOString().split('T')[0]} className={`flex-1 text-xs px-2 py-1.5 rounded-lg border outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
+                                    <input type="time" value={counterTime} onChange={e => setCounterTime(e.target.value)} className={`flex-1 text-xs px-2 py-1.5 rounded-lg border outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} />
                                   </div>
                                   <div className="flex gap-2">
-                                    <button onClick={() => handleCounterReschedule(bid)}
-                                      className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-700 hover:bg-blue-800 text-white transition-colors">Send Proposal</button>
-                                    <button onClick={() => setShowCounterForm(null)}
-                                      className={`px-3 py-1.5 text-xs rounded-lg border ${darkMode ? 'border-slate-600 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Back</button>
+                                    <button onClick={() => handleCounterReschedule(bid)} className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-700 hover:bg-blue-800 text-white">Send Proposal</button>
+                                    <button onClick={() => setShowCounterForm(null)} className={`px-3 py-1.5 text-xs rounded-lg border ${darkMode ? 'border-slate-600 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Back</button>
                                   </div>
                                 </div>
                               ) : (
                                 <div className="flex gap-2 mt-2">
-                                  <button onClick={() => handleAcceptReschedule(bid, b.proposed_date, b.proposed_time)}
-                                    className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors">✅ Accept</button>
-                                  <button onClick={() => setShowCounterForm(bid)}
-                                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg border ${darkMode ? 'border-blue-500 text-blue-400 hover:bg-blue-900/20' : 'border-blue-500 text-blue-600 hover:bg-blue-50'} transition-colors`}>🗓 Propose New Time</button>
+                                  <button onClick={() => handleAcceptReschedule(bid, b.proposed_date, b.proposed_time)} className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-700 text-white">✅ Accept</button>
+                                  <button onClick={() => setShowCounterForm(bid)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg border ${darkMode ? 'border-blue-500 text-blue-400' : 'border-blue-500 text-blue-600'}`}>🗓 Counter</button>
                                 </div>
                               )}
                             </div>
                           )}
-                          {/* ── Counter-proposal sent — waiting for lawyer ── */}
                           {isRescheduledByUser && (
                             <div className={`mt-3 rounded-xl p-3 border ${darkMode ? 'bg-slate-900/40 border-slate-700/40' : 'bg-slate-50 border-slate-200'}`}>
-                              <p className={`text-xs font-bold ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>🔄 Counter-Proposal Sent</p>
-                              <p className={`text-sm mt-0.5 ${darkMode ? 'text-slate-300' : 'text-gray-700'}`}>You proposed: <strong>{b.proposed_date} at {b.proposed_time}</strong></p>
-                              {deadlineLabel && <p className={`text-[10px] mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>⏱ Lawyer has {deadlineLabel} to respond — auto-cancels if no reply</p>}
+                              <p className={`text-xs font-bold ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>🔄 Counter-Proposal Sent: {b.proposed_date} at {b.proposed_time}</p>
                             </div>
                           )}
                         </div>
@@ -1264,12 +1463,11 @@ export default function UserDashboard() {
                   </div>
                 )}
               </div>
-
             </div>
           )}
 
-          {/* ChatBot Tab - Enhanced with Legal Analysis Cards */}
-          {activeTab === 'chatbot' && (
+          {/* Legal AI Chat Tab */}
+          {activeTab === 'legalai' && (
             <div className={`h-full flex flex-col ${darkMode ? 'bg-slate-950' : 'bg-gray-50'} transition-colors`}>
               <div className={`p-6 border-b ${darkMode ? 'border-slate-800 bg-gradient-to-r from-blue-900 to-black' : 'border-gray-200 bg-gradient-to-r from-blue-700 to-blue-900'}`}>
                 <div className="flex items-center justify-between">
@@ -1485,7 +1683,7 @@ export default function UserDashboard() {
                           className={`flex items-center space-x-3 p-4 cursor-pointer transition-all border-l-4 ${selectedChat?.other_user_id === chat.other_user_id
                             ? (darkMode ? 'bg-blue-900/20 border-blue-500' : 'bg-blue-50 border-blue-500')
                             : (darkMode ? 'border-transparent hover:bg-slate-800' : 'border-transparent hover:bg-gray-50')
-                          }`}>
+                            }`}>
                           <div className="relative flex-shrink-0">
                             <div className={`w-11 h-11 ${darkMode ? 'bg-slate-700 text-slate-200' : 'bg-blue-100 text-blue-600'} rounded-full flex items-center justify-center font-bold shadow-sm`}>
                               {(chat.avatar || (chat.name || '?')[0]).toUpperCase()}
@@ -1536,11 +1734,10 @@ export default function UserDashboard() {
                               </div>
                             )}
                             <div className={`max-w-[70%] ${msg.sender_id === user?.id ? 'text-right' : ''}`}>
-                              <div className={`p-3 rounded-2xl text-sm ${
-                                msg.sender_id === user?.id
+                              <div className={`p-3 rounded-2xl text-sm ${msg.sender_id === user?.id
                                   ? 'bg-blue-600 text-white rounded-tr-none'
                                   : (darkMode ? 'bg-slate-800 border-slate-700 text-slate-200 border' : 'bg-white border border-gray-200 text-gray-900') + ' rounded-tl-none'
-                              }`}>
+                                }`}>
                                 {msg.content}
                               </div>
                               <p className={`text-[10px] mt-1 ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
@@ -1551,26 +1748,26 @@ export default function UserDashboard() {
                       {/* Permission Banner */}
                       {msgPermission && (
                         <div className={`px-4 py-2.5 text-xs font-medium flex items-center gap-2 border-b
-                          ${ !msgPermission.allowed
+                          ${!msgPermission.allowed
                             ? (darkMode ? 'bg-slate-900/20 border-slate-800/40 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-700')
                             : msgPermission.quota_left === 1
-                            ? (darkMode ? 'bg-blue-900/20 border-blue-800/40 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700')
-                            : msgPermission.quota_left === 0 && msgPermission.allowed === false
-                            ? (darkMode ? 'bg-slate-900/20 border-slate-800/40 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-700')
-                            : (darkMode ? 'bg-blue-900/20 border-blue-800/40 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700')
+                              ? (darkMode ? 'bg-blue-900/20 border-blue-800/40 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700')
+                              : msgPermission.quota_left === 0 && msgPermission.allowed === false
+                                ? (darkMode ? 'bg-slate-900/20 border-slate-800/40 text-slate-400' : 'bg-slate-50 border-slate-200 text-slate-700')
+                                : (darkMode ? 'bg-blue-900/20 border-blue-800/40 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700')
                           }`}>
                           <span>
-                            { !msgPermission.allowed ? '🔒'
+                            {!msgPermission.allowed ? '🔒'
                               : msgPermission.quota_left === -1 ? '✅'
-                              : msgPermission.quota_left >= 1 ? '⏳'
-                              : '🔒' }
+                                : msgPermission.quota_left >= 1 ? '⏳'
+                                  : '🔒'}
                           </span>
                           <span>
-                            { !msgPermission.allowed
+                            {!msgPermission.allowed
                               ? msgPermission.reason
                               : msgPermission.quota_left === -1
-                              ? 'Full messaging enabled — case approved'
-                              : `Pre-appointment: ${msgPermission.quota_left} message${msgPermission.quota_left !== 1 ? 's' : ''} remaining` }
+                                ? 'Full messaging enabled — case approved'
+                                : `Pre-appointment: ${msgPermission.quota_left} message${msgPermission.quota_left !== 1 ? 's' : ''} remaining`}
                           </span>
                         </div>
                       )}
@@ -1597,7 +1794,7 @@ export default function UserDashboard() {
                       </div>
                     </>
                   ) : (
-                  <div className={`flex-1 flex flex-col items-center justify-center ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>
+                    <div className={`flex-1 flex flex-col items-center justify-center ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>
                       <MessageSquare className="w-14 h-14 mb-4 opacity-30" />
                       <p className="text-base font-medium">Select a conversation</p>
                       <p className="text-sm mt-1">Choose a chat from the list, or confirm an appointment to start messaging</p>
@@ -1979,19 +2176,19 @@ export default function UserDashboard() {
                           </div>
                         </div>
                         {isExpanded && (
-                            <div className={`px-5 pb-5 space-y-3 border-t ${darkMode ? 'border-slate-800' : 'border-gray-100'} pt-4`}>
-                              {c.description && <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>{c.description}</p>}
-                              <div className="flex gap-3">
-                                <button onClick={() => { setActiveTab('consultation'); }}
-                                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                                  Book Lawyer for This Case
-                                </button>
-                                <button onClick={() => navigate('/lxwyerai-premium')}
-                                  className={`flex-1 py-2 border text-sm font-semibold rounded-xl transition-colors ${darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                                  Get AI Advice ✨
-                                </button>
-                              </div>
+                          <div className={`px-5 pb-5 space-y-3 border-t ${darkMode ? 'border-slate-800' : 'border-gray-100'} pt-4`}>
+                            {c.description && <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>{c.description}</p>}
+                            <div className="flex gap-3">
+                              <button onClick={() => { setActiveTab('consultation'); }}
+                                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                                Book Lawyer for This Case
+                              </button>
+                              <button onClick={() => navigate('/lxwyerai-premium')}
+                                className={`flex-1 py-2 border text-sm font-semibold rounded-xl transition-colors ${darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                Get AI Advice ✨
+                              </button>
                             </div>
+                          </div>
                         )}
                       </div>
                     );
@@ -2139,12 +2336,11 @@ export default function UserDashboard() {
                           <div key={row.label} className={`flex justify-between items-center py-2.5 border-b last:border-b-0 ${darkMode ? 'border-slate-800' : 'border-gray-100'}`}>
                             <span className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{row.label}</span>
                             {row.badge ? (
-                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                                row.color === 'blue' ? (darkMode ? 'bg-blue-900/40 text-blue-300 border border-blue-800' : 'bg-blue-50 text-blue-700 border border-blue-200') :
-                                row.color === 'green' ? (darkMode ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800' : 'bg-green-50 text-green-700 border border-green-200') :
-                                row.color === 'amber' ? (darkMode ? 'bg-amber-900/30 text-amber-400 border border-amber-800' : 'bg-amber-50 text-amber-700 border border-amber-200') :
-                                (darkMode ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-gray-100 text-gray-600 border border-gray-200')
-                              }`}>{row.badge}</span>
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${row.color === 'blue' ? (darkMode ? 'bg-blue-900/40 text-blue-300 border border-blue-800' : 'bg-blue-50 text-blue-700 border border-blue-200') :
+                                  row.color === 'green' ? (darkMode ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-800' : 'bg-green-50 text-green-700 border border-green-200') :
+                                    row.color === 'amber' ? (darkMode ? 'bg-amber-900/30 text-amber-400 border border-amber-800' : 'bg-amber-50 text-amber-700 border border-amber-200') :
+                                      (darkMode ? 'bg-slate-800 text-slate-300 border border-slate-700' : 'bg-gray-100 text-gray-600 border border-gray-200')
+                                }`}>{row.badge}</span>
                             ) : (
                               <span className={`text-sm font-medium max-w-[55%] text-right truncate ${darkMode ? 'text-white' : 'text-gray-900'}`}>{row.value}</span>
                             )}
@@ -2219,84 +2415,246 @@ export default function UserDashboard() {
                   })}
                 </div>
               </div>
+
+              {/* Security & Privacy Section */}
+              <div className={`rounded-2xl border ${darkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-gray-200 shadow-sm'} p-6`}>
+                <div className="flex items-center gap-2 mb-5">
+                  <Shield className={`w-5 h-5 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`} />
+                  <h2 className={`text-base font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Security & Privacy</h2>
+                </div>
+                <div className="space-y-3">
+                  <div className={`flex items-center justify-between p-4 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
+                    <div>
+                      <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Password</p>
+                      <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Change your account password</p>
+                    </div>
+                    <button onClick={() => navigate('/login?action=change-password')}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors ${darkMode ? 'border-slate-600 text-slate-300 hover:bg-slate-700' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
+                      Change
+                    </button>
+                  </div>
+                  <div className={`flex items-center justify-between p-4 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'}`}>
+                    <div>
+                      <p className={`text-sm font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Login Sessions</p>
+                      <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Logged in as: {user?.email || 'Unknown'}</p>
+                    </div>
+                    <button onClick={handleLogout}
+                      className="px-4 py-2 rounded-xl text-xs font-bold bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors">
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Delete Account Danger Zone */}
+              <div className={`rounded-2xl border ${darkMode ? 'bg-red-950/20 border-red-900/30' : 'bg-red-50 border-red-200'} p-6`}>
+                <h2 className="text-sm font-bold text-red-500 mb-1">⚠ Danger Zone</h2>
+                <p className={`text-xs mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>These actions are irreversible. Please be certain.</p>
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you absolutely sure you want to delete your account? This cannot be undone.')) {
+                      toast.error('Account deletion requires contacting support. Email: support@lxwyerup.com');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl border border-red-500 text-red-500 text-xs font-bold hover:bg-red-500 hover:text-white transition-colors">
+                  Delete My Account
+                </button>
+              </div>
             </div>
           )}
 
-      {cancelBookingId && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCancelBookingId(null)} />
-          <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
-              <X className="w-6 h-6 text-red-500" />
+          {/* ── Book Appointment Modal (was completely missing!) ─────────────── */}
+          {bookingLawyer && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setBookingLawyer(null)} />
+              <div className={`relative w-full max-w-lg rounded-2xl shadow-2xl border overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-700 to-blue-900 p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 bg-white/20 rounded-full flex items-center justify-center">
+                        {bookingLawyer.photo
+                          ? <img src={bookingLawyer.photo} alt="" className="w-full h-full object-cover rounded-full" />
+                          : <span className="text-white font-bold text-lg">{(bookingLawyer.full_name || bookingLawyer.name || 'L')[0].toUpperCase()}</span>}
+                      </div>
+                      <div>
+                        <h3 className="text-white font-bold">{bookingLawyer.full_name || bookingLawyer.name}</h3>
+                        <p className="text-blue-200 text-xs">{bookingLawyer.specialization || bookingLawyer.practice_area || 'General Practice'}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setBookingLawyer(null)} className="text-white/70 hover:text-white transition-colors">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                {/* Form */}
+                <form onSubmit={handleBookAppointment} className="p-6 space-y-4">
+                  {/* Consultation Type */}
+                  <div>
+                    <label className={`block text-xs font-semibold mb-2 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>Consultation Type</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'video', label: '🎥 Video', desc: 'Online Call' },
+                        { value: 'audio', label: '📞 Audio', desc: 'Phone Call' },
+                        { value: 'in_person', label: '🏛️ In-Person', desc: 'Visit Office' },
+                      ].map(opt => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setBookingType(opt.value)}
+                          className={`p-3 rounded-xl border text-center transition-all ${bookingType === opt.value
+                            ? 'bg-blue-600 border-blue-600 text-white'
+                            : darkMode ? 'border-slate-700 text-slate-400 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                        >
+                          <div className="text-lg">{opt.label.split(' ')[0]}</div>
+                          <div className="text-[10px] font-semibold mt-0.5">{opt.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Date & Time */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={`block text-xs font-semibold mb-1.5 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>Date *</label>
+                      <input
+                        type="date"
+                        value={bookingDate}
+                        onChange={e => setBookingDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                        required
+                        className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-xs font-semibold mb-1.5 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>Time *</label>
+                      <input
+                        type="time"
+                        value={bookingTime}
+                        onChange={e => setBookingTime(e.target.value)}
+                        required
+                        className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                      />
+                    </div>
+                  </div>
+                  {/* Notes */}
+                  <div>
+                    <label className={`block text-xs font-semibold mb-1.5 ${darkMode ? 'text-slate-400' : 'text-gray-600'}`}>Brief Note (optional)</label>
+                    <textarea
+                      value={bookingNote}
+                      onChange={e => setBookingNote(e.target.value)}
+                      rows={3}
+                      placeholder="Describe your legal issue briefly..."
+                      className={`w-full px-3 py-2.5 text-sm rounded-xl border outline-none resize-none ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                    />
+                  </div>
+                  {/* Fee info */}
+                  {(bookingLawyer.fee_30min || bookingLawyer.hourly_rate) && (
+                    <div className={`rounded-xl p-3 border ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-blue-50 border-blue-100'} flex items-center gap-3`}>
+                      <Clock className={`w-4 h-4 flex-shrink-0 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                      <div className="text-xs">
+                        {bookingLawyer.fee_30min && <span className={darkMode ? 'text-slate-300' : 'text-gray-700'}>₹{bookingLawyer.fee_30min} / 30 min &nbsp;•&nbsp;</span>}
+                        {bookingLawyer.hourly_rate && <span className={darkMode ? 'text-slate-300' : 'text-gray-700'}>₹{bookingLawyer.hourly_rate} / 60 min</span>}
+                      </div>
+                    </div>
+                  )}
+                  {/* Actions */}
+                  <div className="flex gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setBookingLawyer(null); setBookingDate(''); setBookingTime(''); setBookingNote(''); setBookingType('video'); }}
+                      className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition-colors ${darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-800' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={bookingLoading}
+                      className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-60 shadow"
+                    >
+                      {bookingLoading ? 'Booking...' : 'Confirm Booking'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
-            <h3 className={`text-lg font-bold text-center mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Cancel Appointment?</h3>
-            <p className={`text-sm text-center mb-6 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setCancelBookingId(null)}
-                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Keep</button>
-              <button onClick={handleCancelBooking}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Yes, Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* ── Rate Lawyer Modal ─────────────────────────────────── */}
-      {ratingModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setRatingModal(null); setRatingValue(0); setRatingComment(''); }} />
-          <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
-            <h3 className={`text-lg font-bold text-center mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Rate Your Consultation</h3>
-            <p className={`text-sm text-center mb-5 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>with {ratingModal.lawyerName}</p>
-            {/* Star picker */}
-            <div className="flex justify-center gap-2 mb-4">
-              {[1, 2, 3, 4, 5].map(s => (
-                <button key={s} type="button" onClick={() => setRatingValue(s)}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${s <= ratingValue ? 'text-blue-400 scale-110' : (darkMode ? 'text-slate-600' : 'text-gray-300')} hover:scale-125`}>
-                  <Star className={`w-7 h-7 ${s <= ratingValue ? 'fill-amber-400' : ''}`} />
-                </button>
-              ))}
-            </div>
-            <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} rows={3}
-              placeholder="Share your experience (optional)"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm resize-none outline-none mb-4 ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`} />
-            <div className="flex gap-3">
-              <button onClick={() => { setRatingModal(null); setRatingValue(0); setRatingComment(''); }}
-                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Skip</button>
-              <button onClick={handleRateLawyer} disabled={ratingSaving || ratingValue === 0}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-60">
-                {ratingSaving ? 'Submitting...' : 'Submit Review'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* ── Delete Document Confirm ────────────────────────────── */}
-      {docToDelete && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDocToDelete(null)} />
-          <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
-              <FileText className="w-6 h-6 text-red-500" />
+          {cancelBookingId && (
+
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setCancelBookingId(null)} />
+              <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+                  <X className="w-6 h-6 text-red-500" />
+                </div>
+                <h3 className={`text-lg font-bold text-center mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Cancel Appointment?</h3>
+                <p className={`text-sm text-center mb-6 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>This action cannot be undone.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setCancelBookingId(null)}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Keep</button>
+                  <button onClick={handleCancelBooking}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Yes, Cancel</button>
+                </div>
+              </div>
             </div>
-            <h3 className={`text-lg font-bold text-center mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Delete Document?</h3>
-            <p className={`text-sm text-center mb-1 font-medium ${darkMode ? 'text-slate-300' : 'text-gray-800'}`}>"{docToDelete.title || docToDelete.file_name}"</p>
-            <p className={`text-xs text-center mb-6 ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>This action cannot be undone.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setDocToDelete(null)}
-                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Cancel</button>
-              <button onClick={handleDeleteDocument}
-                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Delete</button>
+          )}
+          {/* ── Rate Lawyer Modal ─────────────────────────────────── */}
+          {ratingModal && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setRatingModal(null); setRatingValue(0); setRatingComment(''); }} />
+              <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                <h3 className={`text-lg font-bold text-center mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Rate Your Consultation</h3>
+                <p className={`text-sm text-center mb-5 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>with {ratingModal.lawyerName}</p>
+                {/* Star picker */}
+                <div className="flex justify-center gap-2 mb-4">
+                  {[1, 2, 3, 4, 5].map(s => (
+                    <button key={s} type="button" onClick={() => setRatingValue(s)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${s <= ratingValue ? 'text-blue-400 scale-110' : (darkMode ? 'text-slate-600' : 'text-gray-300')} hover:scale-125`}>
+                      <Star className={`w-7 h-7 ${s <= ratingValue ? 'fill-amber-400' : ''}`} />
+                    </button>
+                  ))}
+                </div>
+                <textarea value={ratingComment} onChange={e => setRatingComment(e.target.value)} rows={3}
+                  placeholder="Share your experience (optional)"
+                  className={`w-full px-4 py-2.5 rounded-xl border text-sm resize-none outline-none mb-4 ${darkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`} />
+                <div className="flex gap-3">
+                  <button onClick={() => { setRatingModal(null); setRatingValue(0); setRatingComment(''); }}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Skip</button>
+                  <button onClick={handleRateLawyer} disabled={ratingSaving || ratingValue === 0}
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors disabled:opacity-60">
+                    {ratingSaving ? 'Submitting...' : 'Submit Review'}
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          {/* ── Delete Document Confirm ────────────────────────────── */}
+          {docToDelete && (
+            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDocToDelete(null)} />
+              <div className={`relative w-full max-w-sm rounded-2xl shadow-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+                  <FileText className="w-6 h-6 text-red-500" />
+                </div>
+                <h3 className={`text-lg font-bold text-center mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Delete Document?</h3>
+                <p className={`text-sm text-center mb-1 font-medium ${darkMode ? 'text-slate-300' : 'text-gray-800'}`}>"{docToDelete.title || docToDelete.file_name}"</p>
+                <p className={`text-xs text-center mb-6 ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>This action cannot be undone.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setDocToDelete(null)}
+                    className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold ${darkMode ? 'border-slate-700 text-slate-300' : 'border-gray-300 text-gray-600'}`}>Cancel</button>
+                  <button onClick={handleDeleteDocument}
+                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors">Delete</button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Mobile Bottom Navigation Bar (hidden on md+) ── */}
       <div className={`fixed bottom-0 inset-x-0 z-50 md:hidden border-t ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'} safe-bottom`}>
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="flex items-center justify-around px-1 py-2">
           {[
             { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
             { id: 'consultation', icon: Calendar, label: 'Book' },
@@ -2308,11 +2666,10 @@ export default function UserDashboard() {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${
-                activeTab === id
-                  ? 'text-blue-600'
+              className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${activeTab === id
+                  ? 'text-blue-500'
                   : darkMode ? 'text-slate-500' : 'text-gray-400'
-              }`}
+                }`}
             >
               <Icon className="w-5 h-5" />
               <span className="text-[9px] font-semibold">{label}</span>

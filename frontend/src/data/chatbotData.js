@@ -35,9 +35,9 @@ export const acknowledgements = {
 };
 
 export const aboutBot = {
-    keywords: ['who are you', 'what can you do', 'help me', 'how does this work', 'what do you do', 'tell me about yourself', 'your name', 'about you', 'how to use', 'what is lxwyer', 'lxwyer up'],
+    keywords: ['who are you', 'what can you do', 'help me', 'how does this work', 'what do you do', 'tell me about yourself', 'your name', 'about you', 'how to use', 'what is lxwyer', 'lxwyer up', 'lxwyer ai'],
     responses: [
-        "I'm the Lxwyer Up AI Assistant! I can:\n\n1. 🔍 Find lawyers by specialization\n2. 📍 Match lawyers in your city\n3. ⭐ Rank by rating & experience\n4. 📋 Show profiles with fees\n\nTry: \"I need a divorce lawyer in Delhi\"",
+        "I'm **Lxwyer AI v0.1** ⚖️ — your Indian legal intelligence engine.\n\n• 🔍 Auto-detects area of law from your query\n• 📍 Ask me your city — I'll match lawyers by location\n• 💰 Mention fee range or consultation mode for better matches\n• 📚 Covers BNS, IPC, BNSS, CPC, CrPC, Consumer Protection & more\n• ✅ Only verified experience shown — no misleading ratings\n\nJust describe your legal problem in plain language and I'll handle the rest!",
     ]
 };
 

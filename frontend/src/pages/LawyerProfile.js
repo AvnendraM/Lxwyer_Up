@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
   Scale, Briefcase, MapPin, ArrowLeft, Phone, Mail,
   GraduationCap, CheckCircle, Award, Video, User, Globe,
-  Calendar, Building, Shield, ChevronRight, ExternalLink
+  Calendar, Building, Shield, ChevronRight, ExternalLink, Star
 } from 'lucide-react';
 import { dummyLawyers } from '../data/lawyersData';
 import axios from 'axios';

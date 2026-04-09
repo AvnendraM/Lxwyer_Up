@@ -313,10 +313,12 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
         cards: data.cards || [],
         intentLabel: data.intent,
         sentimentLabel: data.sentiment,
-        sentiment: data.sentiment === 'URGENT' ? 1 : data.sentiment === 'Positive' ? 2 : 0,
+        sentiment: data.sentiment?.includes('URGENT') ? 1 : data.sentiment?.includes('Positive') ? 2 : 0,
         sources: data.sources || [],
         is_greeting: data.is_greeting || false,
         greeting_text: data.greeting_text || '',
+        needs_location: data.needs_location || false,
+        detected_spec: data.detected_spec || '',
       }])
     } catch (error) {
       console.error('Chat Error:', error)
@@ -365,9 +367,9 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
           <div className={`p-4 border-b ${borderCol} shrink-0`}>
             <div className="flex items-center justify-between">
               <h1 className={`font-bold text-base ${textPrimary} leading-tight`}>Lxwyer <span className="text-blue-400">AI</span></h1>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 tracking-widest">PREMIUM</span>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 tracking-widest">v0.1</span>
             </div>
-            <p className={`text-[10px] ${textMuted} mt-0.5`}>Unlimited Legal Intelligence</p>
+            <p className={`text-[10px] ${textMuted} mt-0.5`}>Indian Legal Intelligence Engine</p>
           </div>
 
           {/* New Chat button */}
@@ -416,7 +418,7 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
             >
               <Trash2 size={16} /> Clear Chat
             </button>
-            <button onClick={() => navigate('/')} className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl ${dm ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'} transition-all text-sm font-medium`}>
+            <button onClick={() => navigate('/home')} className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl ${dm ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'} transition-all text-sm font-medium`}>
               <ArrowLeft size={16} /> Back to Home
             </button>
           </div>
@@ -436,7 +438,7 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
               </button>
               <div className="hidden md:flex items-center gap-2">
                 <span className={`font-bold text-sm ${textPrimary}`}>Lxwyer<span className="text-blue-400">AI</span></span>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 tracking-widest">✦ PREMIUM</span>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 tracking-widest">v0.1</span>
               </div>
             </div>
 
@@ -492,9 +494,14 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-2xl mx-auto" style={{ position: 'relative', zIndex: 1, animation: 'fadeSlideUp 0.7s ease 0.35s both' }}>
               <h2 className={`text-3xl font-extrabold text-white mb-1 tracking-tight`}>
-                Welcome to Lxwyer<span className="text-blue-400">AI</span>
+                Lxwyer<span className="text-blue-400">AI</span> <span className="text-blue-400 text-xl">v0.1</span>
               </h2>
-              <p className={`text-xs ${textMuted} mb-8`}>Your AI legal companion for India</p>
+              <p className={`text-xs ${textMuted} mb-2`}>Indian Legal Intelligence Engine</p>
+              <div className={`flex flex-wrap gap-2 justify-center mb-6 text-[10px] font-medium`}>
+                {['Auto-detects specialization','Finds lawyers by city','Covers BNS • IPC • BNSS • CPC','No ratings — only experience'].map((f,i)=>(
+                  <span key={i} className={`px-2.5 py-1 rounded-full border ${dm?'bg-slate-900 border-slate-700 text-slate-400':'bg-slate-100 border-slate-200 text-slate-500'}`}>{f}</span>
+                ))}
+              </div>
 
               {/* 2 small flat pill buttons */}
               <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
@@ -536,10 +543,18 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
                       </div>
                     )}
 
-                    {/* ASSISTANT — greeting (plain text) */}
+                    {/* ASSISTANT — greeting (plain text, with markdown bullets) */}
                     {msg.role === 'assistant' && msg.is_greeting && (
                       <div className={`px-5 py-4 rounded-3xl rounded-tl-sm ${msgAst} border shadow-sm`}>
-                        <p className="text-sm leading-relaxed">{msg.greeting_text}</p>
+                        {(msg.greeting_text || '').split('\n').map((line, li) => {
+                          if (!line.trim()) return <div key={li} className="h-1" />
+                          const parts = line.split(/\*\*([^*]+)\*\*/g)
+                          const formatted = parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)
+                          if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
+                            return <p key={li} className="flex gap-2 text-sm leading-relaxed mb-0.5"><span className="text-blue-400 mt-0.5">•</span><span>{formatted}</span></p>
+                          }
+                          return <p key={li} className="text-sm leading-relaxed">{formatted}</p>
+                        })}
                       </div>
                     )}
 
@@ -583,14 +598,17 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
                         {/* Intent + Sentiment badges + intro */}
                         <div className={`px-4 py-3 rounded-2xl rounded-tl-sm ${msgAst} border shadow-sm`}>
                           <div className="flex flex-wrap gap-2 mb-2">
-                            {/* Intent badge */}
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${dm ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{msg.intentLabel}</span>
-                            {/* Urgent badge */}
+                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${dm ? 'bg-slate-800 text-blue-400 border-slate-700' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{msg.intentLabel}</span>
                             {msg.sentiment === 1 && (
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${dm ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}><Zap size={10} /> URGENT</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border bg-red-900/30 text-red-400 border-red-800"><Zap size={10} /> URGENT</span>
                             )}
                           </div>
-                          <p className={`text-sm ${textMuted}`}>{msg.intro}</p>
+                          {(msg.intro || '').split('\n').map((line, li) => {
+                            if (!line.trim()) return <div key={li} className="h-1" />
+                            const parts = line.split(/\*\*([^*]+)\*\*/g)
+                            const fmt = parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)
+                            return <p key={li} className={`text-sm leading-relaxed ${textMuted}`}>{fmt}</p>
+                          })}
                         </div>
 
                         {/* Summary cards grid */}
@@ -601,23 +619,39 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
                                 key={card.id}
                                 onClick={() => openCard(card, msg)}
                                 className={`text-left p-4 rounded-2xl border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg group ${dm
-                                  ? 'bg-slate-900 border-slate-800 hover:border-slate-600 hover:bg-slate-800/80'
-                                  : 'bg-white border-slate-200 hover:border-slate-400 hover:bg-slate-50'
+                                  ? 'bg-zinc-900 border-zinc-800 hover:border-blue-500/40 hover:bg-zinc-800/80'
+                                  : 'bg-white border-slate-200 hover:border-blue-300 hover:bg-slate-50'
                                   } animate-in zoom-in duration-300 fill-mode-backwards`}
                                 style={{ animationDelay: `${i * 80}ms` }}
                               >
                                 <div className="flex items-start justify-between mb-2">
-                                  <span className={`text-2xl p-2 rounded-xl ${dm ? 'bg-slate-800' : 'bg-slate-100'
-                                    } group-hover:scale-110 transition-transform`}>{card.icon}</span>
-                                  <span className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-md ${dm ? 'bg-slate-800 text-slate-500' : 'bg-slate-100 text-slate-400'
-                                    } flex items-center gap-1`}>
-                                    <ArrowRight size={9} /> View
+                                  <span className={`text-2xl p-2 rounded-xl ${dm ? 'bg-zinc-800' : 'bg-slate-100'} group-hover:scale-110 transition-transform`}>{card.icon}</span>
+                                  <span className={`text-[10px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-md ${dm ? 'bg-zinc-800 text-blue-400 border border-zinc-700' : 'bg-blue-50 text-blue-500 border border-blue-100'} flex items-center gap-1`}>
+                                    <ArrowRight size={9} /> Expand
                                   </span>
                                 </div>
-                                <h4 className={`font-bold text-sm mb-1 ${dm ? 'text-white group-hover:text-slate-300' : 'text-slate-900 group-hover:text-slate-600'} transition-colors`}>{card.title}</h4>
-                                <p className={`text-xs ${textMuted} line-clamp-2 leading-relaxed`}>{card.summary}</p>
+                                <h4 className={`font-bold text-sm mb-2 ${dm ? 'text-white' : 'text-slate-900'}`}>{card.title}</h4>
+                                {/* Bullet-point summary */}
+                                <div className={`space-y-0.5`}>
+                                  {(card.summary || '').split('\n').filter(l => l.trim()).map((line, li) => (
+                                    <p key={li} className={`text-xs ${textMuted} flex gap-1.5 items-start leading-relaxed`}>
+                                      <span className="text-blue-400 shrink-0 mt-0.5">•</span>
+                                      <span>{line.replace(/^[•\-]\s*/, '')}</span>
+                                    </p>
+                                  ))}
+                                </div>
                               </button>
                             ))}
+                          </div>
+                        )}
+
+                        {/* Location follow-up prompt */}
+                        {msg.needs_location && (
+                          <div className={`flex items-start gap-2 px-4 py-3 rounded-xl border ${dm ? 'bg-blue-950/40 border-blue-800/50 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-700'}`}>
+                            <MapPin size={14} className="shrink-0 mt-0.5" />
+                            <p className="text-xs leading-relaxed">
+                              <strong>To find verified lawyers near you</strong> — tell me your <strong>city</strong> (e.g. Delhi, Mumbai, Bangalore). You can also mention your preferred <strong>fee range</strong> (e.g. under ₹5000/hr) or <strong>consultation mode</strong> (in-person / video call).
+                            </p>
                           </div>
                         )}
 
@@ -626,8 +660,7 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
                           <div className="flex flex-wrap items-center gap-1.5">
                             <span className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>📚 Sources:</span>
                             {msg.sources.map((src, i) => (
-                              <span key={i} className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${dm ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-500 border-slate-200'
-                                }`}>{src}</span>
+                              <span key={i} className={`text-[10px] px-2 py-0.5 rounded-md font-medium border ${dm ? 'bg-zinc-800 text-slate-400 border-zinc-700' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>{src}</span>
                             ))}
                           </div>
                         )}

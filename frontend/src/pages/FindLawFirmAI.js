@@ -485,6 +485,7 @@ export default function FindLawFirmAI() {
       state: {
         lawyer: {
           ...firm,
+          photo: firm.image,
           consultation_fee: firm.feeMin || 5000,
           fee: firm.feeRange || '₹5,000 - ₹15,000',
           specialization: firm.practiceAreas?.[0] || 'Corporate Law',
