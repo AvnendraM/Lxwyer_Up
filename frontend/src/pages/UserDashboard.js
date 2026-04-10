@@ -1943,8 +1943,9 @@ export default function UserDashboard() {
                 </div>
 
                 {/* Documents Table */}
-                <div className={`rounded-2xl border overflow-hidden shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'}`}>
-                  <table className="w-full">
+                <div className={`rounded-2xl border shadow-sm ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-gray-200'}`}>
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full min-w-[700px]">
                     <thead className={`border-b ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-100'}`}>
                       <tr>
                         {['Document Name', 'Folder', 'Type', 'Date', 'Size', 'Actions'].map(h => (
@@ -2028,6 +2029,7 @@ export default function UserDashboard() {
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
 
                 {/* New Folder Modal */}

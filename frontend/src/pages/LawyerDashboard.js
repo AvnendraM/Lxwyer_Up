@@ -2235,9 +2235,10 @@ export default function LawyerDashboard() {
                   </div>
 
                   {/* Documents Table */}
-                  <div className={`rounded-2xl border overflow-hidden shadow-sm ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-gray-200'}`}>
-                    <table className="w-full">
-                      <thead className={`border-b ${darkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                  <div className={`rounded-2xl border shadow-sm ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-gray-200'}`}>
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full min-w-[700px]">
+                        <thead className={`border-b ${darkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
                         <tr>
                           {['Document Name', 'Folder', 'Type', 'Date', 'Size', 'Actions'].map(h => (
                             <th key={h} className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{h}</th>
@@ -2318,7 +2319,8 @@ export default function LawyerDashboard() {
                           </tr>
                         )}
                       </tbody>
-                    </table>
+                      </table>
+                    </div>
                   </div>
 
                   {/* New Folder Modal */}
@@ -2485,7 +2487,8 @@ export default function LawyerDashboard() {
                     </h2>
                   </div>
 
-                  <table className="w-full">
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full min-w-[700px]">
                     <thead
                       className={`border-b ${darkMode ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100"}`}
                     >
@@ -2572,6 +2575,7 @@ export default function LawyerDashboard() {
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -2678,7 +2682,8 @@ export default function LawyerDashboard() {
                     </h2>
                   </div>
 
-                  <table className="w-full">
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full min-w-[700px]">
                     <thead className={`border-b ${darkMode ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100"}`}>
                       <tr>
                         <th className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}>Time</th>
@@ -2739,6 +2744,7 @@ export default function LawyerDashboard() {
                       )}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               </motion.div>
             )}

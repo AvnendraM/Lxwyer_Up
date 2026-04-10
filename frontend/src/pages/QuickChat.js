@@ -603,7 +603,7 @@ export default function QuickChat({ embedded = false, darkMode: darkModeProp }) 
 
             </div>
           ) : (
-            <div className="min-h-full flex flex-col justify-end space-y-8 max-w-4xl mx-auto pb-6" style={{ position: 'relative', zIndex: 1 }}>
+            <div className="min-h-full flex flex-col justify-end space-y-8 max-w-4xl mx-auto pb-6 px-4 sm:px-6" style={{ position: 'relative', zIndex: 1 }}>
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} animate-in slide-in-from-bottom-4 duration-500`}>
                   {/* Avatar */}
@@ -615,7 +615,7 @@ export default function QuickChat({ embedded = false, darkMode: darkModeProp }) 
                   </div>
 
                   {/* Message bubble */}
-                  <div className={`flex flex-col gap-2 max-w-[90%] md:max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex flex-col gap-2 w-[calc(100vw-5rem)] md:w-auto sm:max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
 
                     {/* USER bubble — monochrome */}
                     {msg.role === 'user' && (
