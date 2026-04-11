@@ -222,8 +222,8 @@ export default function BookConsultationWithSignup() {
 
       const bookingPayload = {
         lawyer_id: selectedLawyer.id,
-        lawyer_name: selectedLawyer.name || selectedLawyer.full_name || '',
-        lawyer_photo: selectedLawyer.photo || '',
+        lawyer_name: '', // Empty triggers backend to securely fetch name/photo from DB (avoids 4MB size limits)
+        lawyer_photo: '',
         consultation_fee: finalFee,   // lawyer's listed fee (even for free trial)
         date: bookingData.date,
         time: bookingData.time,
