@@ -27,13 +27,29 @@ const OtpVerificationModal = ({ isOpen, onClose, onVerified, email, phone, darkM
     const [loading, setLoading] = useState(false);
     const [resendCountdown, setResendCountdown] = useState(0);
 
+    // Reset verification if contact details change
+    useEffect(() => {
+        setEmailVerified(false);
+        setEmailOtp('');
+    }, [email]);
+
+    useEffect(() => {
+        setPhoneVerified(false);
+        setPhoneOtp('');
+    }, [phone]);
+
     // Auto-send OTPs when modal opens
     useEffect(() => {
         if (isOpen) {
-            sendOtp('email');
-            sendOtp('phone');
+            if (emailVerified && phoneVerified) {
+                onVerified();
+                return;
+            }
+            if (!emailVerified) sendOtp('email');
+            if (!phoneVerified) sendOtp('phone');
             setResendCountdown(30);
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen]);
 
     // Countdown timer
