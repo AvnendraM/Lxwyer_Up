@@ -525,40 +525,80 @@ export default function LawyerApplication() {
   const handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 3 * 1024 * 1024) {
-        // 3MB limit
-        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        toast.error(
-          `File is ${sizeMB} MB. Please upload a profile photo under 3 MB.`,
-        );
-        e.target.value = null;
-        return;
+      if (file.type.startsWith("image/")) {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 800; // Compress heavily
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          } else if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress to JPEG with 0.5 quality (< 100kb usually)
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+          updateField("photo", dataUrl);
+          URL.revokeObjectURL(img.src);
+        };
+      } else {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          updateField("photo", reader.result);
+        };
+        reader.readAsDataURL(file);
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateField("photo", reader.result);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
   const handleDocumentUpload = (field, e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 3 * 1024 * 1024) {
-        // 3MB limit
-        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        toast.error(
-          `File is ${sizeMB} MB. Please upload a document under 3 MB.`,
-        );
-        e.target.value = null;
-        return;
+      if (file.type.startsWith("image/")) {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 1200; // Documents need a bit more clarity
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          } else if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Compress to JPEG with 0.5 quality
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.5);
+          updateField(field, dataUrl);
+          URL.revokeObjectURL(img.src);
+        };
+      } else {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          updateField(field, reader.result);
+        };
+        reader.readAsDataURL(file);
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateField(field, reader.result);
-      };
-      reader.readAsDataURL(file);
     }
   };
 

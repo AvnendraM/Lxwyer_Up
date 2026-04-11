@@ -1121,14 +1121,52 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Bio */}
-            {app.bio && (
+            {/* Bio and Catchphrase */}
+            {(app.bio || app.catchphrase) && (
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                 <div className="flex items-center gap-2 text-slate-400 mb-2">
                   <FileText className="w-4 h-4" />
-                  <span className="text-xs uppercase tracking-wide">Professional Bio</span>
+                  <span className="text-xs uppercase tracking-wide">Professional Bio & Identity</span>
                 </div>
-                <p className="text-slate-300 leading-relaxed">{app.bio}</p>
+                {app.catchphrase && (
+                  <div className="mb-3">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Catchphrase</p>
+                    <p className="text-slate-300 font-medium italic">"{app.catchphrase}"</p>
+                  </div>
+                )}
+                {app.bio && (
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Bio</p>
+                    <p className="text-slate-300 leading-relaxed text-sm">{app.bio}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Consultation Fees */}
+            {(app.charge_30min || app.charge_60min || app.fee_range) && (
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                <div className="flex items-center gap-2 text-blue-400 mb-3">
+                  <IndianRupee className="w-4 h-4" />
+                  <span className="text-xs uppercase tracking-wide font-semibold">Consultation Charges</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {app.charge_30min && (
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700/30">
+                      <p className="text-[10px] text-slate-500 uppercase mb-1">30-Min Session</p>
+                      <p className="text-blue-300 font-bold text-lg">₹{app.charge_30min}</p>
+                    </div>
+                  )}
+                  {app.charge_60min && (
+                    <div className="bg-slate-900/50 rounded-lg p-3 border border-slate-700/30">
+                      <p className="text-[10px] text-slate-500 uppercase mb-1">1-Hour Session</p>
+                      <p className="text-blue-300 font-bold text-lg">₹{app.charge_60min}</p>
+                    </div>
+                  )}
+                </div>
+                {!app.charge_30min && app.fee_range && (
+                   <p className="text-blue-300 font-bold mt-2">Priced at: {app.fee_range}</p>
+                )}
               </div>
             )}
 
@@ -1144,7 +1182,11 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs text-slate-400 uppercase tracking-wide font-semibold">Lawyer Type</span>
                     <div className="flex gap-2">
-                      {isBoth ? (
+                      {app.sos_type === 'sos_talk' ? (
+                        <span className="px-3 py-1 rounded-lg text-sm font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">🎙️ SOS Talk Only</span>
+                      ) : app.sos_type === 'sos_full' ? (
+                        <span className="px-3 py-1 rounded-lg text-sm font-bold bg-red-500/15 text-red-300 border border-red-500/30">🚗 Full SOS Lawyer</span>
+                      ) : isBoth ? (
                         <span className="px-3 py-1 rounded-lg text-sm font-bold bg-purple-500/15 text-purple-300 border border-purple-500/30">⚡ Normal + SOS Lawyer</span>
                       ) : isSosOnly ? (
                         <span className="px-3 py-1 rounded-lg text-sm font-bold bg-red-500/15 text-red-300 border border-red-500/30">🆘 SOS Only Lawyer</span>

@@ -41,6 +41,9 @@ class LawyerApplicationCreate(BaseModel):
     sos_locations: Optional[List[str]] = None
     sos_matters: Optional[List[str]] = None
     sos_terms_accepted: Optional[bool] = None
+    sos_type: Optional[str] = None
+    charge_30min: Optional[int] = None
+    charge_60min: Optional[int] = None
 
 
 class LawyerApplication(BaseModel):
@@ -83,6 +86,9 @@ class LawyerApplication(BaseModel):
     sos_locations: Optional[List[str]] = None
     sos_matters: Optional[List[str]] = None
     sos_terms_accepted: Optional[bool] = None
+    sos_type: Optional[str] = None
+    charge_30min: Optional[int] = None
+    charge_60min: Optional[int] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class AdminLogin(BaseModel):
