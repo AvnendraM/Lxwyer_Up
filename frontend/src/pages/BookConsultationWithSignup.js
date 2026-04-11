@@ -207,7 +207,12 @@ export default function BookConsultationWithSignup() {
           sessionStorage.setItem('token', currentToken);
           sessionStorage.setItem('user', JSON.stringify(signupResponse.data.user));
         } catch (signupErr) {
-          if (signupErr.response?.data?.detail?.includes('already exists')) {
+          const detail = signupErr.response?.data?.detail;
+          const isAlreadyExists = typeof detail === 'string' 
+            ? detail.includes('already exists') 
+            : (Array.isArray(detail) ? JSON.stringify(detail).includes('already exists') : false);
+            
+          if (isAlreadyExists) {
             try {
               const loginRes = await axios.post(`${API}/auth/login`, { email: signupData.email, password: signupData.password });
               currentToken = loginRes.data.token;
@@ -246,11 +251,17 @@ export default function BookConsultationWithSignup() {
 
     } catch (error) {
       console.error('Error:', error);
-      if (error.response?.data?.detail?.includes('already exists')) {
+      const detail = error.response?.data?.detail;
+      const isAlreadyExists = typeof detail === 'string' 
+        ? detail.includes('already exists') 
+        : (Array.isArray(detail) ? JSON.stringify(detail).includes('already exists') : false);
+
+      if (isAlreadyExists) {
         toast.error('Email already registered. Please login instead.');
         setTimeout(() => navigate('/login'), 2000);
       } else {
-        toast.error(error.response?.data?.detail || 'Booking failed. Please try again.');
+        const errorMsg = typeof detail === 'string' ? detail : (Array.isArray(detail) ? detail[0]?.msg : 'Booking failed. Please try again.');
+        toast.error(errorMsg);
       }
     } finally {
       setLoading(false);

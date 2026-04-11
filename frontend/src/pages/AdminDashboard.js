@@ -6,7 +6,7 @@ import {
   MapPin, Briefcase, GraduationCap, Star, ArrowLeft, Loader2, RefreshCw, LogOut,
   Building2, Globe, FileText, X, TrendingUp, Calendar, Activity, Award,
   Sparkles, Home, Bell, Search, BarChart3, PieChart, Settings, ChevronRight,
-  Pencil, Trash2, EyeOff, Ban
+  Pencil, Trash2, EyeOff, Ban, IndianRupee
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
