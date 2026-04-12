@@ -730,23 +730,23 @@ export default function FindLawyerManual() {
 
                   {/* Achievements Section */}
                   {selectedLawyer?.achievements && Array.isArray(selectedLawyer.achievements) && selectedLawyer.achievements.length > 0 && (
-                    <div className="p-6 sm:p-8 bg-gradient-to-br from-amber-50/50 to-yellow-100/50 dark:from-[#151005] dark:to-[#0a0802] rounded-3xl border border-yellow-200/50 dark:border-yellow-500/20 shadow-inner relative overflow-hidden">
+                    <div className="p-6 sm:p-8 bg-gradient-to-br from-emerald-50/50 to-emerald-100/50 dark:from-[#05150f] dark:to-[#020a07] rounded-3xl border border-emerald-200/50 dark:border-emerald-500/20 shadow-inner relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                        <Award className="w-48 h-48 text-yellow-500" />
+                        <Award className="w-48 h-48 text-emerald-500" />
                       </div>
 
-                      <h3 className="text-base font-black text-yellow-800 dark:text-yellow-400 uppercase tracking-widest mb-5 flex items-center gap-3 relative z-10">
-                        <Award className="w-5 h-5 text-yellow-500" />
+                      <h3 className="text-base font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-widest mb-5 flex items-center gap-3 relative z-10">
+                        <Award className="w-5 h-5 text-emerald-500" />
                         {d.milestones}
-                        <div className="h-px flex-1 bg-gradient-to-r from-yellow-200/50 dark:from-yellow-500/20 to-transparent" />
+                        <div className="h-px flex-1 bg-gradient-to-r from-emerald-200/50 dark:from-emerald-500/20 to-transparent" />
                       </h3>
 
                       <div className="space-y-4 relative z-10">
                         {[...selectedLawyer.achievements].sort((a, b) => b.pinned - a.pinned).map(ach => (
                           <div key={ach.id}
                             className={`rounded-2xl border p-5 flex gap-5 items-center relative overflow-hidden transition-all shadow-sm hover:shadow-md group cursor-default ${ach.pinned
-                                ? 'bg-gradient-to-r from-white to-yellow-50/50 dark:from-[#151005] dark:to-[#0a0802] border-yellow-300 dark:border-yellow-500/40 shadow-yellow-500/5'
-                                : 'bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md border-amber-100 dark:border-yellow-500/10 hover:border-yellow-300/50 dark:hover:border-yellow-500/30'
+                                ? 'bg-gradient-to-r from-white to-emerald-50/50 dark:from-[#05150f] dark:to-[#020a07] border-emerald-300 dark:border-emerald-500/40 shadow-emerald-500/5'
+                                : 'bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md border-emerald-100 dark:border-emerald-500/10 hover:border-emerald-300/50 dark:hover:border-emerald-500/30'
                               }`}
                           >
                             {/* Shine Effect Hover */}
@@ -765,28 +765,28 @@ export default function FindLawyerManual() {
                               <img
                                 src={ach.photo.startsWith('http') || ach.photo.startsWith('data:') ? ach.photo : `${API.replace('/api', '')}${ach.photo}`}
                                 alt="achievement"
-                                className="w-52 h-52 rounded-2xl object-cover shrink-0 border border-yellow-200 dark:border-yellow-500/30 shadow-sm cursor-pointer hover:scale-[1.02] transition-transform relative z-10"
+                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover shrink-0 border border-emerald-200 dark:border-emerald-500/30 shadow-sm cursor-pointer hover:scale-[1.02] transition-transform relative z-10"
                                 onClick={() => setExpandedImage(ach.photo.startsWith('http') || ach.photo.startsWith('data:') ? ach.photo : `${API.replace('/api', '')}${ach.photo}`)}
                               />
                             ) : (
-                              <div className="w-52 h-52 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/40 dark:to-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 shadow-inner relative z-10">
-                                <Award className="w-16 h-16 text-yellow-500 dark:text-yellow-400 drop-shadow-sm" />
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center shrink-0 bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/40 dark:to-emerald-900/20 border border-emerald-200 dark:border-emerald-700/50 shadow-inner relative z-10">
+                                <Award className="w-8 h-8 sm:w-10 sm:h-10 text-emerald-500 dark:text-emerald-400 drop-shadow-sm" />
                               </div>
                             )}
                             <div className="flex-1 min-w-0 flex flex-col justify-center relative z-10">
                               <div className="flex items-start justify-between gap-2 mb-2">
-                                <p className="font-bold text-xl leading-snug text-slate-900 dark:text-yellow-50">
+                                <p className="font-bold text-lg sm:text-xl leading-snug break-words text-slate-900 dark:text-emerald-50 flex-1">
                                   {ach.title}
                                 </p>
                                 {ach.pinned && (
-                                  <span className="shrink-0 flex items-center gap-1.5 text-[10px] font-black text-yellow-700 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/40 px-2.5 py-1 rounded-full tracking-wider uppercase border border-yellow-200 dark:border-yellow-800/50">
+                                  <span className="shrink-0 flex items-center gap-1.5 text-[10px] font-black text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-1 rounded-full tracking-wider uppercase border border-emerald-200 dark:border-emerald-800/50">
                                     <Star className="w-3 h-3 fill-current" /> {d.featured}
                                   </span>
                                 )}
                               </div>
                               {ach.date && (
-                                <p className="text-[13px] font-medium text-yellow-700/70 dark:text-yellow-500/60 flex items-center gap-1.5">
-                                  <Calendar className="w-3.5 h-3.5" /> {ach.date}
+                                <p className="text-[13px] font-medium text-emerald-700/70 dark:text-emerald-500/60 flex items-center gap-1.5 break-words">
+                                  <Calendar className="w-3.5 h-3.5 shrink-0" /> {ach.date}
                                 </p>
                               )}
                             </div>
@@ -917,19 +917,21 @@ export default function FindLawyerManual() {
 
 
       {/* Floating AI Lawyer Matching Button */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-8 z-50">
-        <motion.button
-          onClick={() => navigate('/find-lawyer/ai')}
-          initial={{ opacity: 0, scale: 0.8, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ delay: 0.5, type: 'spring', stiffness: 260, damping: 20 }}
-          whileHover={{ scale: 1.05, y: -2 }}
-          whileTap={{ scale: 0.95 }}
-          className="flex items-center justify-center px-8 py-3.5 rounded-full bg-[#050505] border-[1.5px] border-blue-600 hover:border-blue-400 hover:bg-[#111] text-blue-50 font-bold text-sm tracking-wide shadow-2xl shadow-blue-900/40 transition-all cursor-pointer whitespace-nowrap"
-        >
-          <span>{t('fl_ai_btn')}</span>
-        </motion.button>
-      </div>
+      {!selectedLawyer && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-8 z-50">
+          <motion.button
+            onClick={() => navigate('/find-lawyer/ai')}
+            initial={{ opacity: 0, scale: 0.8, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: 0.5, type: 'spring', stiffness: 260, damping: 20 }}
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex items-center justify-center px-8 py-3.5 rounded-full bg-[#050505] border-[1.5px] border-blue-600 hover:border-blue-400 hover:bg-[#111] text-blue-50 font-bold text-sm tracking-wide shadow-2xl shadow-blue-900/40 transition-all cursor-pointer whitespace-nowrap"
+          >
+            <span>{t('fl_ai_btn')}</span>
+          </motion.button>
+        </div>
+      )}
 
       {/* Expanded Image Modal */}
       <AnimatePresence>

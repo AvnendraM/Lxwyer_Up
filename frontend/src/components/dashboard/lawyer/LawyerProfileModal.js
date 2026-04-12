@@ -382,15 +382,15 @@ export default function LawyerProfileModal({ user: initialUser, onClose, onLogou
                                         <div key={ach.id}
                                             className={`rounded-2xl border p-4 flex gap-3 relative overflow-hidden transition-all ${
                                                 ach.pinned
-                                                    ? dm ? 'bg-gradient-to-r from-[#1a1200] to-[#0f0900] border-amber-500/40' : 'bg-amber-50 border-amber-300'
+                                                    ? dm ? 'bg-gradient-to-r from-[#001a0a] to-[#000f05] border-emerald-500/40' : 'bg-emerald-50 border-emerald-300'
                                                     : dm ? 'bg-white/[0.03] border-white/8' : 'bg-white border-slate-100'
                                             }`}
                                         >
                                             {ach.photo ? (
-                                                <img src={ach.photo.startsWith('http') || ach.photo.startsWith('data:') ? ach.photo : `${API.replace('/api', '')}${ach.photo}`} alt="achievement" className="w-12 h-12 rounded-xl object-cover shrink-0 border border-amber-500/20" />
+                                                <img src={ach.photo.startsWith('http') || ach.photo.startsWith('data:') ? ach.photo : `${API.replace('/api', '')}${ach.photo}`} alt="achievement" className="w-12 h-12 rounded-xl object-cover shrink-0 border border-emerald-500/20" />
                                             ) : (
-                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${dm ? 'bg-amber-900/20' : 'bg-amber-100'}`}>
-                                                    <Award className="w-5 h-5 text-amber-400" />
+                                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${dm ? 'bg-emerald-900/20' : 'bg-emerald-100'}`}>
+                                                    <Award className="w-5 h-5 text-emerald-400" />
                                                 </div>
                                             )}
                                             <div className="flex-1 min-w-0 flex flex-col justify-center">
@@ -399,7 +399,7 @@ export default function LawyerProfileModal({ user: initialUser, onClose, onLogou
                                                         {ach.title}
                                                     </p>
                                                     {ach.pinned && (
-                                                        <span className="shrink-0 flex text-[9px] font-bold text-amber-500 tracking-wider uppercase">
+                                                        <span className="shrink-0 flex text-[9px] font-bold text-emerald-500 tracking-wider uppercase">
                                                             Pinned
                                                         </span>
                                                     )}

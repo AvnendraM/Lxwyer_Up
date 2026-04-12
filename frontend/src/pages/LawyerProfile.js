@@ -187,27 +187,27 @@ export default function LawyerProfile({ lawyerId, onCloseModal }) {
 
             {/* Achievements */}
             {lawyer.achievements && lawyer.achievements.length > 0 && (
-              <div className="p-6 sm:p-8 bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-[#151005] dark:to-[#0a0802] rounded-3xl border border-yellow-200 dark:border-yellow-900/50 relative overflow-hidden">
+              <div className="p-6 sm:p-8 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-[#05150f] dark:to-[#020a07] rounded-3xl border border-emerald-200 dark:border-emerald-900/50 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                  <Award className="w-48 h-48 text-yellow-500" />
+                  <Award className="w-48 h-48 text-emerald-500" />
                 </div>
-                <h3 className="text-sm font-black text-yellow-800 dark:text-yellow-500 uppercase tracking-widest mb-6 flex items-center gap-3 relative z-10">
+                <h3 className="text-sm font-black text-emerald-800 dark:text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-3 relative z-10">
                   <Award className="w-5 h-5" /> Milestones & Achievements
-                  <div className="h-px flex-1 bg-yellow-200 dark:bg-yellow-900/50" />
+                  <div className="h-px flex-1 bg-emerald-200 dark:bg-emerald-900/50" />
                 </h3>
                 <div className="space-y-4 relative z-10">
                   {lawyer.achievements.map((ach, i) => (
-                    <div key={i} className="bg-white/80 dark:bg-[#1A1A1A] backdrop-blur-md rounded-2xl p-5 border border-yellow-100 dark:border-[#333] flex items-center gap-5">
+                    <div key={i} className="bg-white/80 dark:bg-[#1A1A1A] backdrop-blur-md rounded-2xl p-5 border border-emerald-100 dark:border-[#333] flex items-center gap-5">
                       {ach.photo ? (
-                        <img src={ach.photo} alt="achievement" className="w-12 h-12 rounded-xl object-cover shrink-0 border border-yellow-200 dark:border-slate-700" />
+                        <img src={ach.photo} alt="achievement" className="w-12 h-12 rounded-xl object-cover shrink-0 border border-emerald-200 dark:border-emerald-700" />
                       ) : (
-                         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-yellow-100 dark:bg-slate-800 border-yellow-200">
-                          <Award className="w-6 h-6 text-yellow-500" />
+                         <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-emerald-100 dark:bg-slate-800 border-emerald-200">
+                          <Award className="w-6 h-6 text-emerald-500" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-lg text-slate-900 dark:text-white mb-1 break-words">{ach.title}</p>
-                        {ach.date && <p className="text-sm text-yellow-700 dark:text-slate-400 flex items-center gap-1.5"><Calendar className="w-4 h-4 shrink-0"/> {ach.date}</p>}
+                        {ach.date && <p className="text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5"><Calendar className="w-4 h-4 shrink-0"/> {ach.date}</p>}
                       </div>
                     </div>
                   ))}
