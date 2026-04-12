@@ -344,6 +344,8 @@ const translations = {
     reg_sign_in: 'Sign in',
     reg_verified: 'Verified Platform',
     reg_review: '48hr Review',
+    reg_secure: 'End-to-End Encrypted',
+    reg_network: 'Elite Legal Network',
     reg_home: 'Home',
 
     // ── GetStarted / Find Lawyer-Firm Chooser ────────────────────────
@@ -921,6 +923,8 @@ const translations = {
     reg_sign_in: 'साइन इन करें',
     reg_verified: 'सत्यापित प्लेटफ़ॉर्म',
     reg_review: '48 घंटे समीक्षा',
+    reg_secure: 'एंड-टू-एंड एन्क्रिप्टेड',
+    reg_network: 'एलीट लीगल नेटवर्क',
     reg_home: 'होम',
 
     // ── GetStarted / Find Lawyer-Firm Chooser ────────────────────────

@@ -76,62 +76,153 @@ class MatchResponse(BaseModel):
 # ── NLP EXTRACTION ────────────────────────────────────────────────────────────
 
 SPECIALIZATION_MAP = {
-    # Criminal
-    "criminal":      "Criminal Law",  "murder":      "Criminal Law",
-    "theft":         "Criminal Law",  "robbery":     "Criminal Law",
-    "bail":          "Criminal Law",  "fir":         "Criminal Law",
-    "arrest":        "Criminal Law",  "police":      "Criminal Law",
-    "fraud":         "Criminal Law",  "ipc":         "Criminal Law",
-    "bns":           "Criminal Law",  "assault":     "Criminal Law",
-    "rape":          "Criminal Law",  "kidnap":      "Criminal Law",
-    # Family
-    "divorce":       "Family Law",    "custody":     "Family Law",
-    "alimony":       "Family Law",    "maintenance": "Family Law",
-    "marriage":      "Family Law",    "matrimonial": "Family Law",
-    "talaq":         "Family Law",    "dowry":       "Family Law",
-    "adoption":      "Family Law",    "family":      "Family Law",
-    # Property / Civil
-    "property":      "Property Law",  "land":        "Property Law",
-    "tenant":        "Property Law",  "landlord":    "Property Law",
-    "rent":          "Property Law",  "zameen":      "Property Law",
-    "real estate":   "Property Law",  "possession":  "Property Law",
-    # Corporate
-    "corporate":     "Corporate Law", "company":     "Corporate Law",
-    "contract":      "Corporate Law", "startup":     "Corporate Law",
-    "merger":        "Corporate Law", "acquisition": "Corporate Law",
-    "director":      "Corporate Law", "shareholder": "Corporate Law",
-    "mca":           "Corporate Law",
-    # Tax
-    "tax":           "Tax Law",       "gst":         "Tax Law",
-    "income tax":    "Tax Law",       "itr":         "Tax Law",
-    "tds":           "Tax Law",
+    # Criminal — expanded
+    "criminal":           "Criminal Law",  "murder":          "Criminal Law",
+    "theft":              "Criminal Law",  "robbery":         "Criminal Law",
+    "bail":               "Criminal Law",  "fir":             "Criminal Law",
+    "arrest":             "Criminal Law",  "police":          "Criminal Law",
+    "fraud":              "Criminal Law",  "ipc":             "Criminal Law",
+    "bns":                "Criminal Law",  "assault":         "Criminal Law",
+    "rape":               "Criminal Law",  "kidnap":          "Criminal Law",
+    "anticipatory bail":  "Criminal Law",  "bail application":"Criminal Law",
+    "habeas corpus":      "Criminal Law",  "pocso":           "Criminal Law",
+    "ndps":               "Criminal Law",  "narcotics":       "Criminal Law",
+    "extortion":          "Criminal Law",  "blackmail":       "Criminal Law",
+    "bribery":            "Criminal Law",  "corruption":      "Criminal Law",
+    "forgery":            "Criminal Law",  "counterfeiting":  "Criminal Law",
+    # Family — expanded
+    "divorce":            "Family Law",    "custody":         "Family Law",
+    "alimony":            "Family Law",    "maintenance":     "Family Law",
+    "marriage":           "Family Law",    "matrimonial":     "Family Law",
+    "talaq":              "Family Law",    "dowry":           "Family Law",
+    "adoption":           "Family Law",    "family":          "Family Law",
+    "498a":               "Family Law",    "498":             "Family Law",
+    "domestic violence":  "Family Law",    "cruelty":         "Family Law",
+    "guardianship":       "Family Law",    "will":            "Family Law",
+    "succession":         "Family Law",    "inheritance":     "Family Law",
+    "probate":            "Family Law",
+    # Property / Civil — expanded
+    "property":           "Property Law",  "land":            "Property Law",
+    "tenant":             "Property Law",  "landlord":        "Property Law",
+    "rent":               "Property Law",  "zameen":          "Property Law",
+    "real estate":        "Property Law",  "possession":      "Property Law",
+    "eviction":           "Property Law",  "partition":       "Property Law",
+    "mutation":           "Property Law",  "registry":        "Property Law",
+    "sale deed":          "Property Law",  "flat booking":    "Property Law",
+    "builder":            "Property Law",  "rera":            "Property Law",
+    "housing":            "Property Law",  "plot":            "Property Law",
+    # Corporate — expanded
+    "corporate":          "Corporate Law", "company":         "Corporate Law",
+    "contract":           "Corporate Law", "startup":         "Corporate Law",
+    "merger":             "Corporate Law", "acquisition":     "Corporate Law",
+    "director":           "Corporate Law", "shareholder":     "Corporate Law",
+    "mca":                "Corporate Law", "llp":             "Corporate Law",
+    "partnership":        "Corporate Law", "mou":             "Corporate Law",
+    "nda":                "Corporate Law", "due diligence":   "Corporate Law",
+    "sebi":               "Corporate Law", "roc":             "Corporate Law",
+    "ibc":                "Corporate Law", "insolvency":      "Corporate Law",
+    "bankruptcy":         "Corporate Law", "nclt":            "Corporate Law",
+    "liquidation":        "Corporate Law",
+    # Tax — expanded
+    "tax":                "Tax Law",       "gst":             "Tax Law",
+    "income tax":         "Tax Law",       "itr":             "Tax Law",
+    "tds":                "Tax Law",       "tax evasion":     "Tax Law",
+    "advance tax":        "Tax Law",       "tax audit":       "Tax Law",
+    "customs duty":       "Tax Law",       "benami":          "Tax Law",
     # Cyber Law
-    "cyber":         "Cyber Law",     "hacking":     "Cyber Law",
-    "online fraud":  "Cyber Law",     "data theft":  "Cyber Law",
-    "it act":        "Cyber Law",
-    # Labour
-    "labour":        "Labour Law",    "employment":  "Labour Law",
-    "fired":         "Labour Law",    "salary":      "Labour Law",
-    "termination":   "Labour Law",    "pf":          "Labour Law",
-    "esic":          "Labour Law",
-    # Consumer
-    "consumer":      "Consumer Law",  "defective":   "Consumer Law",
-    "refund":        "Consumer Law",  "cheating":    "Consumer Law",
-    # IPR
-    "ipr":           "Intellectual Property", "trademark": "Intellectual Property",
-    "patent":        "Intellectual Property", "copyright": "Intellectual Property",
-    # Medical
-    "medical":       "Medical Law",   "hospital":    "Medical Law",
-    "negligence":    "Medical Law",
-    # Banking
-    "banking":       "Banking Law",   "loan":        "Banking Law",
-    "npa":           "Banking Law",   "cheque bounce": "Banking Law",
+    "cyber":              "Cyber Law",     "hacking":         "Cyber Law",
+    "online fraud":       "Cyber Law",     "data theft":      "Cyber Law",
+    "it act":             "Cyber Law",     "ransomware":      "Cyber Law",
+    "phishing":           "Cyber Law",     "deepfake":        "Cyber Law",
+    "identity theft":     "Cyber Law",     "social media":    "Cyber Law",
+    # Labour — expanded
+    "labour":             "Labour Law",    "employment":      "Labour Law",
+    "fired":              "Labour Law",    "salary":          "Labour Law",
+    "termination":        "Labour Law",    "pf":              "Labour Law",
+    "esic":               "Labour Law",    "epf":             "Labour Law",
+    "gratuity":           "Labour Law",    "posh":            "Labour Law",
+    "maternity":          "Labour Law",    "retrenchment":    "Labour Law",
+    "layoff":             "Labour Law",    "provident fund":  "Labour Law",
+    "sexual harassment at work": "Labour Law",
+    # Consumer — expanded
+    "consumer":           "Consumer Law",  "defective":       "Consumer Law",
+    "refund":             "Consumer Law",  "cheating":        "Consumer Law",
+    "consumer forum":     "Consumer Law",  "consumer court":  "Consumer Law",
+    "service deficiency": "Consumer Law",  "warranty":        "Consumer Law",
+    # IPR — expanded
+    "ipr":                "Intellectual Property", "trademark":  "Intellectual Property",
+    "patent":             "Intellectual Property", "copyright":  "Intellectual Property",
+    "passing off":        "Intellectual Property", "licensing":  "Intellectual Property",
+    "royalty":            "Intellectual Property",
+    # Medical / Negligence
+    "medical":            "Medical Law",   "hospital":        "Medical Law",
+    "negligence":         "Medical Law",   "malpractice":     "Medical Law",
+    # Banking / Debt Recovery — expanded
+    "banking":            "Banking Law",   "loan":            "Banking Law",
+    "npa":                "Banking Law",   "cheque bounce":   "Banking Law",
+    "dishonour":          "Banking Law",   "section 138":     "Banking Law",
+    "ni act":             "Banking Law",   "negotiable":      "Banking Law",
+    "nbfc":               "Banking Law",   "fema":            "Banking Law",
+    "debt":               "Banking Law",   "drt":             "Banking Law",
+    "sarfaesi":           "Banking Law",   "recovery":        "Banking Law",
     # Immigration
-    "immigration":   "Immigration Law", "visa":      "Immigration Law",
-    "passport":      "Immigration Law",
-    # Civil
-    "civil":         "Civil Law",     "suit":        "Civil Law",
-    "injunction":    "Civil Law",     "damages":     "Civil Law",
+    "immigration":        "Immigration Law", "visa":          "Immigration Law",
+    "passport":           "Immigration Law", "oci":           "Immigration Law",
+    "nri":                "Immigration Law", "work permit":   "Immigration Law",
+    "citizenship":        "Immigration Law", "asylum":        "Immigration Law",
+    # Arbitration / ADR
+    "arbitration":        "Arbitration",   "mediation":       "Arbitration",
+    "adr":                "Arbitration",   "conciliation":    "Arbitration",
+    "commercial dispute": "Arbitration",
+    # Civil / Accidents
+    "civil":              "Civil Law",     "suit":            "Civil Law",
+    "injunction":         "Civil Law",     "damages":         "Civil Law",
+    "accident":           "Civil Law",     "motor accident":  "Civil Law",
+    "mact":               "Civil Law",     "road accident":   "Civil Law",
+    "insurance claim":    "Civil Law",
+    # Environmental
+    "environment":        "Environmental Law", "pollution":   "Environmental Law",
+    "ngt":                "Environmental Law", "forest":      "Environmental Law",
+    # Media & Entertainment
+    "defamation":         "Media Law",     "entertainment":   "Media Law",
+    "film":               "Media Law",     "publishing":      "Media Law",
+}
+
+# ── HINDI KEYWORD INTENT MAP ──────────────────────────────────────────────────
+# Lets the engine understand Hindi queries without full Devanagari NLP
+
+HINDI_SPECIALIZATION_MAP = {
+    "तलाक":      "Family Law",       # divorce
+    "बच्चे":     "Family Law",       # custody / children
+    "गुजारा":    "Family Law",       # maintenance
+    "दहेज":      "Family Law",       # dowry
+    "घरेलू":     "Family Law",       # domestic
+    "संपत्ति":   "Property Law",     # property
+    "ज़मीन":     "Property Law",     # land
+    "मकान":      "Property Law",     # house
+    "किराया":    "Property Law",     # rent
+    "क्राइम":    "Criminal Law",     # crime
+    "फ्रॉड":     "Criminal Law",     # fraud
+    "धोखा":      "Criminal Law",     # cheating
+    "गिरफ्तारी": "Criminal Law",     # arrest
+    "जमानत":     "Criminal Law",     # bail
+    "कंपनी":     "Corporate Law",    # company
+    "व्यापार":   "Corporate Law",    # business
+    "वेतन":      "Labour Law",       # salary
+    "नौकरी":     "Labour Law",       # job
+    "छंटनी":     "Labour Law",       # layoff
+    "साइबर":     "Cyber Law",        # cyber
+    "हैकिंग":    "Cyber Law",        # hacking
+    "टैक्स":     "Tax Law",          # tax
+    "जीएसटी":    "Tax Law",          # GST
+    "बीमा":      "Civil Law",        # insurance
+    "दुर्घटना":  "Civil Law",        # accident
+    "उपभोक्ता":  "Consumer Law",     # consumer
+    "पेटेंट":    "Intellectual Property",  # patent
+    "ट्रेडमार्क": "Intellectual Property", # trademark
+    "वीज़ा":     "Immigration Law",  # visa
+    "पासपोर्ट":  "Immigration Law",  # passport
+    "मध्यस्थता": "Arbitration",      # arbitration
 }
 
 LOCATION_MAP = {
@@ -185,12 +276,19 @@ def extract_intent(query: str) -> dict:
     """Extract structured intent from a free-text query."""
     q = query.lower()
 
-    # Specialization — longest-match first
+    # Specialization — longest-match first (English)
     spec = None
     for kw in sorted(SPECIALIZATION_MAP.keys(), key=len, reverse=True):
         if kw in q:
             spec = SPECIALIZATION_MAP[kw]
             break
+
+    # Hindi specialization fallback (if not already matched)
+    if not spec:
+        for kw, sp in HINDI_SPECIALIZATION_MAP.items():
+            if kw in query:  # use original query to preserve Devanagari
+                spec = sp
+                break
 
     # Location — longest-match first
     loc = None
@@ -339,14 +437,39 @@ def score_lawyer(lawyer: dict, intent: dict, session_id: str) -> tuple[int, list
             score += 3
             reasons.append("Consult Mode Match")
 
-    # 7. Verification (2 pts)
+    # 7. Court-type scoring (bonus pts)
+    if "high court" in q or "hc" in q:
+        lawyer_courts = lawyer.get("court") or []
+        if isinstance(lawyer_courts, str):
+            lawyer_courts = [lawyer_courts]
+        if any("high court" in c.lower() for c in lawyer_courts):
+            score += 8
+            reasons.append("High Court Advocate")
+
+    if "supreme court" in q or "sc" in q:
+        lawyer_courts = lawyer.get("court") or []
+        if isinstance(lawyer_courts, str):
+            lawyer_courts = [lawyer_courts]
+        if any("supreme" in c.lower() for c in lawyer_courts):
+            score += 10
+            reasons.append("Supreme Court Advocate")
+
+    # 8. Secondary specialization partial credit (15 pts)
+    secondary = lawyer.get("secondary_specializations") or lawyer.get("secondary_specialization") or []
+    if isinstance(secondary, str):
+        secondary = [secondary]
+    if spec and secondary and any(spec.lower() in s.lower() for s in secondary):
+        score += 15
+        reasons.append(f"Also Handles: {spec}")
+
+    # 9. Verification (2 pts)
     is_approved = lawyer.get("is_approved") or lawyer.get("status") == "approved"
     if is_approved:
         score += 2
         if "Verified" not in reasons:
             reasons.append("Verified")
 
-    # 8. Seeded jitter ±3 pts (no bias, just rotation)
+    # 10. Seeded jitter ±3 pts (no bias, just rotation)
     score += seeded_jitter(str(lawyer.get("_id", "")), session_id, 3)
 
     return max(0, min(score, 100)), reasons
@@ -405,16 +528,47 @@ def score_firm(firm: dict, intent: dict, session_id: str) -> tuple[int, list]:
             score += 20
             reasons.append(f"State: {state}")
 
-    # 3. Firm size — team size mentioned
-    q_lower = ""  # no direct query in firm scorer, use intent heuristics
+    # 3. Language support at firm (10 pts)
+    lang = intent.get("language")
+    if lang:
+        firm_langs = firm.get("languages") or []
+        if any(lang.lower() in lg.lower() for lg in firm_langs):
+            score += 10
+            reasons.append(f"Language: {lang}")
+
+    # 4. Firm size — team size mentioned
     lawyers_count = firm.get("total_lawyers") or 0
     try:
         lawyers_count = int(lawyers_count)
     except (ValueError, TypeError):
         lawyers_count = 0
     score += min(lawyers_count // 5, 10)   # Up to 10 pts for large teams
+    if lawyers_count >= 10:
+        reasons.append(f"Large Team ({lawyers_count} lawyers)")
 
-    # 4. Budget fit (5 pts)
+    # 4b. Urgency — large firms respond faster
+    if intent.get("urgent") and lawyers_count >= 10:
+        score += 5
+        reasons.append("Large Team — Fast Response")
+
+    # 4c. Breadth of practice areas
+    areas_list = firm.get("practice_areas") or []
+    if len(areas_list) >= 5:
+        score += 5
+        reasons.append("Full-Service Firm")
+
+    # 4d. Established firm bonus (from year_founded if stored)
+    year_founded = firm.get("year_founded")
+    if year_founded:
+        try:
+            age = 2025 - int(year_founded)
+            score += min(age // 5, 5)   # 1 pt per 5 years, max 5
+            if age >= 10:
+                reasons.append(f"Est. {year_founded}")
+        except (ValueError, TypeError):
+            pass
+
+    # 5. Budget fit (5 pts)
     budget = intent.get("budget")
     if budget is not None and budget > 0:
         fee_min = firm.get("min_fee") or firm.get("consultation_fee") or 0
@@ -425,12 +579,12 @@ def score_firm(firm: dict, intent: dict, session_id: str) -> tuple[int, list]:
         except (ValueError, TypeError):
             pass
 
-    # 5. Verification (2 pts)
+    # 6. Verification (2 pts)
     if firm.get("is_approved") or firm.get("status") == "approved":
         score += 2
         reasons.append("Verified")
 
-    # 6. Seeded jitter ±3 pts
+    # 7. Seeded jitter ±3 pts
     score += seeded_jitter(str(firm.get("_id", "")), session_id, 3)
 
     return max(0, min(score, 100)), reasons

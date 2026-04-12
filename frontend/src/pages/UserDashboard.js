@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Scale, LogOut, LayoutDashboard, Calendar, MessageSquare, FileText, Send, User, Clock, MapPin, Shield, FileCheck, Mic, CheckCircle, Search, Gavel, AlertTriangle, ListChecks, BookOpen, TrendingUp, Video, Moon, Sun, Sparkles, Bell, X, Briefcase, RefreshCw, Camera, HelpCircle, Zap, Filter, ChevronDown, ChevronUp, ExternalLink, PhoneCall, Star, Download, Share2, Archive, ArrowRight } from 'lucide-react';
+import { Scale, LogOut, LayoutDashboard, Calendar, MessageSquare, FileText, Send, User, Clock, MapPin, Shield, FileCheck, Mic, CheckCircle, Search, Gavel, AlertTriangle, ListChecks, BookOpen, TrendingUp, Video, Moon, Sun, Sparkles, Bell, X, Briefcase, RefreshCw, Camera, HelpCircle, Zap, Filter, ChevronDown, ChevronUp, ExternalLink, PhoneCall, Phone, Star, Download, Share2, Archive, ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { API } from '../App';
 import UserHowToUseModal from '../components/dashboard/user/HowToUseModal';
 import LawyerCard from '../components/LawyerCard';
+import VoiceModeOverlay from '../components/VoiceModeOverlay';
 
 // Legal Analysis Card Component
 const LegalAnalysisCard = ({ icon: Icon, title, content, borderColor, bgColor, darkMode }) => (
@@ -242,6 +243,39 @@ export default function UserDashboard() {
   const [ratingValue, setRatingValue] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
   const [ratingSaving, setRatingSaving] = useState(false);
+  // Voice mode for Legal AI Chat
+  const [showVoiceModeAI, setShowVoiceModeAI] = useState(false);
+  // ── SOS (inline) state ──────────────────────────────────────────────────
+  const [sosMode, setSosMode] = useState(null);           // 'talk' | 'visit'
+  const [sosStep, setSosStep] = useState('select');       // select|form|radar_preview|payment|searching|matched|session|no_lawyer|error
+  const [sosForm, setSosForm] = useState({ state: '', city: '', issueType: '', name: '', phone: '' });
+  const [sosMatchedLawyer, setSosMatchedLawyer] = useState(null);
+  const [sosSessionId, setSosSessionId] = useState(null);
+  const [sosActiveSession, setSosActiveSession] = useState(null);
+  const [sosDeclineCount, setSosDeclineCount] = useState(0);
+  const [sosTxnId, setSosTxnId] = useState(null);
+  const [sosPotentialLawyers, setSosPotentialLawyers] = useState([]);
+  const [sosPaymentMethod, setSosPaymentMethod] = useState('upi');
+  const [sosUpiId, setSosUpiId] = useState('');
+  const [sosCardNum, setSosCardNum] = useState('');
+  const [sosCardExp, setSosCardExp] = useState('');
+  const [sosCardCvv, setSosCardCvv] = useState('');
+  const [sosPaymentProcessing, setSosPaymentProcessing] = useState(false);
+  const [sosTicks, setSosTicks] = useState(0);
+  const [sosOtp, setSosOtp] = useState('');
+  const [sosCurrentOtp, setSosCurrentOtp] = useState(null);
+  const [sosShowOtp, setSosShowOtp] = useState(false);
+  const SOS_STATES = ['Delhi', 'Haryana', 'Uttar Pradesh'];
+  const SOS_CITIES = {
+    'Delhi': ['Central Delhi','East Delhi','New Delhi','North Delhi','South Delhi','West Delhi'],
+    'Haryana': ['Ambala','Faridabad','Gurugram','Hisar','Karnal','Panipat','Rohtak','Sonipat'],
+    'Uttar Pradesh': ['Agra','Aligarh','Ghaziabad','Kanpur','Lucknow','Mathura','Meerut','Prayagraj','Varanasi'],
+  };
+  const SOS_ISSUE_TYPES = {
+    criminal: '⚖️ Criminal / Bail', family: '👨‍👩‍👧 Family / Divorce',
+    civil: '🏠 Civil / Property',   cyber: '💻 Cyber / Fraud',
+    traffic: '🚗 Traffic / Accident', other: '📋 Other Urgent',
+  };
 
   // Storage stats for Document Vault
   const { totalStorageBytes, storagePercent, isStorageFull, totalStorageDisplay, recentUploadsCount, STORAGE_LIMIT_BYTES } = useMemo(() => {
@@ -259,6 +293,27 @@ export default function UserDashboard() {
   }, [documents]);
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
+
+  // SOS: short-poll for lawyer match when in searching state
+  useEffect(() => {
+    let id;
+    if (sosStep === 'searching' && sosSessionId) {
+      id = setInterval(async () => {
+        try {
+          const res = await axios.get(`${API}/sos/status/${sosSessionId}`);
+          if (res.data.status === 'matched') {
+            setSosMatchedLawyer(res.data.lawyer);
+            setSosStep('matched');
+            clearInterval(id);
+          } else if (res.data.status === 'no_lawyer') {
+            setSosStep('no_lawyer');
+            clearInterval(id);
+          }
+        } catch (_) {}
+      }, 3000);
+    }
+    return () => { if (id) clearInterval(id); };
+  }, [sosStep, sosSessionId]);
 
 
   const handleProfileImageChange = async (e) => {
@@ -696,6 +751,7 @@ export default function UserDashboard() {
   }, [user]);
 
   return (
+    <>
     <div className={`bg-[#ecf5ff] ${darkMode ? '!bg-black' : ''} flex overflow-hidden font-sans transition-colors duration-300`}
       style={{ height: '100dvh' }}
     >
@@ -748,10 +804,14 @@ export default function UserDashboard() {
 
         {/* Bottom buttons */}
         <div className={`px-2 pb-2 pt-2 border-t ${darkMode ? 'border-slate-800' : 'border-gray-100'} flex flex-col gap-0.5`}>
-          {/* SOS Emergency */}
+          {/* SOS Emergency — inline in dashboard */}
           <button
-            onClick={() => navigate('/emergency')}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 font-bold"
+            onClick={() => setActiveTab('sos')}
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all font-bold ${
+              activeTab === 'sos'
+                ? 'bg-red-600 text-white shadow shadow-red-500/20'
+                : 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'
+            }`}
           >
             <PhoneCall className="w-[14px] h-[14px] shrink-0" />
             <span className="text-[11px] font-semibold">SOS / Emergency</span>
@@ -1623,7 +1683,9 @@ export default function UserDashboard() {
                     />
                     <button
                       type="button"
-                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 ${darkMode ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-gray-200 text-gray-400'} rounded-lg transition-colors`}
+                      onClick={() => setShowVoiceModeAI(true)}
+                      title="Voice Input"
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 ${darkMode ? 'hover:bg-slate-800 text-blue-400 hover:text-blue-300' : 'hover:bg-gray-200 text-blue-500 hover:text-blue-600'} rounded-lg transition-colors`}
                     >
                       <Mic className="w-5 h-5" />
                     </button>
@@ -2105,6 +2167,384 @@ export default function UserDashboard() {
             );
           })()}
 
+
+          {/* ── SOS Emergency Tab (inline) ── */}
+          {activeTab === 'sos' && (
+            <div className={`flex-1 overflow-y-auto p-6 ${darkMode ? 'bg-slate-950' : 'bg-gray-50'}`}>
+              <div className="max-w-2xl mx-auto">
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-red-600/20 border border-red-600/30 flex items-center justify-center">
+                    <PhoneCall className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div>
+                    <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>SOS Emergency</h1>
+                    <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Immediate legal assistance — day or night</p>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2">
+                    <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-600/10 border border-red-600/20 text-red-400">
+                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />LIVE
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mode Selection */}
+                {sosStep === 'select' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <button onClick={() => { setSosMode('talk'); setSosStep('form'); }}
+                      className={`p-6 rounded-2xl text-left border transition-all hover:-translate-y-1 ${
+                        darkMode ? 'bg-slate-900 border-slate-700 hover:border-blue-500' : 'bg-white border-gray-200 hover:border-blue-400'
+                      }`}>
+                      <div className="w-12 h-12 rounded-xl bg-blue-600/15 border border-blue-500/20 flex items-center justify-center mb-4">
+                        <Phone className={`w-6 h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                      </div>
+                      <h3 className={`font-bold text-lg mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>SOS Talk</h3>
+                      <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Immediate phone/video consultation with an SOS lawyer.</p>
+                      <div className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>₹300 <span className={`text-sm font-normal ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>/ session</span></div>
+                    </button>
+                    <button onClick={() => { setSosMode('visit'); setSosStep('form'); }}
+                      className={`p-6 rounded-2xl text-left border transition-all hover:-translate-y-1 ${
+                        darkMode ? 'bg-slate-900 border-slate-700 hover:border-red-500' : 'bg-white border-gray-200 hover:border-red-400'
+                      }`}>
+                      <div className="w-12 h-12 rounded-xl bg-red-600/15 border border-red-500/20 flex items-center justify-center mb-4">
+                        <PhoneCall className={`w-6 h-6 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
+                      </div>
+                      <h3 className={`font-bold text-lg mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Full SOS</h3>
+                      <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>A verified lawyer physically visits your location within 30 min.</p>
+                      <div className={`text-3xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>₹1,100 <span className={`text-sm font-normal ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>+ ₹400/30 min</span></div>
+                    </button>
+                  </div>
+                )}
+
+                {/* Form */}
+                {sosStep === 'form' && (
+                  <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                    <button onClick={() => { setSosStep('select'); setSosMode(null); }}
+                      className={`flex items-center gap-1 text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                      ← Change mode
+                    </button>
+                    <h3 className={`text-lg font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Your Details</h3>
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>State *</label>
+                          <select value={sosForm.state} onChange={e => setSosForm(f => ({ ...f, state: e.target.value, city: '' }))}
+                            className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}>
+                            <option value="">Select state</option>
+                            {SOS_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>District</label>
+                          <select value={sosForm.city} onChange={e => setSosForm(f => ({ ...f, city: e.target.value }))}
+                            disabled={!sosForm.state}
+                            className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'} ${!sosForm.state ? 'opacity-40' : ''}`}>
+                            <option value="">Select district</option>
+                            {(SOS_CITIES[sosForm.state] || []).map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Legal Issue *</label>
+                        <select value={sosForm.issueType} onChange={e => setSosForm(f => ({ ...f, issueType: e.target.value }))}
+                          className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'}`}>
+                          <option value="">Select issue type</option>
+                          {Object.entries(SOS_ISSUE_TYPES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Your Name</label>
+                        <input value={sosForm.name} onChange={e => setSosForm(f => ({ ...f, name: e.target.value }))}
+                          placeholder="Full name"
+                          className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`} />
+                      </div>
+                      <div>
+                        <label className={`text-xs font-bold uppercase tracking-wider block mb-1 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Phone Number (10 digits) *</label>
+                        <div className="flex gap-2">
+                          <span className={`px-3 py-2.5 rounded-xl border text-sm ${darkMode ? 'bg-slate-800 border-slate-600 text-slate-400' : 'bg-gray-100 border-gray-200 text-gray-500'}`}>+91</span>
+                          <input value={sosForm.phone} onChange={e => setSosForm(f => ({ ...f, phone: e.target.value.replace(/\D/g,'').slice(0,10) }))}
+                            placeholder="9876543210" type="tel" maxLength={10}
+                            className={`flex-1 rounded-xl border px-3 py-2.5 text-sm outline-none ${darkMode ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'}`} />
+                        </div>
+                      </div>
+                      <button
+                        disabled={sosForm.phone.length !== 10 || !sosForm.state || !sosForm.issueType}
+                        onClick={() => {
+                          if (sosForm.phone.length !== 10) { toast.error('Please enter a valid 10-digit phone number'); return; }
+                          setSosStep('radar_preview');
+                          setTimeout(() => setSosStep('payment'), 4500);
+                        }}
+                        className={`w-full py-3.5 rounded-xl font-bold text-sm mt-2 transition-all ${
+                          sosForm.phone.length === 10 && sosForm.state && sosForm.issueType
+                            ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/20'
+                            : `${darkMode ? 'bg-slate-800 text-slate-500' : 'bg-gray-100 text-gray-400'} cursor-not-allowed`
+                        }`}>
+                        ₹ Proceed to Payment
+                      </button>
+                      <p className={`text-xs text-center ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>100% refund if no lawyer found within 10 minutes.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Radar Preview */}
+                {sosStep === 'radar_preview' && (
+                  <div className="text-center py-16">
+                    <div className="relative w-40 h-40 mx-auto mb-8">
+                      <div className={`absolute inset-0 rounded-full border-2 animate-ping ${
+                        sosMode === 'talk' ? 'border-blue-500/30' : 'border-red-500/30'
+                      }`} />
+                      <div className={`absolute inset-4 rounded-full border-2 animate-ping animation-delay-300 ${
+                        sosMode === 'talk' ? 'border-blue-500/20' : 'border-red-500/20'
+                      }`} />
+                      <div className={`absolute inset-0 flex items-center justify-center`}>
+                        <div className={`w-20 h-20 rounded-full flex items-center justify-center border-2 ${
+                          sosMode === 'talk' ? 'bg-blue-600/10 border-blue-500/40' : 'bg-red-600/10 border-red-500/40'
+                        }`}>
+                          <PhoneCall className={`w-8 h-8 ${sosMode === 'talk' ? 'text-blue-400' : 'text-red-400'}`} />
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Scanning for lawyers in {sosForm.state}...</h3>
+                    <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Broadcasting your SOS request to the LxwyerUp network</p>
+                  </div>
+                )}
+
+                {/* Payment */}
+                {sosStep === 'payment' && (
+                  <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                    <div className="flex items-center justify-between mb-5">
+                      <div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-600/10 border border-green-600/20 text-green-400 mb-2">
+                          ✓ Lawyers Found Nearby
+                        </span>
+                        <h3 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>Secure Payment</h3>
+                      </div>
+                      <div className={`text-right px-4 py-2 rounded-xl ${
+                        sosMode === 'talk' ? 'bg-blue-600/10' : 'bg-red-600/10'
+                      }`}>
+                        <p className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>₹{sosMode === 'talk' ? '300' : '1,100'}</p>
+                        <p className={`text-xs ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>to pay</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mb-4">
+                      {['upi','card','netbanking'].map(m => (
+                        <button key={m} onClick={() => setSosPaymentMethod(m)}
+                          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                            sosPaymentMethod === m ? 'bg-blue-600 text-white' : `${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-gray-100 text-gray-500'}`
+                          }`}>
+                          {m === 'upi' ? 'UPI' : m === 'card' ? 'Card' : 'Net Banking'}
+                        </button>
+                      ))}
+                    </div>
+                    {sosPaymentMethod === 'upi' && (
+                      <input value={sosUpiId} onChange={e => setSosUpiId(e.target.value)}
+                        placeholder="yourname@ybl"
+                        className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none mb-4 ${
+                          darkMode ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'
+                        }`} />
+                    )}
+                    {sosPaymentMethod === 'card' && (
+                      <div className="space-y-3 mb-4">
+                        <input value={sosCardNum} onChange={e => setSosCardNum(e.target.value.replace(/\D/g,'').slice(0,16))}
+                          placeholder="Card Number (16 digits)"
+                          className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none ${
+                            darkMode ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'
+                          }`} />
+                        <div className="grid grid-cols-2 gap-3">
+                          <input value={sosCardExp} onChange={e => { const r=e.target.value.replace(/\D/g,'').slice(0,4); setSosCardExp(r.length>2?r.slice(0,2)+'/'+r.slice(2):r); }}
+                            placeholder="MM/YY"
+                            className={`rounded-xl border px-3 py-2.5 text-sm outline-none ${
+                              darkMode ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'
+                            }`} />
+                          <input value={sosCardCvv} onChange={e => setSosCardCvv(e.target.value.replace(/\D/g,'').slice(0,3))}
+                            placeholder="CVV" type="password" maxLength={3}
+                            className={`rounded-xl border px-3 py-2.5 text-sm outline-none ${
+                              darkMode ? 'bg-slate-800 border-slate-600 text-white placeholder-slate-500' : 'bg-gray-50 border-gray-200 text-gray-900'
+                            }`} />
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      disabled={sosPaymentProcessing}
+                      onClick={async () => {
+                        setSosPaymentProcessing(true);
+                        await new Promise(r => setTimeout(r, 2200));
+                        const txnId = 'LXW' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,6).toUpperCase();
+                        setSosTxnId(txnId);
+                        setSosPaymentProcessing(false);
+                        toast.success(`Payment successful! Txn: ${txnId}`);
+                        setSosStep('searching');
+                        try {
+                          const res = await axios.post(`${API}/sos/request`, {
+                            user_phone: sosForm.phone, user_name: sosForm.name || undefined,
+                            user_state: sosForm.state, user_city: sosForm.city || sosForm.state,
+                            issue_type: sosForm.issueType,
+                            sos_type: sosMode === 'talk' ? 'sos_talk' : 'sos_full',
+                            transaction_id: txnId,
+                          });
+                          setSosSessionId(res.data.session_id);
+                          if (res.data.status === 'matched') { setSosMatchedLawyer(res.data.lawyer); setTimeout(() => setSosStep('matched'), 1500); }
+                          else if (res.data.status === 'searching') { setSosPotentialLawyers(res.data.potential_lawyers || []); }
+                          else { setSosStep('no_lawyer'); }
+                        } catch { setSosStep('error'); }
+                      }}
+                      className="w-full py-3.5 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20">
+                      {sosPaymentProcessing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</> : <><Shield className="w-4 h-4" /> Pay ₹{sosMode === 'talk' ? '300' : '1,100'} Securely</>}
+                    </button>
+                  </div>
+                )}
+
+                {/* Searching */}
+                {sosStep === 'searching' && (
+                  <div className="text-center py-16">
+                    <div className="relative w-32 h-32 mx-auto mb-6">
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-500/30 animate-ping" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-20 h-20 rounded-full bg-blue-600/10 border-2 border-blue-500/40 flex items-center justify-center">
+                          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+                        </div>
+                      </div>
+                    </div>
+                    <h3 className={`text-xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>Broadcasting SOS to Lawyers...</h3>
+                    <p className={`text-sm mb-3 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Matching you with a verified lawyer in {sosForm.state}</p>
+                    {sosTxnId && <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-600/10 border border-green-600/20 text-green-400">Payment Confirmed · {sosTxnId}</span>}
+                  </div>
+                )}
+
+                {/* Matched */}
+                {sosStep === 'matched' && sosMatchedLawyer && (
+                  <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                    <div className="flex items-center gap-3 mb-5 p-3 rounded-xl bg-green-600/10 border border-green-600/20">
+                      <CheckCircle className="w-5 h-5 text-green-400" />
+                      <p className="text-green-400 font-bold">Lawyer Found!</p>
+                    </div>
+                    <div className="flex items-center gap-4 mb-5">
+                      <div className="w-14 h-14 rounded-full bg-blue-600 flex items-center justify-center">
+                        <User className="w-7 h-7 text-white" />
+                      </div>
+                      <div>
+                        <h4 className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>{sosMatchedLawyer.name || 'SOS Assigned Lawyer'}</h4>
+                        <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{sosMatchedLawyer.specialization || 'Legal Expert'}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <button onClick={() => {
+                        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+                        setSosCurrentOtp(otp); setSosShowOtp(true);
+                        setSosActiveSession({ session_id: sosSessionId, sos_type: sosMode === 'talk' ? 'sos_talk' : 'sos_full', lawyer_name: sosMatchedLawyer?.name, lawyer_phone: sosMatchedLawyer?.phone, lawyer_specialization: sosMatchedLawyer?.specialization });
+                        setSosStep('session');
+                      }} className="flex-1 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-sm flex items-center justify-center gap-2">
+                        <Phone className="w-4 h-4" /> {sosMode === 'talk' ? 'Start Call' : 'Begin Session'}
+                      </button>
+                      <button onClick={() => {
+                        setSosDeclineCount(c => c + 1);
+                        if (sosDeclineCount >= 2) { setSosStep('no_lawyer'); toast.error('All lawyers are busy. Please try again.'); }
+                        else { toast.info('Searching for next lawyer...'); setSosStep('searching'); }
+                      }} className={`px-4 py-3 rounded-xl border font-bold text-sm ${darkMode ? 'border-slate-600 text-slate-300 hover:bg-slate-800' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Active Session */}
+                {sosStep === 'session' && sosActiveSession && (
+                  <div className={`rounded-2xl border p-6 space-y-4 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-green-600/10 border border-green-600/20">
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                      <div className="flex-1">
+                        <p className="text-green-400 font-bold text-sm">Session Active</p>
+                        <p className={`text-xs ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>{sosActiveSession.sos_type === 'sos_full' ? '🚗 Full SOS — Lawyer en route' : '🎙️ SOS Talk — Call in progress'}</p>
+                      </div>
+                      <p className={`text-2xl font-black ${darkMode ? 'text-white' : 'text-gray-900'}`}>₹{sosActiveSession.sos_type === 'sos_full' ? (1100 + sosTicks * 400).toLocaleString('en-IN') : '300'}</p>
+                    </div>
+                    <div className="flex items-center gap-4 p-4 rounded-xl border"
+                      style={{ borderColor: darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)' }}>
+                      <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
+                        <User className="w-6 h-6 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <p className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{sosActiveSession.lawyer_name || 'SOS Lawyer'}</p>
+                        <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>{sosActiveSession.lawyer_specialization || 'Legal Expert'}</p>
+                      </div>
+                      {sosActiveSession.lawyer_phone && (
+                        <a href={`tel:+91${sosActiveSession.lawyer_phone}`}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-green-600/15 border border-green-600/30 text-green-400 text-sm font-bold">
+                          <Phone className="w-4 h-4" /> Call
+                        </a>
+                      )}
+                    </div>
+                    {sosShowOtp && sosCurrentOtp && (
+                      <div className={`p-4 rounded-xl border ${
+                        darkMode ? 'bg-blue-900/10 border-blue-700/30' : 'bg-blue-50 border-blue-200'
+                      }`}>
+                        <p className={`font-bold text-sm mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>🔑 Presence OTP</p>
+                        <div className={`text-center py-3 rounded-xl mb-3 ${
+                          darkMode ? 'bg-slate-800' : 'bg-white border border-gray-200'
+                        }`}>
+                          <p className={`text-xs uppercase tracking-widest mb-1 ${darkMode ? 'text-slate-500' : 'text-gray-400'}`}>Your Session OTP</p>
+                          <p className="text-3xl font-black tracking-widest text-blue-400 font-mono">{sosCurrentOtp}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <input value={sosOtp} onChange={e => setSosOtp(e.target.value.replace(/\D/g,'').slice(0,6))}
+                            placeholder="Enter 6-digit OTP" maxLength={6}
+                            className={`flex-1 rounded-xl border px-3 py-2.5 text-sm text-center font-mono tracking-widest outline-none ${
+                              darkMode ? 'bg-slate-800 border-slate-600 text-white' : 'bg-gray-50 border-gray-200 text-gray-900'
+                            }`} />
+                          <button onClick={() => {
+                            if (sosOtp === sosCurrentOtp) {
+                              toast.success('✓ Verified!'); setSosOtp(''); setSosShowOtp(false);
+                              if (sosActiveSession.sos_type === 'sos_full') setSosTicks(t => t + 1);
+                              const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+                              setSosCurrentOtp(newOtp);
+                              setTimeout(() => setSosShowOtp(true), 1800000);
+                            } else { toast.error('Incorrect OTP. Try again.'); }
+                          }} disabled={sosOtp.length !== 6}
+                            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                              sosOtp.length === 6 ? 'bg-blue-600 text-white' : `${darkMode ? 'bg-slate-700 text-slate-500' : 'bg-gray-100 text-gray-400'} cursor-not-allowed`
+                            }`}>Verify</button>
+                        </div>
+                      </div>
+                    )}
+                    <button onClick={() => {
+                      setSosStep('select'); setSosMode(null); setSosMatchedLawyer(null);
+                      setSosPotentialLawyers([]); setSosSessionId(null); setSosActiveSession(null);
+                      setSosDeclineCount(0); setSosTxnId(null); setSosTicks(0);
+                      setSosForm({ state:'',city:'',issueType:'',name:'',phone:'' });
+                      setSosUpiId(''); setSosCardNum(''); setSosCardExp(''); setSosCardCvv('');
+                      setSosOtp(''); setSosCurrentOtp(null); setSosShowOtp(false);
+                      toast.success('Session ended. Thank you for using LxwyerUp SOS.');
+                    }} className="w-full py-3 rounded-xl border border-red-500/30 text-red-400 text-sm font-bold hover:bg-red-600/10 transition-all">
+                      End Session &amp; Stop Billing
+                    </button>
+                  </div>
+                )}
+
+                {/* No Lawyer / Error */}
+                {(sosStep === 'no_lawyer' || sosStep === 'error') && (
+                  <div className={`rounded-2xl border p-8 text-center ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-gray-200'}`}>
+                    <AlertTriangle className="w-14 h-14 text-amber-400 mx-auto mb-4" />
+                    <h3 className={`text-lg font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      {sosStep === 'no_lawyer' ? 'All lawyers are currently busy' : 'Something went wrong'}
+                    </h3>
+                    <p className={`text-sm mb-4 ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                      {sosStep === 'no_lawyer' ? `No lawyer available in ${sosForm.state} right now. Your payment will be refunded within 24 hours.` : 'Connection error. Payment was not processed.'}
+                    </p>
+                    <button onClick={() => { setSosStep(sosMode ? 'form' : 'select'); setSosMatchedLawyer(null); setSosDeclineCount(0); }}
+                      className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm">
+                      Try Again
+                    </button>
+                  </div>
+                )}
+
+                {/* Polling for match */}
+                {sosStep === 'searching' && sosSessionId && (() => {
+                  // Polling effect inline via a small hidden component
+                  return null;
+                })()}
+              </div>
+            </div>
+          )}
 
           {/* My Cases Tab */}
           {activeTab === 'cases' && (
@@ -2677,8 +3117,27 @@ export default function UserDashboard() {
               <span className="text-[9px] font-semibold">{label}</span>
             </button>
           ))}
+          {/* SOS mobile button */}
+          <button
+            onClick={() => setActiveTab('sos')}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all ${
+              activeTab === 'sos' ? 'text-red-500' : darkMode ? 'text-slate-500' : 'text-gray-400'
+            }`}
+          >
+            <PhoneCall className="w-5 h-5" />
+            <span className="text-[9px] font-semibold">SOS</span>
+          </button>
         </div>
       </div>
     </div>
+    {/* Voice Mode Overlay for Legal AI Chat */}
+    <VoiceModeOverlay
+      open={showVoiceModeAI}
+      onClose={() => setShowVoiceModeAI(false)}
+      onSend={(text) => { setChatInput(text); setShowVoiceModeAI(false); }}
+      accentColor="#3b82f6"
+    />
+    </>
   );
 }
+

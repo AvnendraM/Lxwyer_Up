@@ -248,7 +248,7 @@ export default function RegisterSelectPage() {
                         transition={{ delay: 0.9, duration: 0.5 }}
                         className="mt-12 flex items-center gap-6"
                     >
-                        {[t('reg_verified'), t('reg_review')].map((txt, i) => (
+                        {[t('reg_verified'), t('reg_review'), t('reg_secure'), t('reg_network')].map((txt, i) => (
                             <div key={i} className="flex items-center gap-1.5">
                                 <span className="w-1 h-1 rounded-full bg-blue-400" />
                                 <span className="text-[10px] text-white/25 font-medium tracking-wide">{txt}</span>
