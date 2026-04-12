@@ -22,6 +22,7 @@ import LawyerProfile from './LawyerProfile'
 import FirmProfile from './FirmProfile'
 
 import GenerativeBubble from '../components/GenerativeBubble'
+import { buildKnowledgeBase, lookupByName } from '../utils/lawyerKnowledgeBase'
 
 /* ========== CARD DEFINITIONS ========== */
 const CARD_DEFS = [
@@ -136,9 +137,47 @@ export default function QuickChat({ embedded = false, darkMode: darkModeProp }) 
   const [showGuidelines, setShowGuidelines] = useState(false)
   const [chatHistory, setChatHistory] = useState(() => loadHistory())
   const [currentSessionId, setCurrentSessionId] = useState(() => Date.now().toString())
+  const [knowledgeBase, setKnowledgeBase] = useState(null)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const chatContainerRef = useRef(null)
+
+  // Fetch true DB lawyers/firms to power name-search natively
+  useEffect(() => {
+    const fetchLiveDB = async () => {
+      try {
+        const [lRes, fRes] = await Promise.all([
+          axios.get(`${API}/monitor/lawyers-full`),
+          axios.get(`${API}/monitor/law-firms-full`)
+        ]);
+        let formattedLawyers = [];
+        let formattedFirms = [];
+        try {
+          formattedLawyers = lRes.data.map(l => ({
+            ...l,
+            id: l._id || l.id,
+            name: l.full_name || l.name,
+            unique_id: l.unique_id,
+          }));
+        } catch(e) {}
+        try {
+          formattedFirms = fRes.data.map(f => ({
+            ...f,
+            id: f._id || f.id,
+            name: f.firm_name || f.name,
+            unique_id: f.unique_id,
+            isFirm: true
+          }));
+        } catch(e) {}
+        const merged = [...formattedLawyers, ...dummyLawyers, ...formattedFirms, ...dummyLawFirms.map(f => ({...f, isFirm: true}))];
+        setKnowledgeBase(buildKnowledgeBase(merged));
+      } catch (err) {
+        console.error('KB Load Error', err)
+        setKnowledgeBase(buildKnowledgeBase([...dummyLawyers, ...dummyLawFirms.map(f => ({...f, isFirm: true}))]));
+      }
+    };
+    fetchLiveDB();
+  }, [])
 
   // Persist current session whenever messages change
   useEffect(() => {
@@ -191,6 +230,34 @@ export default function QuickChat({ embedded = false, darkMode: darkModeProp }) 
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setIsTyping(true)
+
+    // STEP 0: Name lookup via exact match
+    if (knowledgeBase) {
+      const nameCheck = lookupByName(knowledgeBase, query);
+      if (nameCheck.found && nameCheck.results.length > 0) {
+        const item = nameCheck.results[0];
+        const isFirm = item.isFirm;
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          id: Date.now() + 1,
+          is_recommendation: true,
+          rec_type: isFirm ? 'firm' : 'lawyer',
+          rec_items: nameCheck.results.slice(0, 5),
+          rec_query: query,
+          city: '', spec: '',
+          intentLabel: 'Profile Match',
+          sentiment: 0,
+          cards: [],
+          sources: [],
+        }]);
+        setIsTyping(false);
+        return;
+      } else if (nameCheck.extractedName) {
+        setMessages(prev => [...prev, { role: 'assistant', id: Date.now() + 1, is_greeting: true, greeting_text: `I'm sorry, but I couldn't find any lawyer or law firm named "**${nameCheck.extractedName.replace(/\b\w/g, c => c.toUpperCase())}**" in our current verified database.\n\nHowever, I can still help you find the right advocate. What kind of legal issue do you need help with?`, intentLabel: 'Not Found', sentiment: 0, cards: [], sources: [] }]);
+        setIsTyping(false);
+        return;
+      }
+    }
 
     // --- Check for recommendation intent first ---
     const recIntent = detectRecommendationIntent(query)
