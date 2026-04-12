@@ -369,7 +369,7 @@ const FinalCTA = ({ fadeInUp }) => {
             {d.bookFreeSub}
           </p>
           <Button
-            onClick={() => window.location.href = '/register'}
+            onClick={() => window.location.href = '/user-get-started'}
             className="bg-white text-slate-900 hover:bg-slate-100 text-lg px-10 py-6 rounded-full font-semibold shadow-lg hover:scale-105 transition-all duration-300 relative z-10"
           >
             {d.bookFreeBtn}

@@ -403,7 +403,7 @@ const FinalCTA = ({ fadeInUp }) => {
             Get best affordable consultation and let our experts guide you through your legal options
           </p>
           <Button
-            onClick={() => window.location.href = '/role-selection'}
+            onClick={() => window.location.href = '/user-get-started'}
             className="bg-white text-[#0F2944] hover:bg-blue-50 text-lg px-10 py-6 rounded-full font-semibold shadow-lg hover:scale-105 transition-all duration-300"
           >
             Get Best Affordable Consultation
