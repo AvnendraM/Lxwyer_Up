@@ -945,7 +945,14 @@ export default function AdminDashboard() {
               )}
               <div>
                 <p className={`text-${config.color}-400 text-sm font-medium mb-1`}>{config.title}</p>
-                <h2 className="text-2xl font-bold text-white">{app.full_name || app.name || app.firm_name}</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-2xl font-bold text-white">{app.full_name || app.name || app.firm_name}</h2>
+                  {app.unique_id && (
+                    <span className="text-xs font-mono bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20">
+                      ID: {app.unique_id}
+                    </span>
+                  )}
+                </div>
                 <p className="text-slate-400">{app.specialization || app.case_type || app.practice_areas?.join(', ') || 'Registered Client'}</p>
               </div>
             </div>

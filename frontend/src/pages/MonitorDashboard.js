@@ -400,6 +400,7 @@ export default function MonitorDashboard() {
             {loading.users ? <div style={{ color:'rgba(0,255,180,0.3)', fontSize:11 }}>LOADING...</div> : (
               <Table items={d.users} search={search} searchKeys={['full_name','email','phone']}
                 cols={[
+                  { label:'ID', render:r=>r.unique_id||'—' },
                   { label:'NAME', key:'full_name' },{ label:'EMAIL', key:'email' },{ label:'PHONE', key:'phone' },
                   { label:'JOINED', render:r=>fmtDate(r.created_at) },
                   { label:'BOOKINGS', render:r=>r.bookings?.length||0 },
@@ -419,6 +420,7 @@ export default function MonitorDashboard() {
             {loading.lawyers ? <div style={{ color:'rgba(0,255,180,0.3)', fontSize:11 }}>LOADING...</div> : (
               <Table items={d.lawyers} search={search} searchKeys={['full_name','email','specialization','state','bar_council_number']}
                 cols={[
+                  { label:'ID', render:r=>r.unique_id||'—' },
                   { label:'NAME', key:'full_name' },{ label:'EMAIL', key:'email' },
                   { label:'SPECIALIZATION', key:'specialization' },{ label:'STATE', key:'state' },
                   { label:'BAR COUNCIL', key:'bar_council_number' },{ label:'RATING', key:'rating' },

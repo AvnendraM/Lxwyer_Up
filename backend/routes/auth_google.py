@@ -3,6 +3,7 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 from services.database import db
 from services.auth import create_token
+from services.id_generator import generate_unique_id
 from models.user import User, TokenResponse
 from datetime import datetime, timezone
 import os
@@ -60,6 +61,7 @@ async def google_login(token: str = Body(..., embed=True), user_type: str = Body
                 "full_name": name,
                 "picture": picture,
                 "user_type": user_type,
+                "unique_id": await generate_unique_id(user_type),
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "is_active": True,
                 "auth_provider": "google"

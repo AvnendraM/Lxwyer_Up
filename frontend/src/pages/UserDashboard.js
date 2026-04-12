@@ -840,8 +840,13 @@ export default function UserDashboard() {
         {/* Top Header Bar */}
         <div className={`px-6 py-4 flex items-center justify-between ${darkMode ? 'bg-slate-900/30 border-slate-700/50' : 'bg-white/30 border-white/40'} backdrop-blur-md border-b sticky top-0 z-50 transition-colors`}>
           <div>
-            <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            <h1 className={`text-2xl font-bold flex items-center gap-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
               Hi, {(user?.full_name || user?.name || 'User').split(' ')[0]} 👋
+              {user?.unique_id && (
+                <span className="text-xs font-mono bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-md border border-blue-500/20">
+                  ID: {user.unique_id}
+                </span>
+              )}
             </h1>
             <p className="text-sm text-gray-500 font-medium">Your weekly legal update</p>
           </div>

@@ -1286,9 +1286,7 @@ export default function LawyerDashboard() {
                       Here's what's happening with your practice today.
                     </p>
                     {user?.unique_id && (
-                      <div
-                        className={`text-xs font-mono mt-1 ${darkMode ? "text-gray-500" : "text-slate-400"}`}
-                      >
+                      <div className="mt-2 text-xs font-mono bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-md border border-blue-500/20 inline-block">
                         ID: {user.unique_id}
                       </div>
                     )}
