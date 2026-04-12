@@ -395,7 +395,7 @@ export default function LawyerProfileModal({ user: initialUser, onClose, onLogou
                                             )}
                                             <div className="flex-1 min-w-0 flex flex-col justify-center">
                                                 <div className="flex items-start justify-between gap-2 mb-0.5">
-                                                    <p className={`font-bold text-sm leading-tight ${dm ? 'text-white' : 'text-slate-800'}`}>
+                                                    <p className={`font-bold text-sm leading-tight break-words ${dm ? 'text-white' : 'text-slate-800'}`}>
                                                         {ach.title}
                                                     </p>
                                                     {ach.pinned && (

@@ -205,9 +205,9 @@ export default function LawyerProfile({ lawyerId, onCloseModal }) {
                           <Award className="w-8 h-8 text-yellow-500" />
                         </div>
                       )}
-                      <div>
-                        <p className="font-bold text-lg text-slate-900 dark:text-white mb-1">{ach.title}</p>
-                        {ach.date && <p className="text-sm text-yellow-700 dark:text-slate-400 flex items-center gap-1.5"><Calendar className="w-4 h-4"/> {ach.date}</p>}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-lg text-slate-900 dark:text-white mb-1 break-words">{ach.title}</p>
+                        {ach.date && <p className="text-sm text-yellow-700 dark:text-slate-400 flex items-center gap-1.5"><Calendar className="w-4 h-4 shrink-0"/> {ach.date}</p>}
                       </div>
                     </div>
                   ))}
