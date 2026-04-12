@@ -128,6 +128,13 @@ export default function SignatureLawyerProfile() {
         { title: 'Successfully settled multi-million scale corporate/civil matters.', date: '2021' }
       ];
 
+  const achievementImages = [
+    "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?auto=format&fit=crop&q=80&w=400",
+    "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&q=80&w=400",
+    "https://images.unsplash.com/photo-1505664124967-17b2b73bc3fa?auto=format&fit=crop&q=80&w=400",
+    "https://images.unsplash.com/photo-1618060932014-4deda4932554?auto=format&fit=crop&q=80&w=400"
+  ];
+
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden relative selection:bg-[#d4af37] selection:text-black pb-24">
       <GoldenStars />
@@ -155,7 +162,7 @@ export default function SignatureLawyerProfile() {
           </span>
 
           {/* Left / Middle: Photo and Identity */}
-          <div className="flex-1 p-8 sm:p-14 flex flex-col sm:flex-row gap-12 relative z-10">
+          <div className="flex-1 p-8 sm:p-14 flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-8 sm:gap-12 relative z-10">
             {/* Massive Profile Shot */}
             <div className="w-56 h-56 sm:w-64 sm:h-64 shrink-0 rounded-2xl border border-[#d4af37]/40 overflow-hidden bg-[#111] shadow-[0_0_50px_rgba(0,0,0,1)] relative group">
               {getLawyerPhoto(lawyer.image || lawyer.photo, displayName) ? (
@@ -186,7 +193,7 @@ export default function SignatureLawyerProfile() {
                 {lawyer.lawFirm}
               </h2>
               
-              <div className="flex flex-wrap gap-2 mb-6 max-w-xl">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-6 max-w-xl">
                 {allTags.map((tag, i) => (
                   <span key={i} className="text-xs uppercase tracking-wider font-semibold text-white/70 bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg">
                     {tag}
@@ -194,7 +201,7 @@ export default function SignatureLawyerProfile() {
                 ))}
               </div>
 
-              <div className="flex flex-wrap items-center gap-6 text-sm">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-6 text-sm">
                 <span className="flex items-center gap-2 text-[#d4af37] font-bold bg-[#d4af37]/10 px-4 py-2 rounded-xl border border-[#d4af37]/30 uppercase tracking-widest text-[10px]">
                   <Shield className="w-4 h-4" /> Signature Member
                 </span>
@@ -288,12 +295,15 @@ export default function SignatureLawyerProfile() {
                 
                 <div className="space-y-4 relative z-10">
                   {finalAchievements.map((ach, i) => (
-                    <div key={i} className="bg-white/[0.02] hover:bg-[#d4af37]/[0.05] transition-all duration-500 rounded-2xl p-5 border border-white/[0.05] hover:border-[#d4af37]/30 flex items-center gap-6 group">
-                      <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 bg-[#d4af37]/5 border border-[#d4af37]/20 text-[#d4af37] font-black text-2xl group-hover:bg-[#d4af37] group-hover:text-black transition-colors shadow-[0_0_15px_rgba(212,175,55,0.1)] group-hover:shadow-[0_0_20px_rgba(212,175,55,0.4)]">
-                        {i + 1}
+                    <div key={i} className="bg-white/[0.02] hover:bg-[#d4af37]/[0.05] transition-all duration-500 rounded-2xl p-4 sm:p-5 border border-white/[0.05] hover:border-[#d4af37]/30 flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 group">
+                      <div className="w-full sm:w-32 sm:h-28 h-48 shrink-0 rounded-xl overflow-hidden border border-[#d4af37]/20 relative shadow-2xl">
+                        <img src={achievementImages[i % achievementImages.length]} alt="Achievement Detail" className="w-full h-full object-cover grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-700 group-hover:scale-110" />
+                        <div className="absolute top-0 right-0 bg-black/80 backdrop-blur-md px-3 py-1.5 text-[#d4af37] font-black text-xs rounded-bl-xl border-b border-l border-[#d4af37]/30">
+                          0{i + 1}
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-lg text-white mb-1.5 break-words group-hover:text-[#d4af37] transition-colors">{ach.title}</p>
+                      <div className="flex-1 min-w-0 text-center sm:text-left flex flex-col justify-center h-full pt-2 sm:pt-3">
+                        <p className="font-bold text-lg sm:text-xl text-white mb-2 break-words group-hover:text-[#d4af37] transition-colors">{ach.title}</p>
                         <p className="text-xs uppercase font-extrabold tracking-[0.25em] text-white/40 group-hover:text-[#d4af37]/80 transition-colors">{ach.date || 'Landmark Phase'}</p>
                       </div>
                     </div>
