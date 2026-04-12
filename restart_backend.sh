@@ -27,30 +27,15 @@ else
 fi
 
 echo ""
-echo "Starting backend server..."
-# Start in background using nohup or just run it if user wants to see output?
-# The user wants "restart", usually implies running it.
-# I will run it in background and tail the logs, roughly resembling a restart.
-# But since this is a one-shot agent, `run_command` with background might be better.
-# However, for a shell script, I'll use nohup.
+echo "Starting backend server in a new Terminal window..."
+# Use osascript to run it cleanly in a new macOS Terminal tab to avoid nohup/stdin uvicorn crashes
+osascript <<EOF
+tell application "Terminal"
+    do script "cd \"$(pwd)\" && source backend/venv/bin/activate && python3 -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000"
+    activate
+end tell
+EOF
 
-nohup python3 -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000 > backend/main.log 2>&1 &
-NEW_PID=$!
-
-echo "Backend started with PID $NEW_PID"
-echo "Logs are being written to backend/server.log"
-echo "Waiting 5 seconds to ensure startup..."
-sleep 5
-
-# Check if it's still running
-if ps -p $NEW_PID > /dev/null; then
-   echo "✅ Backend is RUNNING."
-   echo "Tail of server.log:"
-   tail -n 10 backend/server.log
-else
-   echo "❌ Backend FAILED to start."
-   cat backend/server.log
-   exit 1
-fi
-
+echo "✅ Backend terminal launched successfully."
+echo "Your API and the automated Background Scheduler (which checks missed appointments) are now running in the newly opened Terminal window!"
 echo "========================================"
