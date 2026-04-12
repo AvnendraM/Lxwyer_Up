@@ -5,6 +5,7 @@ import {
   Scale, Briefcase, MapPin, ArrowLeft, Phone, Globe,
   CheckCircle, Award, Shield, Check, Clock, Mail, BookOpen
 } from 'lucide-react';
+import GoldenStars from '../components/GoldenStars';
 import { dummyLawyers } from '../data/lawyersData';
 import axios from 'axios';
 import { getLawyerPhoto, getInitials } from '../utils/lawyerPhoto';
@@ -13,7 +14,7 @@ const API = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
 
 const SignatureNavbar = ({ navigate }) => {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050505] border-b border-[#d4af37]/20 shadow-xl">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-[#d4af37]/20 shadow-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <button onClick={() => navigate('/')} className="flex items-center space-x-2">
@@ -95,7 +96,7 @@ export default function SignatureLawyerProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#050505]">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="w-12 h-12 rounded-full border-4 border-[#d4af37]/20 border-t-[#d4af37] animate-spin" />
       </div>
     );
@@ -103,7 +104,8 @@ export default function SignatureLawyerProfile() {
 
   if (!lawyer) {
     return (
-      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center relative">
+        <GoldenStars />
         <SignatureNavbar navigate={navigate} />
         <Scale className="w-16 h-16 text-[#d4af37]/30 mb-6" />
         <h1 className="text-2xl font-bold text-white tracking-widest uppercase">Dossier Unavailable</h1>
@@ -119,7 +121,8 @@ export default function SignatureLawyerProfile() {
   const allTags = [lawyer.specialization, ...(lawyer.secondarySpecializations || [])].filter(Boolean);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white overflow-hidden relative selection:bg-[#d4af37] selection:text-black pb-24">
+    <div className="min-h-screen bg-black text-white overflow-hidden relative selection:bg-[#d4af37] selection:text-black pb-24">
+      <GoldenStars />
       <SignatureNavbar navigate={navigate} />
       
       {/* Ambient background glow */}

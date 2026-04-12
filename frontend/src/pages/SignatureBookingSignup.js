@@ -6,6 +6,7 @@ import {
   CheckCircle, ArrowLeft, ArrowRight, Loader2, MapPin, Briefcase,
   Shield, Eye, EyeOff, Sparkles
 } from 'lucide-react';
+import GoldenStars from '../components/GoldenStars';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { toast } from 'sonner';
@@ -14,7 +15,7 @@ import { API } from '../App';
 
 const SignatureNavbar = ({ navigate }) => {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#050505] border-b border-[#d4af37]/20 shadow-xl">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-[#d4af37]/20 shadow-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <button onClick={() => navigate('/')} className="flex items-center space-x-2">
@@ -202,7 +203,8 @@ const SignatureBookingSignup = () => {
   const consultationFee = parseInt(lawyer.feeMin || lawyer.charge_30min || 15000);
 
   return (
-    <div className="min-h-screen bg-[#020202] text-white selection:bg-[#d4af37] selection:text-black">
+    <div className="min-h-screen bg-black text-white selection:bg-[#d4af37] selection:text-black">
+      <GoldenStars />
       <SignatureNavbar navigate={navigate} />
 
       {/* Ambient background shimmer */}
