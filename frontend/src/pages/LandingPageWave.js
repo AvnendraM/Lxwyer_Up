@@ -446,7 +446,7 @@ const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
 
     // On mobile (≤768px) use 100vh so it doesn't waste 2 full screens
     return (
-        <section ref={ref} className="relative bg-[#f8faff] dark:bg-black transition-colors duration-500 min-h-screen flex items-center justify-center pt-20 pb-56" style={{ overflow: 'visible' }}>
+        <section ref={ref} className="relative bg-[#f8faff] dark:bg-black transition-colors duration-500 min-h-screen flex items-center justify-center pt-20 pb-56 overflow-hidden">
             <div style={{ zIndex: 20, pointerEvents: 'none', overflow: 'visible', width: '100%' }}>
                 {/* Hero tubelight effect removed as requested */}
                 <motion.div 
@@ -515,7 +515,7 @@ const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
                                     }}
                                 >
                                     <div
-                                        className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap px-4 py-2 rounded-full border border-blue-500/30 bg-[#020510] text-blue-400 font-bold text-[9px] tracking-widest uppercase shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+                                        className="absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap px-2.5 py-1 rounded-full border border-blue-500/30 bg-[#020510] text-blue-400 font-bold text-[6px] tracking-widest uppercase shadow-[0_0_10px_rgba(59,130,246,0.12)]"
                                     >
                                         {t(item.label)}
                                     </div>

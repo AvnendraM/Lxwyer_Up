@@ -305,80 +305,155 @@ function FeatureCard({ feature, index }) {
   );
 }
 
-export default function FeaturesPage() {
+function BentoFeaturePage() {
   const navigate = useNavigate();
   const { lang } = useLang();
   const d = TEXT[lang] || TEXT.en;
   const featuresList = lang === 'hi' ? FEATURES_HI : FEATURES;
 
-  return (
-    <div className="min-h-screen bg-black text-white transition-colors duration-300">
+  // SOS, APEX, AI = first 3; rest = 4–10
+  const [sos, apex, ai, booking, caseTrack, docs, clients, notifs, analytics, allDay] = featuresList;
 
-      {/* ── NAVBAR ─────────────────────────────────────────────────── */}
+  return (
+    <div className="min-h-screen bg-black text-white">
       <NavbarWave />
 
-      {/* ── HERO ───────────────────────────────────────────────────── */}
-      <section className="pt-28 pb-10 px-6 text-center">
-        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3 leading-tight text-slate-900 dark:text-white">
+      {/* Hero */}
+      <section className="pt-28 pb-8 px-6 text-center">
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3 leading-tight text-white">
           {d.heroTitle1}
         </h1>
+        <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto">{d.cap_desc}</p>
       </section>
 
-      {/* Thin divider */}
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="h-px bg-gradient-to-r from-transparent via-slate-200 dark:via-slate-700 to-transparent" />
-      </div>
-
-
-      {/* ── PLATFORM CAPABILITIES ─────────────────────────────── */}
-      <section className="max-w-7xl mx-auto px-6 pt-10 pb-24">
-        {/* Platform capabilities title */}
-        <div className="text-center mb-10">
-          <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.18em]">{d.cap_sub}</span>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-24">
+        <div className="text-center mb-8">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-[0.18em]">{d.cap_sub}</span>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
-          {featuresList.map((f, i) => (
-            <FeatureCard key={i} feature={f} index={i} />
-          ))}
-        </div>
-      </section>
+        {/* ── BENTO GRID ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-6 gap-4">
 
-      <section className="max-w-4xl mx-auto px-6 pb-28 text-center">
-        <div className="relative overflow-hidden rounded-3xl border border-blue-900/40 bg-gradient-to-br from-[#03060f] via-[#060d1e] to-[#030609] p-12">
-          {/* Ambient glow */}
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-80 h-40 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute inset-0 bg-gradient-to-b from-blue-500/3 to-transparent pointer-events-none rounded-3xl" />
-          {/* Decorative scales icon */}
-          <div className="w-14 h-14 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-6">
-            <Scale className="w-7 h-7 text-blue-400" />
-          </div>
-          <div className="relative">
-            <h2 className="text-3xl sm:text-4xl font-extrabold mb-4 text-white">
-              {d.cta_title}
-            </h2>
-            <p className="text-slate-400 text-lg mb-8 max-w-xl mx-auto">
-              {d.cta_sub}
-            </p>
-            <div className="flex items-center justify-center gap-4 flex-wrap">
-              <button
-                onClick={() => navigate('/user-get-started')}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl flex items-center gap-2 transition-all hover:gap-3 text-sm shadow-lg shadow-blue-600/20"
-              >
-                {d.cta_consult} <ArrowRight size={16} />
+          {/* ROW 1 — SOS (large), APEX (medium), AI (medium) */}
+
+          {/* SOS — Large, red hero card */}
+          <div className="sm:col-span-6 lg:col-span-2 relative overflow-hidden rounded-2xl border border-red-500/25 bg-gradient-to-br from-red-950/60 via-[#0a0005] to-black p-6 flex flex-col justify-between min-h-[220px] group hover:border-red-500/50 transition-all duration-300">
+            <div className="absolute inset-0 bg-red-600/5 rounded-2xl pointer-events-none" />
+            <div className="absolute -top-12 -right-12 w-40 h-40 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center">
+                  <sos.icon className="w-5 h-5 text-red-400" />
+                </div>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 uppercase tracking-widest animate-pulse">{sos.badge || 'Live'}</span>
+              </div>
+              <h2 className="text-xl font-bold text-white mb-2">{sos.title}</h2>
+              <p className="text-slate-400 text-[0.8rem] leading-relaxed">{sos.description}</p>
+            </div>
+            <div className="relative z-10 mt-4">
+              <button onClick={() => navigate('/sos')} className="text-[11px] font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors">
+                Access SOS <ArrowRight size={11} />
               </button>
-              <button
-                onClick={() => navigate('/contact')}
-                className="border border-slate-700 hover:border-blue-500/50 text-slate-400 hover:text-white font-semibold px-8 py-3.5 rounded-xl text-sm transition-all"
-              >
+            </div>
+          </div>
+
+          {/* APEX — pearl/teal card */}
+          <div className="sm:col-span-3 lg:col-span-2 relative overflow-hidden rounded-2xl border border-teal-500/20 bg-gradient-to-br from-teal-950/40 via-[#020e0c] to-black p-6 flex flex-col justify-between min-h-[220px] group hover:border-teal-400/40 transition-all duration-300">
+            <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-teal-500/08 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center">
+                <apex.icon className="w-5 h-5 text-teal-300" />
+              </div>
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 uppercase tracking-widest">{apex.badge || 'APEX'}</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white mb-2">{apex.title}</h2>
+              <p className="text-slate-400 text-[0.78rem] leading-relaxed line-clamp-4">{apex.description}</p>
+            </div>
+          </div>
+
+          {/* AI Chatbot */}
+          <div className="sm:col-span-3 lg:col-span-2 relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-950/30 via-[#03050f] to-black p-6 flex flex-col justify-between min-h-[220px] group hover:border-blue-400/40 transition-all duration-300">
+            <div className="absolute -top-8 -right-8 w-32 h-32 bg-blue-500/08 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center">
+                <ai.icon className="w-5 h-5 text-blue-400" />
+              </div>
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-400 uppercase tracking-widest">Gemini AI</span>
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white mb-2">{ai.title}</h2>
+              <p className="text-slate-400 text-[0.78rem] leading-relaxed">{ai.description}</p>
+            </div>
+            <div className="mt-3 flex gap-2">
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">24/7</span>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/15">Instant</span>
+            </div>
+          </div>
+
+          {/* ROW 2 — Booking + Case Tracking */}
+          {[booking, caseTrack].map((f, i) => (
+            <div key={i} className="sm:col-span-3 relative overflow-hidden rounded-2xl border border-slate-700/40 bg-[#07090f] p-6 flex flex-col min-h-[170px] group hover:border-blue-500/30 hover:bg-[#080b14] transition-all duration-300">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                  <f.icon className="w-4.5 h-4.5 text-blue-400" style={{ width: '1.1rem', height: '1.1rem' }} />
+                </div>
+                <h2 className="text-sm font-bold text-white">{f.title}</h2>
+              </div>
+              <p className="text-slate-500 text-[0.75rem] leading-relaxed">{f.description}</p>
+            </div>
+          ))}
+
+          {/* ROW 3 — Docs, Clients, Notifications (3 equal) */}
+          {[docs, clients, notifs].map((f, i) => (
+            <div key={i} className="sm:col-span-2 relative overflow-hidden rounded-2xl border border-slate-700/40 bg-[#07090f] p-5 flex flex-col min-h-[160px] group hover:border-blue-500/25 hover:bg-[#080b14] transition-all duration-300">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-3">
+                <f.icon className="text-blue-400" style={{ width: '0.95rem', height: '0.95rem' }} />
+              </div>
+              <h2 className="text-sm font-bold text-white mb-1">{f.title}</h2>
+              <p className="text-slate-500 text-[0.72rem] leading-relaxed">{f.description}</p>
+            </div>
+          ))}
+
+          {/* ROW 4 — Analytics + 24/7 */}
+          {[analytics, allDay].map((f, i) => (
+            <div key={i} className="sm:col-span-3 relative overflow-hidden rounded-2xl border border-slate-700/40 bg-[#07090f] p-6 flex flex-col min-h-[160px] group hover:border-blue-500/30 hover:bg-[#080b14] transition-all duration-300">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                  <f.icon className="text-blue-400" style={{ width: '1.1rem', height: '1.1rem' }} />
+                </div>
+                <h2 className="text-sm font-bold text-white">{f.title}</h2>
+              </div>
+              <p className="text-slate-500 text-[0.75rem] leading-relaxed">{f.description}</p>
+            </div>
+          ))}
+
+        </div>
+
+        {/* CTA */}
+        <section className="mt-16 text-center">
+          <div className="relative overflow-hidden rounded-3xl border border-blue-900/40 bg-gradient-to-br from-[#03060f] via-[#060d1e] to-[#030609] p-10 sm:p-12">
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-64 h-32 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-500/20 flex items-center justify-center mx-auto mb-5">
+              <Scale className="w-6 h-6 text-blue-400" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold mb-3 text-white">{d.cta_title}</h2>
+            <p className="text-slate-400 text-base mb-7 max-w-lg mx-auto">{d.cta_sub}</p>
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <button onClick={() => navigate('/user-get-started')} className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-7 py-3 rounded-xl flex items-center gap-2 transition-all text-sm shadow-lg shadow-blue-600/20">
+                {d.cta_consult} <ArrowRight size={15} />
+              </button>
+              <button onClick={() => navigate('/contact')} className="border border-slate-700 hover:border-blue-500/50 text-slate-400 hover:text-white font-semibold px-7 py-3 rounded-xl text-sm transition-all">
                 {d.cta_contact}
               </button>
             </div>
           </div>
-        </div>
-      </section>
-
-
+        </section>
+      </div>
     </div>
   );
+}
+
+export default function FeaturesPage() {
+  return <BentoFeaturePage />;
 }

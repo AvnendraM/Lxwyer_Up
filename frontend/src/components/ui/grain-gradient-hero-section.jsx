@@ -15,7 +15,7 @@ export default function GrainHeroSection({
   const professionalPreset = {
     ...grainGradientPresets[0],
     colors: ["#000000", "#1e3a8a", "#0f172a", "#3b82f6", "#ffffff"],
-    speed: 0.325,  // +30% faster than before (was 0.25)
+    speed: 0.455,  // +40% from 0.325
   };
 
   return (
