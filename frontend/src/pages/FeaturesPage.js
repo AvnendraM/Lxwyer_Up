@@ -280,7 +280,7 @@ function FeatureCard({ feature, index }) {
             animationDelay: `${index * 0.07}s`,
         }}
       >
-          <CardHeader className="pb-4 pt-8 px-8 text-center relative z-10">
+          <CardHeader className="pb-3 pt-6 px-4 sm:pt-8 sm:px-8 text-center relative z-10">
               {feature.badge && (
                   <div className="absolute -top-1 -right-2 transform scale-75">
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${feature.color === 'red' ? 'text-red-600 border-red-500/30 bg-red-500/10' : feature.color === 'green' ? 'text-emerald-600 border-emerald-500/30 bg-emerald-500/10' : 'text-blue-600 border-blue-500/30 bg-blue-500/10'} animate-pulse`}>
@@ -292,11 +292,11 @@ function FeatureCard({ feature, index }) {
                   <feature.icon className="size-7" aria-hidden />
               </CardDecorator>
 
-              <h3 className="mt-5 text-[1.35rem] font-bold text-slate-900 dark:text-white transition-colors">{feature.title}</h3>
+              <h3 className="mt-3 text-[0.95rem] sm:text-[1.35rem] font-bold text-slate-900 dark:text-white transition-colors">{feature.title}</h3>
           </CardHeader>
 
-          <CardContent className="text-center relative z-10 px-8 pb-8">
-              <p className="text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">{feature.description}</p>
+          <CardContent className="text-center relative z-10 px-4 pb-5 sm:px-8 sm:pb-8">
+              <p className="text-[0.78rem] sm:text-[0.95rem] text-slate-500 dark:text-slate-400 leading-relaxed">{feature.description}</p>
           </CardContent>
           
           {/* Subtle background glow on hover */}
@@ -337,7 +337,7 @@ export default function FeaturesPage() {
           <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-[0.18em]">{d.cap_sub}</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
           {featuresList.map((f, i) => (
             <FeatureCard key={i} feature={f} index={i} />
           ))}
