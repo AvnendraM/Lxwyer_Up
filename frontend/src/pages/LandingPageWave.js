@@ -445,7 +445,10 @@ const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
         <section ref={ref} className="relative bg-[#f8faff] dark:bg-black transition-colors duration-500 overflow-hidden min-h-screen flex items-center justify-center pt-20 pb-40">
             <div style={{ zIndex: 20, pointerEvents: 'none', overflow: 'visible', width: '100%' }}>
                 {/* Hero tubelight effect removed as requested */}
-                <motion.div className="relative flex flex-col items-center gap-6 w-full">
+                <motion.div 
+                    className="relative flex flex-col items-center gap-6 w-full scale-100 md:scale-[1.6] md:mt-20"
+                    style={{ transformOrigin: 'center center' }}
+                >
                     <motion.div
                         initial={justTransitioned ? { opacity: 0, scale: 0.8, filter: 'blur(10px)' } : false}
                         animate={justTransitioned ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : false}
