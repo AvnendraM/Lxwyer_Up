@@ -1008,7 +1008,7 @@ export default function LawyerDashboard() {
         >
           {/* Logo */}
           <div className="px-4 py-3 flex items-center gap-2.5 mb-1">
-            <img src="/logo.png" alt="Lxwyer Up Logo" className="w-8 h-8 md:w-10 md:h-10 object-contain rounded-md" style={{ mixBlendMode: "screen" }} />
+            <img src="/logo.png" alt="Lxwyer Up Logo" className="w-8 h-8 xl:w-9 xl:h-9 object-contain rounded-md" style={{ mixBlendMode: "screen" }} />
             <span className={`font-bold text-xs tracking-tight ${darkMode ? 'text-white' : 'text-slate-800'}`}>Lxwyer Up</span>
           </div>
 

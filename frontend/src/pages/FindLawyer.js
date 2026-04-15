@@ -46,7 +46,7 @@ export default function FindLawyer() {
               onClick={() => navigate('/')}
               className="flex items-center space-x-3 text-white hover:text-blue-500 transition-colors"
             >
-              <img src="/logo.png" alt="Lxwyer Up Logo" className="w-8 h-8 md:w-10 md:h-10 object-contain rounded-md" style={{ mixBlendMode: "screen" }} />
+              <img src="/logo.png" alt="Lxwyer Up Logo" className="w-8 h-8 xl:w-9 xl:h-9 object-contain rounded-md" style={{ mixBlendMode: "screen" }} />
               <span className="text-xl font-semibold">Lxwyer Up</span>
             </button>
             

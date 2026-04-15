@@ -384,7 +384,7 @@ export default function RevolutionisingSoon() {
             <img
               src="/logo.png"
               alt="Lxwyer Up Logo"
-              style={{ width: 32, height: 32, objectFit: 'contain', mixBlendMode: 'screen' }}
+              className="w-8 h-8 xl:w-9 xl:h-9 object-contain rounded-md" style={{ mixBlendMode: 'screen' }}
             />
             <span style={{
               fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em',
