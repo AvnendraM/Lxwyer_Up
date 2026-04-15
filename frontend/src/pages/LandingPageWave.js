@@ -1800,7 +1800,7 @@ const AnimatedCounter = ({ target, suffix = '' }) => {
 
     return (
         <span ref={ref}>
-            {isInView ? <CountUp end={endValue} duration={2.5} separator="," /> : '0'}
+            {isInView ? <CountUp end={endValue} duration={6} separator="," /> : '0'}
             {suffix}
         </span>
     );
