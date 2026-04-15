@@ -319,11 +319,6 @@ export default function FeaturesPage() {
 
       {/* ── HERO ───────────────────────────────────────────────────── */}
       <section className="pt-28 pb-10 px-6 text-center">
-        {/* Formal badge */}
-        <div className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-full px-4 py-1.5 mb-5">
-          {d.heroBadge}
-        </div>
-
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-3 leading-tight text-slate-900 dark:text-white">
           {d.heroTitle1}
         </h1>
