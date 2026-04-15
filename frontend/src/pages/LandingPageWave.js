@@ -2292,8 +2292,8 @@ const LandingPageWave = () => {
                 <NavbarWave />
                 <ScalesOfJusticeIntro justTransitioned={justTransitioned} />
 
-                {/* Wrap in negative margin to eliminate the blank space without overlapping the marquee */}
-                <div style={{ marginTop: '-25vh', position: 'relative', zIndex: 10 }}>
+                {/* Wrap in negative margin on desktop only to eliminate blank space without overlapping on mobile where section is 100vh */}
+                <div className="relative z-10 md:-mt-[25vh]">
                     <TwoScenePushBridge
                         sceneA={grainHeroContent}
                         sceneB={beamsContent}
