@@ -183,7 +183,7 @@ export const NavbarWave = () => {
             }`}>
             {/* Full-width container with responsive padding */}
             <div className="w-full mx-auto px-4 md:px-6 xl:px-12">
-                <div className="relative flex items-center justify-between h-14 xl:h-24">
+                <div className="relative flex items-center justify-between h-14 xl:h-16">
 
                     {/* ── Logo ──────────────────────────────────────────── */}
                     <div className="flex shrink-0">
@@ -194,10 +194,10 @@ export const NavbarWave = () => {
                             <img
                                 src="/logo.png"
                                 alt="Lxwyer Up Logo"
-                                className="w-8 h-8 xl:w-14 xl:h-14 object-contain rounded"
+                                className="w-8 h-8 xl:w-9 xl:h-9 object-contain rounded"
                                 style={{ mixBlendMode: 'screen' }}
                             />
-                            <span className="text-base md:text-lg xl:text-[28px] font-bold tracking-tight text-slate-900 dark:text-white font-['Outfit'] select-none">
+                            <span className="text-base md:text-lg xl:text-[20px] font-bold tracking-tight text-slate-900 dark:text-white font-['Outfit'] select-none">
                                 Lxwyer Up
                             </span>
                         </button>
@@ -209,7 +209,7 @@ export const NavbarWave = () => {
                             <button
                                 key={l.label}
                                 onClick={() => handleNavigation(l.path)}
-                                className="text-[12px] xl:text-[20px] font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors duration-200 whitespace-nowrap tracking-wide"
+                                className="text-[12px] xl:text-[14px] font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors duration-200 whitespace-nowrap tracking-wide"
                             >
                                 {l.label}
                             </button>
@@ -223,7 +223,7 @@ export const NavbarWave = () => {
                         <button
                             onClick={toggleLang}
                             title={lang === 'en' ? 'Switch to Hindi' : 'Switch to English'}
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 xl:px-4 xl:py-2.5 rounded-full text-[11px] xl:text-[20px] font-bold transition-all duration-200 border whitespace-nowrap select-none"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 xl:px-3 xl:py-1.5 rounded-full text-[11px] xl:text-[12px] font-bold transition-all duration-200 border whitespace-nowrap select-none"
                             style={{
                                 background: lang === 'hi' ? 'linear-gradient(135deg,#f97316,#ea580c)' : 'transparent',
                                 color: lang === 'hi' ? '#fff' : '#64748b',
@@ -236,7 +236,7 @@ export const NavbarWave = () => {
                         {/* Login */}
                         <button
                             onClick={() => navigate('/login')}
-                            className="px-2 py-1.5 xl:px-4 xl:py-2.5 text-[11px] xl:text-[22px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors duration-200 whitespace-nowrap"
+                            className="px-2 py-1.5 xl:px-3 xl:py-2 text-[11px] xl:text-[13px] font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors duration-200 whitespace-nowrap"
                         >
                             {t('nav_login')}
                         </button>
@@ -244,7 +244,7 @@ export const NavbarWave = () => {
                         {/* Join as Expert */}
                         <button
                             onClick={() => navigate('/register')}
-                            className="inline-flex items-center px-2.5 xl:px-6 py-1.5 xl:py-3 rounded-full text-[11px] xl:text-[22px] font-semibold transition-all duration-200 border whitespace-nowrap text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-200"
+                            className="inline-flex items-center px-2.5 xl:px-4 py-1.5 xl:py-2 rounded-full text-[11px] xl:text-[13px] font-semibold transition-all duration-200 border whitespace-nowrap text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-200"
                         >
                             <span className="hidden xl:inline">{t('nav_join_expert')}</span>
                             <span className="xl:hidden">{t('nav_join')}</span>
@@ -258,9 +258,9 @@ export const NavbarWave = () => {
                           <div className="lxwyer-spin" />
                           <button
                             onClick={() => navigate('/lxwyerai')}
-                            className="lxwyer-inner px-2.5 xl:px-7 py-[6px] xl:py-[12px] text-[11px] xl:text-[22px] font-bold whitespace-nowrap"
+                            className="lxwyer-inner px-2.5 xl:px-4 py-[6px] xl:py-[8px] text-[11px] xl:text-[13px] font-bold whitespace-nowrap"
                           >
-                            <Sparkles className="w-3 h-3 xl:w-6 xl:h-6 text-white/60" />
+                            <Sparkles className="w-3 h-3 xl:w-4 xl:h-4 text-white/60" />
                             <span className="lxwyer-text text-white font-black tracking-[0.05em]">Lxwyer<span className="text-blue-400">AI</span></span>
                           </button>
                         </div>
@@ -268,14 +268,14 @@ export const NavbarWave = () => {
                         {/* Find Lawyer */}
                         <button
                             onClick={() => navigate('/user-get-started')}
-                            className="inline-flex items-center gap-1 px-2.5 xl:px-7 py-[6px] xl:py-[12px] rounded-full text-[11px] xl:text-[22px] font-bold
+                            className="inline-flex items-center gap-1 px-2.5 xl:px-4 py-[6px] xl:py-[8px] rounded-full text-[11px] xl:text-[13px] font-bold
                                        text-white bg-blue-600 hover:bg-blue-700
                                        shadow-md shadow-blue-500/20 hover:shadow-blue-500/40
                                        transition-all duration-200 whitespace-nowrap"
                         >
                             <span className="hidden xl:inline">{t('nav_find_lawyer')}</span>
                             <span className="xl:hidden">{t('nav_match')}</span>
-                            <ArrowRight className="w-3 h-3 xl:w-6 xl:h-6 moving-arrow" />
+                            <ArrowRight className="w-3 h-3 xl:w-4 xl:h-4 moving-arrow" />
                         </button>
 
 
