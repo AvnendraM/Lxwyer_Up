@@ -2040,6 +2040,16 @@ const StackedSection = ({ children, zIndex, bg = "" }) => (
    ───────────────────────────────────────────── */
 const TwoScenePushBridge = ({ sceneA, sceneB }) => {
     const ref = useRef(null);
+    const [isMobile, setIsMobile] = useState(
+        typeof window !== 'undefined' ? window.innerWidth <= 768 : false
+    );
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const { scrollYProgress } = useScroll({
         target: ref,
         offset: ['start start', 'end start'],
@@ -2056,6 +2066,15 @@ const TwoScenePushBridge = ({ sceneA, sceneB }) => {
     const bY = useTransform(scrollYProgress, [0.40, 0.85], ['100%', '0%']);
     const bShadow = useTransform(scrollYProgress, [0.40, 0.85],
         ['0 0px 0px rgba(0,0,0,0)', '0 -40px 100px rgba(0,0,0,0.85)']);
+
+    if (isMobile) {
+        return (
+            <div className="flex flex-col w-full bg-black relative z-10">
+                <div className="relative w-full h-auto">{sceneA}</div>
+                <div className="relative w-full h-auto">{sceneB}</div>
+            </div>
+        );
+    }
 
     return (
         // 200vh: first 100vh is the dwell on Scene A, next 100vh is the transition
