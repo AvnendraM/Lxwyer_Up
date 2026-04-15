@@ -634,7 +634,7 @@ const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
                 {/* Modern Feature Marquee Pinned to Bottom powered by InfiniteSlider */}
                 <div style={{
                     position: 'absolute',
-                    bottom: '40px',
+                    bottom: '120px',
                     left: 0,
                     right: 0,
                     margin: '0 auto',
