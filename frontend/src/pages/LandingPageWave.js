@@ -385,16 +385,6 @@ const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
     const { lang } = useLang();
     const isHi = lang === 'hi';
     const t = (text) => isHi ? (TRANSLATIONS[text] || text) : text;
-    const { scrollYProgress } = useScroll({
-        target: ref,
-        offset: ['start start', 'end start'],
-    });
-
-    const scaleVal = useTransform(scrollYProgress, [0, 0.5], [1.6, 0.16]);
-    const opacityVal = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
-    const yVal = useTransform(scrollYProgress, [0, 0.5], [0, -100]);
-    const blurVal = useTransform(scrollYProgress, [0, 0.4], [0, 8]); // Reduced max blur from 20 to 8
-    const filterVal = useTransform(blurVal, (v) => `blur(${v}px)`);
 
     // ── Hide floating labels after 20 s ───────────────────────────────
     const [labelsVisible, setLabelsVisible] = useState(true);
@@ -422,15 +412,9 @@ const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
                     className="relative flex flex-col items-center gap-6 w-full scale-[1.6] md:scale-[1.6] md:mt-20"
                     style={{
                         transformOrigin: 'center center',
-                        // On mobile: never override the CSS scale class — let scale-[1.8] apply
-                        // On desktop: apply scroll-driven scale/opacity/y transition
-                        ...(isMobile ? {} : { scale: scaleVal, opacity: opacityVal, y: yVal, filter: filterVal }),
                     }}
                 >
                     <motion.div
-                        initial={justTransitioned ? { opacity: 0, scale: 0.8, filter: 'blur(10px)' } : false}
-                        animate={justTransitioned ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : false}
-                        transition={{ duration: 1.8, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
                         className="relative flex flex-col items-center justify-center w-full"
                     >
                         {/* Radiating rays toward center */}

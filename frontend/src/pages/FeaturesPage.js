@@ -327,6 +327,24 @@ if (typeof document !== 'undefined' && !document.getElementById('bento-css')) {
   const s = document.createElement('style'); s.id = 'bento-css'; s.textContent = BENTO_CSS; document.head.appendChild(s);
 }
 
+function ExpandableText({ text, maxLength = 100 }) {
+  const [expanded, setExpanded] = React.useState(false);
+  if (!text) return null;
+  if (text.length <= maxLength) return <span>{text}</span>;
+  
+  return (
+    <span>
+      {expanded ? text : text.slice(0, maxLength) + '… '}
+      <span 
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setExpanded(!expanded); }} 
+        style={{ color: '#60a5fa', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+      >
+        {expanded ? 'Show less' : 'Read more'}
+      </span>
+    </span>
+  );
+}
+
 function BentoFeaturePage() {
   const navigate = useNavigate();
   const { lang } = useLang();
@@ -372,7 +390,9 @@ function BentoFeaturePage() {
               </div>
               <div>
                 <h2 style={{ fontSize: 20, fontWeight: 800, color: '#fff', margin: '0 0 8px 0' }}>{sos.title}</h2>
-                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0, paddingRight: 40 }}>{sos.description.slice(0, 100)}…</p>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0, paddingRight: 40 }}>
+                  <ExpandableText text={sos.description} maxLength={100} />
+                </p>
                 <button onClick={() => navigate('/sos')} style={{ marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, background: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', width: 'fit-content' }}>
                   Access SOS <ArrowRight style={{ width: 11, height: 11 }} />
                 </button>
@@ -403,7 +423,9 @@ function BentoFeaturePage() {
               </div>
               <div>
                 <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: '0 0 6px 0' }}>{apex.title}</h2>
-                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0, paddingRight: 20 }}>{apex.description.slice(0, 100)}…</p>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0, paddingRight: 20 }}>
+                  <ExpandableText text={apex.description} maxLength={100} />
+                </p>
               </div>
             </div>
           </div>
@@ -428,7 +450,9 @@ function BentoFeaturePage() {
                   <MessageSquare style={{ width: 16, height: 16, color: '#60a5fa' }} />
                 </div>
                 <h2 style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: '0 0 6px 0' }}>{ai.title}</h2>
-                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>{ai.description}</p>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                  <ExpandableText text={ai.description} maxLength={100} />
+                </p>
               </div>
             </div>
           </div>
@@ -467,7 +491,9 @@ function BentoFeaturePage() {
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>{icon}</div>
                 <div>
                   <h2 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 6px 0' }}>{f.title}</h2>
-                  <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0, paddingRight: 40 }}>{f.description.slice(0, 80)}…</p>
+                  <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0, paddingRight: 40 }}>
+                    <ExpandableText text={f.description} maxLength={80} />
+                  </p>
                 </div>
               </div>
             </div>
@@ -484,7 +510,9 @@ function BentoFeaturePage() {
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>{icon}</div>
                 <div>
                   <h2 style={{ fontSize: 14, fontWeight: 800, color: '#fff', margin: '0 0 4px 0' }}>{f.title}</h2>
-                  <p style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.55, margin: 0 }}>{f.description.slice(0, 75)}…</p>
+                  <p style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.55, margin: 0 }}>
+                    <ExpandableText text={f.description} maxLength={75} />
+                  </p>
                 </div>
               </div>
             </div>
@@ -504,7 +532,9 @@ function BentoFeaturePage() {
               </div>
               <div>
                 <h2 style={{ fontSize: 16, fontWeight: 800, color: '#fff', margin: '0 0 6px 0' }}>{analytics.title}</h2>
-                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0, paddingRight: 40 }}>{analytics.description.slice(0, 80)}…</p>
+                <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.6, margin: 0, paddingRight: 40 }}>
+                  <ExpandableText text={analytics.description} maxLength={80} />
+                </p>
               </div>
             </div>
           </div>
@@ -523,7 +553,9 @@ function BentoFeaturePage() {
               <div>
                 <p style={{ fontSize: 32, fontWeight: 900, color: '#fff', margin: '0 0 2px 0', letterSpacing: '-0.02em' }}>99.9%</p>
                 <h2 style={{ fontSize: 15, fontWeight: 800, color: '#fff', margin: '0 0 4px 0' }}>{allDay.title}</h2>
-                <p style={{ fontSize: 11.5, color: '#6b7280', lineHeight: 1.55, margin: 0 }}>{allDay.description}</p>
+                <p style={{ fontSize: 11.5, color: '#6b7280', lineHeight: 1.55, margin: 0 }}>
+                  <ExpandableText text={allDay.description} maxLength={100} />
+                </p>
               </div>
             </div>
           </div>
