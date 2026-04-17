@@ -201,6 +201,19 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
             const all = dummyLawyers;
             results = city ? all.filter(l => (l.city || '').toLowerCase().includes(city)) : all;
           }
+
+          if (results.length > 0) {
+            const shuffled = [...results].sort(() => Math.random() - 0.5);
+            const signatureList = shuffled.filter(l => l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature');
+            const normalList = shuffled.filter(l => !(l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature'));
+            
+            const topSig = signatureList.slice(0, 3);
+            const remainingSlots = Math.max(0, results.length - topSig.length);
+            const fillers = normalList.slice(0, remainingSlots);
+            
+            results = [...topSig, ...fillers];
+          }
+
           setMessages(prev => [...prev, {
             role: 'assistant',
             id: Date.now() + 1,
@@ -570,7 +583,7 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
                                 ? `Great news! I found ${msg.rec_items.length} lawyer${msg.rec_items.length > 1 ? 's' : ''}` + (msg.city ? ` in ${msg.city.charAt(0).toUpperCase() + msg.city.slice(1)}` : '') + ` who match your needs. Here are the best options for you:`
                                 : `I found ${msg.rec_items.length} law firm${msg.rec_items.length > 1 ? 's' : ''}` + (msg.city ? ` in ${msg.city.charAt(0).toUpperCase() + msg.city.slice(1)}` : '') + ` that could be a great fit:`
                               : msg.rec_type === 'lawyer'
-                                ? `I wasn't able to find lawyers matching that exact criteria. Try a different city or specialization and I'll search again!`
+                                ? `I'm sorry, I couldn't find lawyers matching that exact criteria. However, we have highly qualified Criminal Lawyers in Delhi, Property Lawyers in Noida, and Family Lawyers in Mumbai. Would any of those help?`
                                 : `No law firms matched that search right now. Try adjusting the location or practice area.`
                             }
                           </p>

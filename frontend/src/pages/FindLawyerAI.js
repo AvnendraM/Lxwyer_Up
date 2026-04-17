@@ -857,6 +857,22 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
             if (urgent) badges.push('⚡ Urgent');
             return { ...l, matchBadges: badges };
           });
+        });
+      }
+
+      // --- NEW: Universal Shuffling and Signature Priority Algorithm ---
+      // We take the matches (either from backend or fallback), shuffle them randomly,
+      // and ensure exactly up to 3 signature lawyers appear at the top.
+      if (enriched.length > 0) {
+        const shuffled = [...enriched].sort(() => Math.random() - 0.5);
+        const signatureList = shuffled.filter(l => l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature');
+        const normalList = shuffled.filter(l => !(l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature'));
+        
+        const topSig = signatureList.slice(0, 3);
+        const remainingSlots = Math.max(0, enriched.length - topSig.length);
+        const fillers = normalList.slice(0, remainingSlots);
+        
+        enriched = [...topSig, ...fillers];
       }
 
       let responseContent = '';
@@ -908,7 +924,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
         const locationText = location.city || location.state;
         responseContent = `Got it, you're in ${locationText}.\n\nWhat's your legal issue?\nExample: "Property dispute" or "Divorce case"`;
       } else {
-        responseContent = `I couldn't find an exact match. Try being more specific:\n\n1. Legal issue (criminal, property, divorce...)\n2. Location (Delhi, Noida, Gurgaon...)\n\nOr type "show all" to browse manually.`;
+        responseContent = `I'm sorry, I couldn't find a lawyer exactly matching your criteria. However, we have highly qualified Criminal Lawyers in Delhi, Property Lawyers in Noida, and Family Lawyers in Mumbai. Would any of those help? Or type "show all" to browse our complete directory.`;
         setQuickChips(['Show all lawyers', 'Criminal lawyer Delhi', 'Property dispute Noida']);
       }
       setMessages(prev => [...prev, { role: 'assistant', content: responseContent }]);
@@ -1177,71 +1193,14 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
                   }
 
                   return (
-                    <motion.div
-                      key={lawyer.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.06 }}
-                      className="rounded-3xl overflow-hidden border border-slate-800 bg-slate-900 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
-                      onClick={() => handleViewProfile(lawyer)}
-                    >
-                      {/* Gradient header — black at top to dark blue, matching manual */}
-                      <div className={`relative h-28 bg-gradient-to-b ${grad}`}>
-                        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, white 0, white 1px, transparent 0, transparent 50%)', backgroundSize: '12px 12px' }} />
-                        <span className="absolute top-2 right-3 text-white/10 font-black text-xs tracking-widest uppercase select-none">LXWYER UP</span>
-                        {lawyer.matchBadges && lawyer.matchBadges.length > 0 && (
-                          <div className="absolute top-2 left-3 flex gap-1">
-                            {lawyer.matchBadges.slice(0, 3).map((b, bi) => (
-                              <span key={bi} className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-black/40 text-white/80 backdrop-blur-sm">✓ {b}</span>
-                            ))}
-                          </div>
-                        )}
-                        <div className="absolute bottom-0 left-5 translate-y-1/2">
-                          <div className="w-24 h-24 rounded-2xl overflow-hidden ring-[5px] ring-slate-900 shadow-2xl">
-                            <img src={photoSrc} alt={lawyer.name} className="w-full h-full object-cover" onError={onPhotoError(lawyer.name)} />
-                          </div>
-                          {lawyer.verified && (
-                            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 rounded-full border-2 border-slate-900 flex items-center justify-center shadow-lg">
-                              <span className="text-white text-[10px] font-bold">✓</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      {/* Card body */}
-                      <div className="pt-16 px-4 pb-4">
-                        <div className="mb-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="font-bold text-white text-sm">{lawyer.name}</h4>
-                            {lawyer.verified && <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full font-semibold">✓ {d.verified}</span>}
-                          </div>
-                          {lawyer.specialization && <p className="text-xs font-semibold mt-0.5 text-blue-400">{lawyer.specialization}</p>}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                          <div className="rounded-xl px-3 py-2 border bg-slate-800 border-slate-700">
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">{d.experience}</p>
-                            <p className="text-sm font-bold text-slate-100">{lawyer.experience} {d.years}</p>
-                          </div>
-                          <div className="rounded-xl px-3 py-2 border bg-slate-800 border-slate-700">
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">{d.location}</p>
-                            <p className="text-sm font-bold text-slate-100 truncate">{lawyer.city || lawyer.state || 'India'}</p>
-                          </div>
-                          <div className="rounded-xl px-3 py-2 border col-span-2 bg-slate-800 border-slate-700">
-                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500 mb-0.5">{d.consultationFee}</p>
-                            <p className="text-sm font-bold text-slate-100">{lawyer.feeMin ? `₹${lawyer.feeMin.toLocaleString()}/hr` : (lawyer.fee || d.contactForFee)}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button onClick={(e) => { e.stopPropagation(); handleViewProfile(lawyer); }}
-                            className="flex-1 py-2 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all border border-slate-700">
-                            {d.viewProfile}
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleBookConsultation(lawyer); }}
-                            className={`flex-1 py-2 rounded-2xl bg-gradient-to-r ${grad} hover:opacity-90 text-white text-xs font-bold transition-all shadow-sm`}>
-                            {d.bookNow} →
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
+                    <div key={lawyer.id} className="cursor-pointer mb-2">
+                       <LawyerCard 
+                          lawyer={lawyer} 
+                          index={index} 
+                          onProfileClick={(l) => handleViewProfile(l)} 
+                          onBookClick={(l) => handleBookConsultation(l)} 
+                       />
+                    </div>
                   );
                 })}
                 {recommendedLawyers.length > 5 && (
