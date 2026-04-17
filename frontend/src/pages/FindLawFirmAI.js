@@ -492,8 +492,6 @@ export default function FindLawFirmAI() {
       }]);
       setQuickChips(['Corporate firm in Delhi', 'IP firm in Mumbai', 'Criminal firm in Bangalore', 'Show all firms']);
     }
-      setQuickChips(['Corporate firm in Delhi', 'IP firm in Mumbai', 'Criminal firm in Bangalore', 'Show all firms']);
-    }
 
     setIsLoading(false);
   };
