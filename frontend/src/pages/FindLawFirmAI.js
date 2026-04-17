@@ -29,11 +29,11 @@ const FIRM_FAQ = [
 
 // ── Follow-up question bank ───────────────────────────────────────────────
 const FIRM_FOLLOWUP = [
-  { key: 'size',     text: '🏢 What size of firm do you prefer?',             chips: ['Boutique (1–10 lawyers)', 'Mid-size (10–50)', 'Large firm (50+)', 'Any size'] },
-  { key: 'mode',     text: '📱 How would you like to consult?',               chips: ['In-person visit', 'Video call', 'Either works'] },
-  { key: 'budget',   text: '💰 What is your approximate budget?',             chips: ['Under ₹5,000', 'Under ₹15,000', 'Above ₹15,000', 'Discuss with firm'] },
-  { key: 'urgency',  text: '⚡ How urgent is this matter?',                  chips: ['Not urgent', 'Within a week', 'Urgent — ASAP'] },
-  { key: 'language', text: '🗣️ Which language do you prefer?',               chips: ['English', 'Hindi', 'Regional language', 'Doesn\'t matter'] },
+  { key: 'size',     text: 'What size of firm do you prefer?',             chips: ['Boutique (1–10 lawyers)', 'Mid-size (10–50)', 'Large firm (50+)', 'Any size'] },
+  { key: 'mode',     text: 'How would you like to consult?',               chips: ['In-person visit', 'Video call', 'Either works'] },
+  { key: 'budget',   text: 'What is your approximate budget?',             chips: ['Under ₹5,000', 'Under ₹15,000', 'Above ₹15,000', 'Discuss with firm'] },
+  { key: 'urgency',  text: 'How urgent is this matter?',                  chips: ['Not urgent', 'Within a week', 'Urgent — ASAP'] },
+  { key: 'language', text: 'Which language do you prefer?',               chips: ['English', 'Hindi', 'Regional language', 'Doesn\'t matter'] },
 ];
 
 // ── Defined OUTSIDE the component so React never remounts on keystroke ──
@@ -132,7 +132,7 @@ export default function FindLawFirmAI() {
 
   const [messages, setMessages] = useState([{
     role: 'assistant',
-    content: "Hello! 👋 I'm your AI consultant for finding the right law firm. Describe your legal requirement and city — I'll match you with the best firms.\n\nFor example: \"Looking for a corporate law firm in Mumbai\" or \"IP law firm in Delhi\"",
+    content: "Hello! I'm your AI consultant for finding the right law firm. Describe your legal requirement and city — I'll match you with the best firms.\n\nFor example: \"Looking for a corporate law firm in Mumbai\" or \"IP law firm in Delhi\"",
   }]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -430,20 +430,30 @@ export default function FindLawFirmAI() {
     }
 
     if (enriched.length > 0) {
+      const shuffled = [...enriched].sort(() => Math.random() - 0.5);
+      const signatureList = shuffled.filter(l => l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature');
+      const normalList = shuffled.filter(l => !(l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature'));
+      
+      const topSig = signatureList.slice(0, 3);
+      const remainingSlots = Math.max(0, enriched.length - topSig.length);
+      const fillers = normalList.slice(0, remainingSlots);
+      
+      enriched = [...topSig, ...fillers];
+      
       setRecommendedFirms(enriched);
 
       const locationText = location || (matchData?.query_summary?.location?.city) || 'India';
       const areaText = practiceArea || 'your requirement';
       
-      let responseContent = `I’ve gathered some excellent matches for you! Here are the top ${enriched.length} highly rated law firms specializing in ${areaText.toLowerCase()} in ${locationText} that fit your needs. ⚖️\n\n`;
+      let responseContent = `I’ve gathered some excellent matches for you! Here are the top ${enriched.length} highly rated law firms specializing in ${areaText.toLowerCase()} in ${locationText} that fit your needs.\n\n`;
       const requirements = [];
-      if (memory.budget) requirements.push(`💰 Under ₹${memory.budget.max}`);
-      if (memory.language) requirements.push(`🗣️ ${memory.language}`);
-      if (memory.mode) requirements.push(`📺 ${memory.mode === 'in_person' ? 'In-Person' : 'Video'}`);
-      if (urgent) requirements.push(`⚡ Urgent Help`);
+      if (memory.budget) requirements.push(`Under ₹${memory.budget.max}`);
+      if (memory.language) requirements.push(`${memory.language}`);
+      if (memory.mode) requirements.push(`${memory.mode === 'in_person' ? 'In-Person' : 'Video'}`);
+      if (urgent) requirements.push(`Urgent Help`);
       if (requirements.length) responseContent += `*Applied filters: ${requirements.join(' · ')}*\n\n`;
 
-      responseContent += `👉 You can view their verified firm profiles in the panel. Let me know if you want to refine this list further!`;
+      responseContent += `You can view their verified firm profiles in the panel. Let me know if you want to refine this list further!`;
 
       // Build follow-up queue
       const missingFollowUps = FIRM_FOLLOWUP.filter(fq => {
@@ -469,11 +479,19 @@ export default function FindLawFirmAI() {
     } else if (!practiceArea && location) {
       setMessages(prev => [...prev, { role: 'assistant', content: `Got it, you're in ${location}.\n\nWhat type of legal expertise does your firm need?\nExample: "Corporate", "IP", "Tax", "Criminal"` }]);
       setQuickChips(['Corporate Law', 'Intellectual Property', 'Tax Law', 'Criminal Law', 'Family Law']);
+    } else if (practiceArea && location) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `I'm sorry, I couldn't find a firm exactly matching your criteria. However, we have highly qualified Corporate Firms in Delhi, IP Firms in Mumbai, and Criminal Firms in Bangalore. Would any of those help? Or type "show all firms" to browse our complete directory.`
+      }]);
+      setQuickChips(['Corporate firm in Delhi', 'IP firm in Mumbai', 'Criminal firm in Bangalore', 'Show all firms']);
     } else {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `I can help match you with the right law firm! Try describing:\n\n1. 📋 Legal area (Corporate, IP, Tax, Criminal...)\n2. 📍 Your city or state\n\nOr type "show all firms" to browse manually.`,
+        content: `I can help match you with the right law firm! Try describing:\n\n1. Legal area (Corporate, IP, Tax, Criminal...)\n2. Your city or state\n\nOr type "show all firms" to browse manually.`,
       }]);
+      setQuickChips(['Corporate firm in Delhi', 'IP firm in Mumbai', 'Criminal firm in Bangalore', 'Show all firms']);
+    }
       setQuickChips(['Corporate firm in Delhi', 'IP firm in Mumbai', 'Criminal firm in Bangalore', 'Show all firms']);
     }
 

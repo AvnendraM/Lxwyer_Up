@@ -32,11 +32,11 @@ const LAWYER_FAQ = [
 
 // ── Follow-up question bank ──────────────────────────────────────────────────
 const FOLLOWUP_QUESTIONS = [
-  { key: 'budget',       text: '💰 What is your approximate consultation budget?', chips: ['Under ₹1,000', 'Under ₹2,500', 'Under ₹5,000', 'No budget limit'] },
-  { key: 'consultType',  text: '📱 How would you prefer to consult?',             chips: ['Video call', 'In-person meeting', 'Either works'] },
-  { key: 'language',     text: '🗣️ Which language do you prefer?',                chips: ['English', 'Hindi', 'Both English & Hindi'] },
-  { key: 'experience',   text: '⭐ How much experience should the lawyer have?',   chips: ['Any experience', '3+ years', '5+ years', '10+ years'] },
-  { key: 'urgency',      text: '⚡ How urgent is your matter?',                   chips: ['Not urgent', 'Within a week', 'Urgent — today/tomorrow'] },
+  { key: 'budget',       text: 'What is your approximate consultation budget?', chips: ['Under ₹1,000', 'Under ₹2,500', 'Under ₹5,000', 'No budget limit'] },
+  { key: 'consultType',  text: 'How would you prefer to consult?',             chips: ['Video call', 'In-person meeting', 'Either works'] },
+  { key: 'language',     text: 'Which language do you prefer?',                chips: ['English', 'Hindi', 'Both English & Hindi'] },
+  { key: 'experience',   text: 'How much experience should the lawyer have?',   chips: ['Any experience', '3+ years', '5+ years', '10+ years'] },
+  { key: 'urgency',      text: 'How urgent is your matter?',                   chips: ['Not urgent', 'Within a week', 'Urgent — today/tomorrow'] },
 ];
 
 // ── Defined OUTSIDE the component so React never remounts existing messages on keystroke ──
@@ -172,7 +172,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! 👋 I'm your AI legal assistant. We operate in Delhi, Haryana, and Uttar Pradesh. Tell me about your legal issue and city, and I'll find the right lawyer for you.\n\nFor example: \"I need a criminal lawyer in Delhi with more than 3 years of experience\"",
+      content: "Hello! I'm your AI legal assistant. We operate in Delhi, Haryana, and Uttar Pradesh. Tell me about your legal issue and city, and I'll find the right lawyer for you.\n\nFor example: \"I need a criminal lawyer in Delhi with more than 3 years of experience\"",
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
@@ -560,7 +560,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
     }
     // Name not found — helpful fallback
     const currentSpec = memory.caseType;
-    return nameQueryResponses.notFound(nameResult.extractedName) + (currentSpec ? `\n\n👉 Showing verified ${currentSpec} lawyers instead.` : '');
+    return nameQueryResponses.notFound(nameResult.extractedName) + (currentSpec ? `\n\nShowing verified ${currentSpec} lawyers instead.` : '');
   };
 
   // Get legal context from CSV data for a case type
@@ -804,7 +804,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
           specialization: r.specialization,
           city: r.city,
           state: r.state,
-          feeMin: typeof r.fee === 'string' ? parseInt(r.fee.replace(/\D/g, '')) || 0 : (r.fee || 0),
+          feeMin: typeof r.fee === 'string' ? parseInt(String(r.fee).split('-')[0].replace(/\D/g, '')) || 0 : (r.fee || 0),
           fee: r.fee,
           languages: r.languages || ['English'],
           photo: getLawyerPhoto(r.photo, r.name),
@@ -854,7 +854,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
             if (location && l.city === location.city) badges.push('Location');
             if (budget && (l.feeMin || 0) <= budget.max) badges.push('Budget');
             if (language) badges.push('Language');
-            if (urgent) badges.push('⚡ Urgent');
+            if (urgent) badges.push('Urgent');
             return { ...l, matchBadges: badges };
           });
       }
@@ -881,19 +881,19 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
         const caseText = caseType || (language ? `${language}-speaking lawyers` : 'your request');
         const askedForBest = /\b(best|top|greatest|good)\b/i.test(userMessage);
         
-        responseContent = `I’ve gathered some excellent matches for you! Here are the top ${enriched.length} highly rated ${caseText.toLowerCase()} experts in ${locationText} that fit your needs. ⚖️\n\n`;
+        responseContent = `I’ve gathered some excellent matches for you! Here are the top ${enriched.length} highly rated ${caseText.toLowerCase()} experts in ${locationText} that fit your needs.\n\n`;
         
         const requirements = [];
-        if (budget) requirements.push(`💰 ${budget.label || `Under ₹${budget}`}`);
-        if (language) requirements.push(`🗣️ ${language}`);
-        if (requiredExp) requirements.push(`⭐ ${requiredExp}+ years exp`);
-        if (urgent) requirements.push(`⚡ Urgent Help`);
-        if (consultType) requirements.push(`📺 ${consultType === 'in_person' ? 'In-Person' : consultType === 'video' ? 'Video Call' : 'Any mode'}`);
+        if (budget) requirements.push(`${budget.label || `Under ₹${budget}`}`);
+        if (language) requirements.push(`${language}`);
+        if (requiredExp) requirements.push(`${requiredExp}+ years exp`);
+        if (urgent) requirements.push(`Urgent Help`);
+        if (consultType) requirements.push(`${consultType === 'in_person' ? 'In-Person' : consultType === 'video' ? 'Video Call' : 'Any mode'}`);
         if (requirements.length) responseContent += `*Applied filters: ${requirements.join(' · ')}*\n\n`;
 
         if (caseType) { const ctx = getLegalContext(caseType); if (ctx) responseContent += ctx; }
         
-        responseContent += `\n👉 You can view their verified profiles in the panel. Let me know if you want to refine this list further!`;
+        responseContent += `\nYou can view their verified profiles in the panel. Let me know if you want to refine this list further!`;
         setRecommendedLawyers(enriched);
         setShowAllLawyers(false);
 

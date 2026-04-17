@@ -22,14 +22,14 @@ import GenerativeBubble from '../components/GenerativeBubble'
 /* ========== CARD DEFINITIONS ========== */
 const CARD_DEFS = [
   { id: 'case-overview', icon: '📋', title: 'Case Overview', preview: 'Quick summary of your legal situation, charges, or dispute', readTime: '2 min' },
-  { id: 'applicable-laws', icon: '⚖️', title: 'Applicable Laws & Sections', preview: 'Specific legal provisions, acts, and section numbers relevant here', readTime: '3 min' },
+  { id: 'applicable-laws', icon: 'Book', title: 'Applicable Laws & Sections', preview: 'Specific legal provisions, acts, and section numbers relevant here', readTime: '3 min' },
   { id: 'bail-bond', icon: '🔓', title: 'Bail/Bond Information', preview: 'Eligibility, amount, timeline, and conditions for getting bail', readTime: '2 min' },
   { id: 'precedents', icon: '📚', title: 'Precedents & Similar Cases', preview: 'Past judgments, success rates, and how courts typically rule', readTime: '4 min' },
   { id: 'timeline', icon: '⏱️', title: 'Timeline & Procedure', preview: 'Step-by-step process and expected duration at each stage', readTime: '3 min' },
   { id: 'penalties', icon: '💰', title: 'Potential Penalties & Outcomes', preview: 'Possible consequences, fines, imprisonment, and best/worst cases', readTime: '2 min' },
   { id: 'rights', icon: '🛡️', title: 'Rights & Protections', preview: 'Your constitutional and legal rights at every stage', readTime: '3 min' },
   { id: 'documents', icon: '📝', title: 'Required Documents', preview: 'Paperwork needed at each stage and evidence to collect', readTime: '2 min' },
-  { id: 'strategy', icon: '👨‍⚖️', title: 'Legal Strategy & Options', preview: 'Defense approaches, settlement options, and tactical considerations', readTime: '4 min' },
+  { id: 'strategy', icon: 'Shield', title: 'Legal Strategy & Options', preview: 'Defense approaches, settlement options, and tactical considerations', readTime: '4 min' },
   { id: 'considerations', icon: '⚠️', title: 'Important Considerations', preview: 'Critical factors, mistakes to avoid, red flags, and urgent actions', readTime: '2 min' },
   { id: 'next-steps', icon: '🔍', title: 'Next Steps', preview: 'Immediate actions, how to find a lawyer, and resources available', readTime: '2 min' },
 ]
@@ -235,6 +235,16 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
           } else {
             const all = dummyLawFirms;
             results = city ? all.filter(f => (f.city || '').toLowerCase().includes(city)) : all;
+          if (results.length > 0) {
+            const shuffled = [...results].sort(() => Math.random() - 0.5);
+            const signatureList = shuffled.filter(l => l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature');
+            const normalList = shuffled.filter(l => !(l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature'));
+            
+            const topSig = signatureList.slice(0, 3);
+            const remainingSlots = Math.max(0, results.length - topSig.length);
+            const fillers = normalList.slice(0, remainingSlots);
+            
+            results = [...topSig, ...fillers];
           }
           setMessages(prev => [...prev, {
             role: 'assistant',

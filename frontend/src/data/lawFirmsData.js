@@ -449,7 +449,8 @@ practiceAreas.forEach((area) => {
            billing_models: ['Hourly', 'Retainer', 'Flat Rate'],
            branch_offices: [loc.city],
            platform_metrics: {"cases_resolved": 100 + (firmIdCounter * 5), "csat": 4.0 + (i * 0.2)},
-           average_response_time_mins: 15 - i
+           average_response_time_mins: 15 - i,
+           isSignature: Math.random() > 0.85
         });
     }
   });
