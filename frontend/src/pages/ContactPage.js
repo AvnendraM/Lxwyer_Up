@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { Mail, Phone, MapPin, Send, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, CheckCircle, Linkedin } from 'lucide-react';
 import { NavbarWave } from '../components/NavbarWave';
 import { GradientOrbs } from '../components/GradientOrbs';
 import { Button } from '../components/ui/button';
@@ -28,6 +28,7 @@ const TEXT = {
     email: 'Email',
     phone: 'Phone',
     location: 'Location',
+    linkedin: 'LinkedIn',
   },
   hi: {
     phoneLabel: 'फ़ोन नंबर',
@@ -48,6 +49,7 @@ const TEXT = {
     email: 'ईमेल',
     phone: 'फ़ोन',
     location: 'स्थान',
+    linkedin: 'लिंक्डइन',
   }
 };
 
@@ -168,6 +170,12 @@ const ContactFormSection = ({ formData, handleChange, handleSubmit, isSubmitting
       title: d.location,
       value: 'New Delhi, Delhi, India',
       link: null
+    },
+    {
+      icon: Linkedin,
+      title: d.linkedin,
+      value: 'LxwyerUp',
+      link: 'https://www.linkedin.com/company/lxwyerup1'
     }
   ];
 

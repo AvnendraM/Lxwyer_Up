@@ -2275,6 +2275,7 @@ const LandingPageWave = () => {
             animate={justTransitioned ? { opacity: 1, scale: 1, y: 0 } : false}
             transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
             className="min-h-screen relative bg-[#f8faff] dark:bg-[#040810] transition-colors duration-500"
+            style={{ WebkitTransform: 'translate3d(0, 0, 0)', WebkitPerspective: 1000, WebkitBackfaceVisibility: 'hidden', willChange: 'transform, opacity' }}
         >
             <StyleInjector />
 
