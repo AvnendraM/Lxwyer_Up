@@ -169,6 +169,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
   const navigate = useNavigate();
   const [mobileView, setMobileView] = useState('chat'); // 'chat' | 'matches'
   const chatEndRef = useRef(null);
+  const scrollPanelRef = useRef(null);
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -1193,8 +1194,11 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
                   </button>
                 </div>
               </div>
-              {/* Scrollable cards list — flex:1 + minHeight:0 guarantees trackpad scrolling */}
+              {/* Scrollable cards list — focus on hover so trackpad wheel events route here immediately */}
               <div
+                ref={scrollPanelRef}
+                tabIndex={-1}
+                onMouseEnter={() => { if (scrollPanelRef.current) scrollPanelRef.current.focus({ preventScroll: true }); }}
                 style={{
                   flex: '1 1 0',
                   minHeight: 0,
@@ -1202,6 +1206,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
                   WebkitOverflowScrolling: 'touch',
                   padding: '16px',
                   boxSizing: 'border-box',
+                  outline: 'none',
                 }}
               >
                 {(showAllLawyers ? recommendedLawyers : recommendedLawyers.slice(0, 5)).map((lawyer, index) => {
