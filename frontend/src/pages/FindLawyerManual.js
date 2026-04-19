@@ -455,7 +455,7 @@ export default function FindLawyerManual() {
             </button>
           )}
 
-          <FloatingCard className={`w-full p-4 sm:p-6 transition-all duration-300 ${searchCollapsed ? 'hidden sm:block' : 'block'}`}>
+          <FloatingCard className={`w-full p-4 sm:p-6 transition-all duration-300 ${searchCollapsed ? 'hidden sm:block' : 'block'} max-h-[80vh] overflow-y-auto custom-scrollbar`}>
           <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
             <div className="relative flex-1 w-full relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />

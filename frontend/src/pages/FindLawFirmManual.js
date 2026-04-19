@@ -226,7 +226,7 @@ export default function FindLawFirmManual() {
         </div>
 
         {/* Search & Filters */}
-        <FloatingCard className="p-4 sm:p-6 mb-6 sm:mb-12 sticky top-20 sm:top-24 z-30">
+        <FloatingCard className="p-4 sm:p-6 mb-6 sm:mb-12 sticky top-20 sm:top-24 z-30 max-h-[80vh] overflow-y-auto custom-scrollbar">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />

@@ -980,7 +980,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
   const content = (
     <>
       <div
-        style={{ display: 'flex', height: '100dvh', background: '#000', color: '#fff', paddingTop: embedded ? 0 : '4rem', position: 'relative' }}
+        style={{ display: 'flex', height: '100dvh', background: '#000', color: '#fff', paddingTop: embedded ? 0 : '4rem', position: 'relative', overflow: 'hidden' }}
       >
 
         {/* ── Left: Chat Panel ── */}
@@ -1165,6 +1165,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
                 background: '#000',
                 zIndex: mobileView === 'matches' ? 50 : 20,
                 borderLeft: '1px solid rgba(51,65,85,0.6)',
+                overflow: 'hidden',
               }}
             >
               {/* Fixed header */}
@@ -1204,6 +1205,8 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
                   height: `calc(100% - 56px)`,
                   overflowY: 'auto',
                   WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-y',
+                  overscrollBehavior: 'contain',
                   padding: '16px',
                   boxSizing: 'border-box',
                   outline: 'none',
