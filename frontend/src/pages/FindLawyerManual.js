@@ -523,55 +523,64 @@ export default function FindLawyerManual() {
           )}
         </AnimatePresence>
 
-        {/* Search & Filters */}
-        <div className="sticky top-20 sm:top-24 z-30 mb-6 sm:mb-12 flex justify-end">
+        {/* Search & Filters — sticky wrapper always visible */}
+        <div className="sticky top-20 sm:top-24 z-30 mb-6 sm:mb-12">
+
+          {/* Collapsed mini-bar — mobile only, always sticky */}
           {searchCollapsed && (
-            <button
-              onClick={() => { setSearchCollapsed(false); setShowFilters(true); }}
-              className="sm:hidden -mt-4 bg-slate-900 border border-slate-700 text-slate-100 shadow-xl rounded-full p-2.5 z-40 flex items-center justify-center transition-all"
-            >
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-              </div>
-            </button>
+            <div className="sm:hidden flex items-center gap-2">
+              <button
+                onClick={() => setSearchCollapsed(false)}
+                className="flex-1 flex items-center gap-2 bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] shadow-lg rounded-full px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+              >
+                <Search className="w-4 h-4 text-blue-500 shrink-0" />
+                <span className="truncate text-slate-500 dark:text-slate-400">{searchQuery || t('fl_search_ph')}</span>
+                {currentFilters.length > 0 && (
+                  <span className="ml-auto w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center shrink-0">{currentFilters.length}</span>
+                )}
+              </button>
+              <button
+                onClick={() => { setSearchCollapsed(false); setShowFilters(true); }}
+                className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] shadow-lg text-slate-600 dark:text-slate-300"
+              >
+                <Filter className="w-4 h-4" />
+              </button>
+            </div>
           )}
 
           <FloatingCard className={`w-full p-4 sm:p-6 transition-all duration-300 ${searchCollapsed ? 'hidden sm:block' : 'block'}`}>
-          <div className="flex flex-row gap-3 items-center justify-between">
-            <div className="relative flex-1 w-full">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder={t('fl_search_ph')}
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:ring-slate-700/50 dark:focus:border-[#444] transition-all shadow-sm dark:shadow-none"
-              />
+            <div className="flex flex-row gap-2 sm:gap-3 items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder={t('fl_search_ph')}
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="w-full pl-12 pr-4 py-3 bg-slate-50 dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] rounded-xl text-slate-900 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:focus:ring-slate-700/50 dark:focus:border-[#444] transition-all shadow-sm dark:shadow-none"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className={`shrink-0 h-[46px] sm:h-[50px] px-3 sm:px-4 border-slate-200 dark:border-[#333] dark:bg-[#1A1A1A] ${showFilters || currentFilters.length > 0 ? 'bg-blue-50 dark:bg-[#222] border-blue-200 dark:border-[#444] text-blue-700 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}
+              >
+                <Filter className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t('fl_filters')}</span>
+                {currentFilters.length > 0 && (
+                  <span className="ml-1.5 w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                    {currentFilters.length}
+                  </span>
+                )}
+              </Button>
+              {/* Minimize button — mobile only */}
+              <button
+                onClick={() => setSearchCollapsed(true)}
+                className="sm:hidden shrink-0 w-[46px] h-[46px] flex items-center justify-center rounded-xl bg-slate-100 dark:bg-[#222] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-[#333]"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-              className={`w-full sm:min-w-[120px] sm:w-auto h-[46px] sm:h-[50px] border-slate-200 dark:border-[#333] dark:bg-[#1A1A1A] ${showFilters || currentFilters.length > 0 ? 'bg-blue-50 dark:bg-[#222] border-blue-200 dark:border-[#444] text-blue-700 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              {t('fl_filters')}
-              {currentFilters.length > 0 && (
-                <span className="ml-2 w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
-                  {currentFilters.length}
-                </span>
-              )}
-            </Button>
-            {/* Minimize button — mobile only */}
-            <button
-              onClick={() => setSearchCollapsed(true)}
-              className="sm:hidden shrink-0 w-[46px] h-[46px] flex items-center justify-center rounded-xl bg-slate-100 dark:bg-[#222] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-[#333]"
-              title="Collapse search"
-            >
-              <ChevronUp className="w-4 h-4" />
-            </button>
-          </div>
 
           {/* Active Filter Badges */}
           {currentFilters.length > 0 && !showFilters && (
@@ -1162,9 +1171,9 @@ export default function FindLawyerManual() {
       </AnimatePresence>
 
 
-      {/* Floating AI Lawyer Matching Button */}
-      {!selectedLawyer && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-8 z-50">
+      {/* Floating AI Lawyer Matching Button — hidden when filter sheet open */}
+      {!selectedLawyer && !showFilters && (
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-8 z-30">
           <motion.button
             onClick={() => navigate('/find-lawyer/ai')}
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
