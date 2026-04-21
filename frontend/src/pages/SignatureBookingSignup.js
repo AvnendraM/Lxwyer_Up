@@ -95,8 +95,27 @@ const SignatureBookingSignup = () => {
     cardName: ''
   });
 
-  const timeSlots = generateTimeSlots();
   const availableDates = generateAvailableDates();
+
+  const formatTo12Hour = (time24) => {
+    if (!time24 || typeof time24 !== 'string') return time24;
+    if (time24.includes('AM') || time24.includes('PM')) return time24; // Already formatted
+    const [h, m] = time24.split(':');
+    const intH = parseInt(h, 10);
+    if (isNaN(intH)) return time24;
+    const ampm = intH >= 12 ? 'PM' : 'AM';
+    const hr = intH % 12 || 12;
+    return `${hr}:${m} ${ampm}`;
+  };
+
+  const timeSlots = lawyer?.available_slots?.length > 0
+    ? lawyer.available_slots.map(formatTo12Hour).sort((a, b) => {
+        // Quick sort AM before PM, then by hour
+        const aVal = a.includes('PM') ? (parseInt(a) === 12 ? 12 : parseInt(a) + 12) : parseInt(a);
+        const bVal = b.includes('PM') ? (parseInt(b) === 12 ? 12 : parseInt(b) + 12) : parseInt(b);
+        return aVal - bVal;
+      })
+    : generateTimeSlots().map(formatTo12Hour);
 
   useEffect(() => {
     if (!lawyer) {
@@ -212,29 +231,33 @@ const SignatureBookingSignup = () => {
 
       <div className="pt-32 pb-20 max-w-5xl mx-auto px-4 relative z-10">
         
-        {/* Elite Progress Steps */}
-        <div className="flex items-center justify-center mb-12">
+        {/* Progress Steps */}
+        <div className="flex items-center justify-center mb-8 sm:mb-12 px-2">
           {[
-            { num: 1, label: 'Concierge' },
-            { num: 2, label: 'Itinerary' },
-            { num: 3, label: 'Retainer' },
-            { num: 4, label: 'Confirmed' }
+            { num: 1, label: 'Your Info' },
+            { num: 2, label: 'Schedule' },
+            { num: 3, label: 'Payment' },
+            { num: 4, label: 'Done' }
           ].map((s, idx) => (
             <div key={s.num} className="flex items-center">
               <div className="flex flex-col items-center">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold tracking-widest transition-all duration-500 shadow-xl ${s.num === step ? 'bg-[#d4af37] text-black shadow-[#d4af37]/20 border border-[#b5952f]' :
+                <div className={`w-7 h-7 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold transition-all duration-500 shadow-xl text-xs sm:text-base ${
+                  s.num === step ? 'bg-[#d4af37] text-black border border-[#b5952f]' :
                   s.num < step ? 'bg-white/10 text-[#d4af37] border border-[#d4af37]/50' :
-                    'bg-white/5 text-white/30 border border-white/5'
-                  }`}>
-                  {s.num < step ? <CheckCircle className="w-5 h-5 text-[#d4af37]" /> : s.num}
+                  'bg-white/5 text-white/30 border border-white/5'
+                }`}>
+                  {s.num < step ? <CheckCircle className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-[#d4af37]" /> : s.num}
                 </div>
-                <span className={`text-xs mt-3 uppercase tracking-widest font-semibold ${s.num <= step ? 'text-[#d4af37]' : 'text-white/30'}`}>
+                <span className={`text-[9px] sm:text-xs mt-1.5 sm:mt-3 uppercase tracking-wider font-semibold ${
+                  s.num <= step ? 'text-[#d4af37]' : 'text-white/30'
+                }`}>
                   {s.label}
                 </span>
               </div>
               {idx < 3 && (
-                <div className={`w-10 sm:w-20 h-px mx-3 ${s.num < step ? 'bg-gradient-to-r from-[#d4af37] to-[#d4af37]/50' : 'bg-white/10'
-                  }`} />
+                <div className={`w-6 sm:w-20 h-px mx-1.5 sm:mx-3 ${
+                  s.num < step ? 'bg-gradient-to-r from-[#d4af37] to-[#d4af37]/50' : 'bg-white/10'
+                }`} />
               )}
             </div>
           ))}
@@ -259,13 +282,13 @@ const SignatureBookingSignup = () => {
               {step === 1 && (
                 <div className="space-y-8 relative z-10">
                   <div className="mb-8">
-                    <h2 className="text-3xl font-black text-white tracking-wide uppercase mb-2">Priority Access</h2>
-                    <p className="text-[#d4af37] text-sm tracking-widest uppercase">Secure your private consultation</p>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide uppercase mb-2">Your Details</h2>
+                    <p className="text-[#d4af37] text-sm tracking-widest uppercase">Fill in your information to get started</p>
                   </div>
 
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Client Name</label>
+                      <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Full Name</label>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d4af37]" />
                         <Input
@@ -279,7 +302,7 @@ const SignatureBookingSignup = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Email Contact</label>
+                      <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Email Address</label>
                       <div className="relative">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d4af37]" />
                         <Input
@@ -294,13 +317,16 @@ const SignatureBookingSignup = () => {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Direct Line</label>
+                      <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Phone Number</label>
                       <div className="relative">
                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d4af37]" />
                         <Input
+                          type="tel"
+                          inputMode="numeric"
                           value={formData.phone}
-                          onChange={(e) => updateField('phone', e.target.value)}
-                          placeholder="+91 Private Number"
+                          onChange={(e) => updateField('phone', e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          placeholder="10-digit mobile number"
+                          maxLength={10}
                           className="pl-12 py-6 bg-[#0a0a0a] border-[#d4af37]/30 rounded-xl text-white placeholder:text-white/20 focus:border-[#d4af37] focus:ring-[#d4af37]/20"
                         />
                       </div>
@@ -308,7 +334,7 @@ const SignatureBookingSignup = () => {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Security Key</label>
+                        <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Password</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#d4af37]" />
                           <Input
@@ -328,7 +354,7 @@ const SignatureBookingSignup = () => {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Verify Key</label>
+                        <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Confirm Password</label>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#d4af37]" />
                           <Input
@@ -357,13 +383,13 @@ const SignatureBookingSignup = () => {
               {step === 2 && (
                 <div className="space-y-8 relative z-10">
                   <div className="mb-8">
-                    <h2 className="text-3xl font-black text-white tracking-wide uppercase mb-2">Private Itinerary</h2>
-                    <p className="text-[#d4af37] text-sm tracking-widest uppercase">Reserve your dedicated time</p>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide uppercase mb-2">Pick a Time</h2>
+                    <p className="text-[#d4af37] text-sm tracking-widest uppercase">Choose your preferred date and time</p>
                   </div>
 
                   {/* Consultation Type */}
                   <div>
-                    <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-4">Mode of Presence</label>
+                    <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-4">How do you want to meet?</label>
                     <div className="grid grid-cols-2 gap-4">
                       {[
                         { value: 'video', label: 'Encrypted Video', icon: '📹' },
@@ -416,9 +442,14 @@ const SignatureBookingSignup = () => {
                   <div>
                     <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-4">Select Time</label>
                     <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
-                      {timeSlots.map((time) => {
-                        const isSelected = formData.selectedTime === time;
-                        const isAvailable = Math.random() > 0.2;
+                      {timeSlots.length === 0 ? (
+                        <div className="col-span-full py-4 text-center text-[#d4af37]/70 text-sm italic">
+                          No specific availability defined. Please contact support.
+                        </div>
+                      ) : (
+                        timeSlots.map((time) => {
+                          const isSelected = formData.selectedTime === time;
+                          const isAvailable = true; // Actual scheduling availability would go here
 
                         return (
                           <button
@@ -435,7 +466,7 @@ const SignatureBookingSignup = () => {
                             {time}
                           </button>
                         );
-                      })}
+                      }))}
                     </div>
                   </div>
 
@@ -462,9 +493,9 @@ const SignatureBookingSignup = () => {
               {step === 3 && !paymentSuccess && (
                 <div className="space-y-8 relative z-10">
                   <div className="mb-8">
-                    <h2 className="text-3xl font-black text-white tracking-wide uppercase mb-2">Retainer Deposit</h2>
+                    <h2 className="text-2xl sm:text-3xl font-black text-white tracking-wide uppercase mb-2">Pay to Confirm</h2>
                     <p className="text-[#d4af37] text-sm tracking-widest uppercase flex items-center gap-2">
-                      <Shield className="w-4 h-4" /> Secure Tier Payment
+                      <Shield className="w-4 h-4" /> Secure and encrypted payment
                     </p>
                   </div>
 
@@ -492,7 +523,7 @@ const SignatureBookingSignup = () => {
                   {/* Card Details */}
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Card Designation</label>
+                      <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-3">Card Number</label>
                       <div className="relative">
                         <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#d4af37]" />
                         <Input

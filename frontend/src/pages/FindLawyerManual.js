@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Briefcase, MapPin, ArrowRight, ChevronLeft, ChevronRight, ChevronUp, Scale, X, Check, GraduationCap, Sparkles, Award, Star, Calendar } from 'lucide-react';
+import { Search, Filter, Briefcase, MapPin, ArrowRight, ChevronLeft, ChevronRight, ChevronUp, Scale, X, Check, GraduationCap, Sparkles, Award, Star, Calendar, MoreHorizontal, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
 import { API } from '../App';
 import { WaveLayout } from '../components/WaveLayout';
@@ -105,28 +105,35 @@ export default function FindLawyerManual() {
   const location = useLocation();
   const { t, lang } = useLang();
   const d = LOCAL_TEXT[lang] || LOCAL_TEXT.en;
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('standard'); // 'standard' | 'signature'
-  const [filters, setFilters] = useState({
-    state: '',
-    city: '',
-    specialization: '',
-    court: '',
-    minRating: 0,
-    consultationType: '',
-    priceMax: '',
-    withAchievement: false
+  const [searchQuery, setSearchQuery] = useState(() => sessionStorage.getItem('fl_searchQuery') || '');
+  const [filters, setFilters] = useState(() => {
+    const saved = sessionStorage.getItem('fl_filters');
+    if (saved) return JSON.parse(saved);
+    return {
+      state: '',
+      city: '',
+      specialization: '',
+      court: '',
+      minRating: 0,
+      consultationType: '',
+      priceMax: '',
+      withAchievement: false,
+      onlySignature: false
+    };
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => parseInt(sessionStorage.getItem('fl_currentPage')) || 1);
   const [selectedLawyer, setSelectedLawyer] = useState(null);
   const [expandedImage, setExpandedImage] = useState(null);
-  const [dbLawyers, setDbLawyers] = useState([]);
-  const [loadingLawyers, setLoadingLawyers] = useState(true);
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [dbLawyers, setDbLawyers] = useState(() => {
+    const saved = sessionStorage.getItem('fl_dbLawyers');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [loadingLawyers, setLoadingLawyers] = useState(!sessionStorage.getItem('fl_dbLawyers'));
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
   const [searchCollapsed, setSearchCollapsed] = useState(false);
   const debounceRef = useRef(null);
-  const lawyersPerPage = 12;
+  const lawyersPerPage = 10;
 
   // Initialize filters from URL parameters if available
   useEffect(() => {
@@ -172,7 +179,7 @@ export default function FindLawyerManual() {
   useEffect(() => {
     const handleScroll = () => {
       if (window.innerWidth < 640) {
-        setSearchCollapsed(window.scrollY > 110);
+        setSearchCollapsed(window.scrollY > 300);
       } else {
         setSearchCollapsed(false);
       }
@@ -181,6 +188,11 @@ export default function FindLawyerManual() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Persist local state to sessionStorage
+  useEffect(() => { sessionStorage.setItem('fl_filters', JSON.stringify(filters)); }, [filters]);
+  useEffect(() => { sessionStorage.setItem('fl_searchQuery', searchQuery); }, [searchQuery]);
+  useEffect(() => { sessionStorage.setItem('fl_currentPage', currentPage); }, [currentPage]);
+
   // Fetch verified lawyers from backend
   useEffect(() => {
     const fetchLawyers = async () => {
@@ -188,6 +200,7 @@ export default function FindLawyerManual() {
       try {
         const response = await axios.get(`${API}/lawyers`, { timeout: 5000 });
         setDbLawyers(response.data || []);
+        sessionStorage.setItem('fl_dbLawyers', JSON.stringify(response.data || []));
       } catch (error) {
         console.warn('Backend unavailable, using local data:', error.message);
         setDbLawyers([]);
@@ -195,7 +208,11 @@ export default function FindLawyerManual() {
         setLoadingLawyers(false);
       }
     };
-    fetchLawyers();
+    
+    // Only fetch if not already populated from cache
+    if (dbLawyers.length === 0) {
+      fetchLawyers();
+    }
   }, []);
 
   // Map DB lawyers to match component structure
@@ -255,9 +272,8 @@ export default function FindLawyerManual() {
 
   // Search and filter logic — memoized, only re-runs when debounced query or filters change
   const filteredLawyers = useMemo(() => shuffledLawyers.filter(lawyer => {
-    // 1. Filter by Tier
-    if (activeTab === 'signature' && !lawyer.isSignature) return false;
-    if (activeTab === 'standard' && lawyer.isSignature) return false;
+    // 1. Filter by Signature if toggled
+    if (filters.onlySignature && !lawyer.isSignature) return false;
 
     // 2. Filter by Search
     const matchesSearch =
@@ -297,13 +313,39 @@ export default function FindLawyerManual() {
     if (filters.withAchievement && (!lawyer.achievements || !Array.isArray(lawyer.achievements) || lawyer.achievements.length === 0)) return false;
 
     return true;
-  }), [activeTab, shuffledLawyers, debouncedQuery, filters]);
+  }), [shuffledLawyers, debouncedQuery, filters]);
+
+  const ratioWeavedLawyers = useMemo(() => {
+    if (filters.onlySignature) return filteredLawyers; // Maintain sorting if strictly filtered
+
+    const signature = filteredLawyers.filter(l => l.isSignature);
+    const normal = filteredLawyers.filter(l => !l.isSignature);
+    
+    const result = [];
+    let s_idx = 0, n_idx = 0;
+    const pattern = ['S', 'S', 'N',  'S', 'S', 'N', 'N',  'S', 'S', 'N', 'N'];
+    let p_idx = 0;
+
+    while (s_idx < signature.length || n_idx < normal.length) {
+      const want = pattern[p_idx % pattern.length];
+      p_idx++;
+
+      if (want === 'S') {
+        if (s_idx < signature.length) result.push(signature[s_idx++]);
+        else if (n_idx < normal.length) result.push(normal[n_idx++]);
+      } else {
+        if (n_idx < normal.length) result.push(normal[n_idx++]);
+        else if (s_idx < signature.length) result.push(signature[s_idx++]);
+      }
+    }
+    return result;
+  }, [filteredLawyers, filters.onlySignature]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredLawyers.length / lawyersPerPage);
+  const totalPages = Math.ceil(ratioWeavedLawyers.length / lawyersPerPage);
   const startIndex = (currentPage - 1) * lawyersPerPage;
   const endIndex = startIndex + lawyersPerPage;
-  const currentLawyers = filteredLawyers.slice(startIndex, endIndex);
+  const currentLawyers = ratioWeavedLawyers.slice(startIndex, endIndex);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -319,7 +361,8 @@ export default function FindLawyerManual() {
       minRating: 0,
       consultationType: '',
       priceMax: '',
-      withAchievement: false
+      withAchievement: false,
+      onlySignature: false
     });
     setSearchQuery('');
     setDebouncedQuery('');
@@ -359,19 +402,12 @@ export default function FindLawyerManual() {
     { key: 'court', value: filters.court },
     { key: 'consultationType', value: filters.consultationType },
     { key: 'priceMax', value: filters.priceMax ? `${d.under} ₹${filters.priceMax}` : '' },
-    ...(filters.withAchievement ? [{ key: 'withAchievement', value: d.hasAchievements }] : [])
+    ...(filters.withAchievement ? [{ key: 'withAchievement', value: d.hasAchievements }] : []),
+    ...(filters.onlySignature ? [{ key: 'onlySignature', value: 'Signature' }] : [])
   ].filter(f => f.value);
 
   return (
     <WaveLayout activePage="find-lawyer">
-      {/* Dynamic Luxury Background Overlay */}
-      <div 
-        className={`fixed inset-0 z-0 pointer-events-none transition-opacity duration-700 ease-in-out ${activeTab === 'signature' ? 'opacity-100' : 'opacity-0'}`}
-        style={{ background: 'radial-gradient(ellipse at center, #111 0%, #030303 100%)' }}
-      >
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10 mix-blend-screen" />
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12 relative z-10">
 
         {/* Header Section */}
@@ -379,9 +415,9 @@ export default function FindLawyerManual() {
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-6 tracking-tight transition-colors duration-500 ${activeTab === 'signature' ? 'text-white' : 'text-slate-900 dark:text-white'}`}
+            className="text-2xl sm:text-4xl md:text-5xl font-bold mb-3 sm:mb-6 tracking-tight text-slate-900 dark:text-white"
           >
-            {t('fl_title')} <span className={`transition-colors duration-500 ${activeTab === 'signature' ? 'text-[#d4af37]' : 'text-blue-600 dark:text-slate-200'}`}>{t('fl_title_2')}</span>
+            {t('fl_title')} <span className="text-blue-600 dark:text-slate-200">{t('fl_title_2')}</span>
           </motion.h1>
 
           <motion.p
@@ -396,40 +432,11 @@ export default function FindLawyerManual() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50 dark:bg-[#1A1A1A] border border-blue-100 dark:border-[#333] rounded-full"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-[#1A1A1A] border border-blue-100 dark:border-[#333] mb-6"
           >
-            <Scale className="w-3.5 h-3.5 text-blue-600 dark:text-slate-400" />
-            <span className={`text-xs font-medium transition-colors duration-500 ${activeTab === 'signature' ? 'text-[#d4af37]' : 'text-blue-600 dark:text-slate-400'}`}>{t('fl_verified')}</span>
+            <ShieldCheck className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+            <span className="text-[10px] font-medium text-blue-600 dark:text-slate-400">{t('fl_verified')}</span>
           </motion.div>
-        </div>
-
-        {/* Premium Tab Toggle */}
-        <div className="flex justify-center mb-8 relative z-20">
-          <div className="inline-flex bg-slate-100 dark:bg-[#111] p-1.5 rounded-full border border-slate-200 dark:border-[#222]">
-            <button
-              onClick={() => { setActiveTab('standard'); setCurrentPage(1); }}
-              className={`px-8 py-3 rounded-full text-sm font-semibold transition-all duration-300 ${activeTab === 'standard' 
-                ? 'bg-white dark:bg-[#222] text-slate-900 dark:text-white shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-            >
-              Lawyers
-            </button>
-            <button
-              onClick={() => { setActiveTab('signature'); setCurrentPage(1); }}
-              className={`px-8 py-3 rounded-full transition-all duration-300 relative overflow-hidden group flex items-center justify-center min-w-[140px] ${activeTab === 'signature' 
-                ? 'bg-[#050505] shadow-[0_0_15px_rgba(212,175,55,0.15)] border border-[#d4af37]/30' 
-                : 'hover:bg-[#111] hover:border-[#d4af37]/20 border border-transparent'}`}
-              style={{ fontFamily: '"Great Vibes", cursive', color: '#d4af37' }}
-            >
-              {activeTab === 'signature' && (
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#d4af37]/20 to-transparent -translate-x-full animate-[shimmer_2s_infinite]" />
-              )}
-              <span className={`relative z-10 flex items-center gap-2 text-2xl font-normal tracking-wide`}>
-                {activeTab === 'signature' && <Sparkles className="w-5 h-5 text-[#d4af37]" />} Signature
-              </span>
-            </button>
-          </div>
         </div>
 
         {/* ── Mobile Filter Bottom Sheet (sm:hidden) ── */}
@@ -523,35 +530,36 @@ export default function FindLawyerManual() {
           )}
         </AnimatePresence>
 
-        {/* Search & Filters — sticky wrapper always visible */}
-        <div className="sticky top-20 sm:top-24 z-30 mb-6 sm:mb-12">
-
-          {/* Collapsed mini-bar — mobile only, always sticky */}
-          {searchCollapsed && (
-            <div className="sm:hidden flex items-center gap-2">
-              <button
-                onClick={() => setSearchCollapsed(false)}
-                className="flex-1 flex items-center gap-2 bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] shadow-lg rounded-full px-4 py-2.5 text-sm font-medium text-slate-700 dark:text-slate-200"
+          {/* Unbreakable Fixed Minimized Button — perfectly replaces filter button's visual position */}
+          <AnimatePresence>
+            {searchCollapsed && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="sm:hidden fixed pt-[2px] right-4 lg:right-8 z-[9999]" 
+                style={{ top: '6rem' }}
               >
-                <Search className="w-4 h-4 text-blue-500 shrink-0" />
-                <span className="truncate text-slate-500 dark:text-slate-400">{searchQuery || t('fl_search_ph')}</span>
-                {currentFilters.length > 0 && (
-                  <span className="ml-auto w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center shrink-0">{currentFilters.length}</span>
-                )}
-              </button>
-              <button
-                onClick={() => { setSearchCollapsed(false); setShowFilters(true); }}
-                className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] shadow-lg text-slate-600 dark:text-slate-300"
-              >
-                <Filter className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+                <button
+                  onClick={() => setShowFilters(true)}
+                  className="shrink-0 h-[46px] w-[54px] flex items-center justify-center rounded-xl bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] shadow-lg shadow-black/10 text-slate-600 dark:text-slate-300 transition-transform active:scale-95 relative"
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                  {currentFilters.length > 0 && (
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center shrink-0 shadow-sm">{currentFilters.length}</span>
+                  )}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          <FloatingCard className={`w-full p-4 sm:p-6 transition-all duration-300 ${searchCollapsed ? 'hidden sm:block' : 'block'}`}>
-            <div className="flex flex-row gap-2 sm:gap-3 items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+          {/* Search & Filters — sticky wrapper smoothly fades out without altering document height */}
+          <div className={`sticky top-20 sm:top-24 z-30 mb-6 sm:mb-12 transition-all duration-300 ease-out ${searchCollapsed ? 'opacity-0 pointer-events-none -translate-y-4 sm:opacity-100 sm:pointer-events-auto sm:translate-y-0' : 'opacity-100 pointer-events-auto translate-y-0'}`}>
+            <FloatingCard className="w-full p-4 sm:p-6">
+              <div className="flex flex-row gap-2 sm:gap-3 items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                   type="text"
                   placeholder={t('fl_search_ph')}
@@ -563,7 +571,7 @@ export default function FindLawyerManual() {
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className={`shrink-0 h-[46px] sm:h-[50px] px-3 sm:px-4 border-slate-200 dark:border-[#333] dark:bg-[#1A1A1A] ${showFilters || currentFilters.length > 0 ? 'bg-blue-50 dark:bg-[#222] border-blue-200 dark:border-[#444] text-blue-700 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}
+                className={`shrink-0 h-[46px] sm:h-[50px] px-3 sm:px-4 border-slate-200 dark:border-[#333] dark:bg-[#1A1A1A] ${showFilters || currentFilters.length > 0 ? 'bg-blue-50 dark:bg-[#222] border-blue-200 dark:border-[#444] text-blue-700 dark:text-white' : 'text-slate-600 dark:text-slate-300'} transition-all shadow-sm`}
               >
                 <Filter className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">{t('fl_filters')}</span>
@@ -573,13 +581,6 @@ export default function FindLawyerManual() {
                   </span>
                 )}
               </Button>
-              {/* Minimize button — mobile only */}
-              <button
-                onClick={() => setSearchCollapsed(true)}
-                className="sm:hidden shrink-0 w-[46px] h-[46px] flex items-center justify-center rounded-xl bg-slate-100 dark:bg-[#222] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-[#333]"
-              >
-                <ChevronUp className="w-4 h-4" />
-              </button>
             </div>
 
           {/* Active Filter Badges */}
@@ -588,7 +589,7 @@ export default function FindLawyerManual() {
               {currentFilters.map(f => (
                 <span key={f.key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-[#222] text-slate-700 dark:text-slate-300 border dark:border-[#333] rounded-lg text-sm font-medium">
                   {f.key === 'consultationType' ? (f.value === 'both' ? d.bothVideoInPerson : (f.value === 'video' ? d.videoCall : d.inPerson)) : f.value}
-                  <button onClick={() => handleFilterChange(f.key, f.key === 'withAchievement' ? false : '')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                  <button onClick={() => handleFilterChange(f.key, (f.key === 'withAchievement' || f.key === 'onlySignature') ? false : '')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -715,17 +716,34 @@ export default function FindLawyerManual() {
 
                 {/* Apply button row — always visible, outside the scrollable area */}
                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <button
-                      onClick={() => handleFilterChange('withAchievement', !filters.withAchievement)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${filters.withAchievement ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
-                    >
-                      <span className="sr-only">Toggle Achievements</span>
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${filters.withAchievement ? 'translate-x-6' : 'translate-x-1'}`} />
-                    </button>
-                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                      <Award className="w-4 h-4 text-blue-500" /> {t('fl_achievements')}
-                    </span>
+                  <div className="flex flex-wrap items-center gap-5 w-full sm:w-auto">
+                    {/* Signature Filter */}
+                    <div className="flex items-center gap-2">
+                       <button
+                         onClick={() => handleFilterChange('onlySignature', !filters.onlySignature)}
+                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${filters.onlySignature ? 'bg-[#d4af37]' : 'bg-slate-300 dark:bg-slate-700'}`}
+                       >
+                         <span className="sr-only">Toggle Signature</span>
+                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${filters.onlySignature ? 'translate-x-6' : 'translate-x-1'}`} />
+                       </button>
+                       <span className="text-xl" style={{ color: '#d4af37', fontFamily: '"Great Vibes", cursive' }}>
+                         Signature Lawyers
+                       </span>
+                    </div>
+
+                    {/* Achievements Filter */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleFilterChange('withAchievement', !filters.withAchievement)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${filters.withAchievement ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                      >
+                        <span className="sr-only">Toggle Achievements</span>
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${filters.withAchievement ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <Award className="w-4 h-4 text-blue-500" /> {t('fl_achievements')}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between w-full sm:w-auto gap-4">
                     <button
@@ -1173,7 +1191,7 @@ export default function FindLawyerManual() {
 
       {/* Floating AI Lawyer Matching Button — hidden when filter sheet open */}
       {!selectedLawyer && !showFilters && (
-        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-8 z-30">
+        <div className="fixed bottom-6 right-4 md:right-8 z-30">
           <motion.button
             onClick={() => navigate('/find-lawyer/ai')}
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -1181,7 +1199,7 @@ export default function FindLawyerManual() {
             transition={{ delay: 0.5, type: 'spring', stiffness: 260, damping: 20 }}
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
-            className="flex items-center justify-center rounded-full bg-[#050505] border-[1.5px] border-blue-600 hover:border-blue-400 hover:bg-[#111] text-blue-50 font-semibold shadow-2xl shadow-blue-900/40 transition-all cursor-pointer scale-80 md:scale-100"
+            className="flex items-center justify-center rounded-full bg-[#050505] border-[1.5px] border-blue-600 hover:border-blue-400 hover:bg-[#111] text-blue-50 font-semibold shadow-2xl shadow-blue-900/40 transition-all cursor-pointer transform scale-[0.7] md:scale-100 origin-bottom-right"
             style={{ padding: '8px 16px', fontSize: 13, letterSpacing: '0.04em' }}
           >
             <Sparkles className="w-4 h-4 sm:hidden mr-2" />

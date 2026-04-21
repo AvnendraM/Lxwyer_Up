@@ -1,0 +1,26 @@
+};
+
+export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
+  const { t, lang, setLang } = useLang();
+  const d = LOCAL_TEXT_AI[lang] || LOCAL_TEXT_AI.en;
+  const navigate = useNavigate();
+  const [mobileView, setMobileView] = useState('chat'); // 'chat' | 'matches'
+  const chatEndRef = useRef(null);
+  const scrollPanelRef = useRef(null);
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      content: "Hello! I'm your AI legal assistant. We operate in Delhi, Haryana, and Uttar Pradesh. Tell me about your legal issue and city, and I'll find the right lawyer for you.\n\nFor example: \"I need a criminal lawyer in Delhi with more than 3 years of experience\"",
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [recommendedLawyers, setRecommendedLawyers] = useState([]);
+  const [selectedLawyer, setSelectedLawyer] = useState(null);
+
+  // Lock body scroll when profile modal is open
+  useScrollLock(!!selectedLawyer);
+  const [isListening, setIsListening] = useState(false);
+  const [showAllLawyers, setShowAllLawyers] = useState(false);
+  const [allLawyersList, setAllLawyersList] = useState(dummyLawyers);
+  const [quickChips, setQuickChips] = useState([]);

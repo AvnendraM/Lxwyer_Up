@@ -44,7 +44,7 @@ const ExpandableText = ({ text, maxLength = 160 }) => {
 const SignatureNavbar = ({ navigate }) => (
   <nav style={{
     position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-    background: 'rgba(6,6,8,0.92)', backdropFilter: 'blur(20px)',
+    background: '#000000', backdropFilter: 'blur(20px)',
     borderBottom: `1px solid ${BORDER}`,
   }}>
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 68,
@@ -54,7 +54,6 @@ const SignatureNavbar = ({ navigate }) => (
         display: 'flex', alignItems: 'center', gap: 10,
         background: 'none', border: 'none', cursor: 'pointer', padding: 0,
       }}>
-        <Gavel size={18} color={GOLD} strokeWidth={1.5} />
         <span style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '0.18em',
           textTransform: 'uppercase', fontFamily: FONT_SANS }}>
           Lxwyer<span style={{ color: GOLD }}> Up</span>
@@ -62,7 +61,7 @@ const SignatureNavbar = ({ navigate }) => (
         <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.15)', margin: '0 4px' }} />
         <span style={{ fontSize: 11, color: GOLD, letterSpacing: '0.12em',
           fontFamily: FONT_SERIF, fontStyle: 'italic', opacity: 0.9 }}>
-          Signature Dossier
+          Signature
         </span>
       </button>
 
@@ -135,7 +134,7 @@ export default function SignatureLawyerProfile() {
           feeMin: dummy.feeMin || 'N/A',
           feeMax: dummy.feeMax || 'N/A',
           image: (dummy.photo && dummy.photo.length > 5) ? dummy.photo : null,
-          consultationModes: dummy.consultationModes || ['In-Person', 'Video Call', 'Phone'],
+          consultationModes: dummy.consultationModes?.filter(m => m !== 'Phone') || ['In-Person', 'Video Call'],
           achievements: dummy.achievements || [],
           lawFirm: dummy.firm || 'Exclusive Legal Practice'
         });
@@ -277,12 +276,6 @@ export default function SignatureLawyerProfile() {
             <div style={{ flex: 1, minWidth: 260, padding: '36px 32px', display: 'flex',
               flexDirection: 'column', justifyContent: 'center', gap: 0 }}>
 
-              {/* Case number / dossier ref */}
-              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.2em',
-                textTransform: 'uppercase', marginBottom: 14, fontWeight: 600 }}>
-                Dossier Ref · SD-{id?.slice(0,8)?.toUpperCase() || 'XXXXXXXX'}
-              </div>
-
               <h1 style={{ fontSize: 32, fontWeight: 700, color: '#fff', lineHeight: 1.15,
                 fontFamily: FONT_SERIF, marginBottom: 6, letterSpacing: '-0.01em' }}>
                 {displayName}
@@ -353,7 +346,7 @@ export default function SignatureLawyerProfile() {
                 onMouseEnter={e => e.currentTarget.style.boxShadow = '0 8px 32px rgba(201,168,76,0.4)'}
                 onMouseLeave={e => e.currentTarget.style.boxShadow = '0 6px 24px rgba(201,168,76,0.25)'}
               >
-                Book Consultation
+                Priority Premium Consultation
               </button>
 
               {/* Fee preview */}
@@ -546,29 +539,7 @@ export default function SignatureLawyerProfile() {
               ))}
             </motion.div>
 
-            {/* Book CTA sticky-ish */}
-            <motion.div
-              initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.32 }}
-            >
-              <button
-                onClick={() => navigate('/signature-booking', { state: { lawyer } })}
-                style={{
-                  width: '100%', padding: '16px 0',
-                  background: `linear-gradient(135deg, ${GOLD} 0%, #b08a34 100%)`,
-                  color: '#000', fontWeight: 800, fontSize: 12, letterSpacing: '0.14em',
-                  textTransform: 'uppercase', border: 'none', borderRadius: 10, cursor: 'pointer',
-                  fontFamily: FONT_SANS, boxShadow: '0 8px 28px rgba(201,168,76,0.2)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 10px 36px rgba(201,168,76,0.38)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 8px 28px rgba(201,168,76,0.2)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                Request Priority Consultation
-                <ChevronRight size={14} strokeWidth={2.5} />
-              </button>
-            </motion.div>
+            {/* Removed sticky CTA as requested */}
           </div>
         </div>
       </main>

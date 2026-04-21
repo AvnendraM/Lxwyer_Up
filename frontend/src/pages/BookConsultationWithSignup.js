@@ -634,13 +634,32 @@ export default function BookConsultationWithSignup() {
                               className="w-full pl-12 pr-4 py-3 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm appearance-none"
                             >
                               <option value="">Select Time</option>
-                              <option value="10:00 AM">10:00 AM</option>
-                              <option value="11:00 AM">11:00 AM</option>
-                              <option value="12:00 PM">12:00 PM</option>
-                              <option value="2:00 PM">2:00 PM</option>
-                              <option value="3:00 PM">3:00 PM</option>
-                              <option value="4:00 PM">4:00 PM</option>
-                              <option value="5:00 PM">5:00 PM</option>
+                              {(() => {
+                                const formatTo12Hour = (time24) => {
+                                  if (!time24) return;
+                                  if (time24.includes('AM') || time24.includes('PM')) return time24;
+                                  const [h, m] = time24.split(':');
+                                  const intH = parseInt(h, 10);
+                                  const ampm = intH >= 12 ? 'PM' : 'AM';
+                                  const hr = intH % 12 || 12;
+                                  return `${hr}:${m} ${ampm}`;
+                                };
+
+                                const customSlots = selectedLawyer?.available_slots?.length > 0 
+                                  ? selectedLawyer.available_slots.map(formatTo12Hour).sort((a, b) => {
+                                      const aVal = a.includes('PM') ? (parseInt(a) === 12 ? 12 : parseInt(a) + 12) : parseInt(a);
+                                      const bVal = b.includes('PM') ? (parseInt(b) === 12 ? 12 : parseInt(b) + 12) : parseInt(b);
+                                      return aVal - bVal;
+                                    })
+                                  : null;
+
+                                const defaultSlots = ["10:00 AM", "11:00 AM", "12:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"];
+                                const slotsToMap = customSlots || defaultSlots;
+
+                                return slotsToMap.map(slot => (
+                                  <option key={slot} value={slot}>{slot}</option>
+                                ));
+                              })()}
                             </select>
                           </div>
                         </div>

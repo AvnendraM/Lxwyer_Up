@@ -1,0 +1,121 @@
+                  <button
+                    onClick={() => { setRecommendedLawyers([]); setMobileView('chat'); setQuickChips([]); setFollowUpQueue([]); }}
+                    title="Close results"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              {/* Scrollable cards — explicit height so browser has unambiguous scroll boundary */}
+              <div
+                ref={scrollPanelRef}
+                tabIndex={-1}
+                onMouseEnter={() => { if (scrollPanelRef.current) scrollPanelRef.current.focus({ preventScroll: true }); }}
+                style={{
+                  display: 'block',
+                  height: `calc(100% - 56px)`,
+                  overflowY: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-y',
+                  overscrollBehavior: 'contain',
+                  padding: '16px',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+              >
+                {(showAllLawyers ? recommendedLawyers : recommendedLawyers.slice(0, 5)).map((lawyer, index) => {
+                  const grad = GRADIENTS[index % GRADIENTS.length];
+                  const photoSrc = getLawyerPhoto(lawyer.photo, lawyer.name);
+
+                  if (lawyer.isFirm) {
+                    return (
+                      <div key={lawyer.id || lawyer._id} className="cursor-pointer">
+                        <FirmCard 
+                           firm={lawyer} 
+                           index={index}
+                           dm={true}
+                           onDetails={(firm) => handleViewProfile({ ...firm, isFirm: true })} 
+                           onBook={(firm) => handleBookConsultation(firm)} 
+                        />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={lawyer.id} className="cursor-pointer mb-2">
+                       <LawyerCard 
+                          lawyer={lawyer} 
+                          index={index} 
+                          onProfileClick={(l) => handleViewProfile(l)} 
+                          onBookClick={(l) => handleBookConsultation(l)} 
+                       />
+                    </div>
+                  );
+                })}
+                {recommendedLawyers.length > 5 && (
+                  <button onClick={() => setShowAllLawyers(!showAllLawyers)}
+                    className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800 transition-all">
+                    {showAllLawyers ? d.showLess : `${d.showAllMatches} (${recommendedLawyers.length})`} <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+                <button onClick={() => navigate('/find-lawyer/manual', { state: { specialization: memory.caseType || '', location: memory.location ? (memory.location.city || memory.location.state) : '', budget: memory.budget ? memory.budget.max : '' } })}
+                  className="w-full py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 bg-slate-900 text-slate-400 hover:bg-slate-800 border border-slate-800 transition-all">
+                  {d.browseAllLawyers} <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Lawyer Profile Modal — same design as FindLawyerManual */}
+      <AnimatePresence>
+        {selectedLawyer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedLawyer(null)}
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-3xl bg-white dark:bg-[#121212] rounded-[2.5rem] shadow-[0_40px_80px_-15px_rgba(0,0,0,0.3)] dark:shadow-none overflow-hidden flex flex-col max-h-[90vh] border border-white/20 dark:border-[#2A2A2A]"
+            >
+              {/* Banner */}
+              <div className="h-36 bg-gradient-to-br from-blue-700 via-indigo-600 to-violet-700 dark:from-slate-800 dark:via-[#111] dark:to-black relative shrink-0">
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
+                <span className="absolute top-5 right-7 text-white/20 dark:text-white/5 font-black text-5xl tracking-widest select-none pointer-events-none uppercase">Lxwyer Up</span>
+                <button onClick={() => setSelectedLawyer(null)} className="absolute top-5 left-5 p-2 bg-white/10 hover:bg-white/20 dark:bg-black/20 dark:hover:bg-black/40 rounded-full text-white transition-colors backdrop-blur-md z-50">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {selectedLawyer.isFirm ? (
+                 <div className="flex-1 min-h-0 overflow-y-auto" style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}>
+                 <div className="relative h-64">
+                   <img src={selectedLawyer.image} alt={selectedLawyer.name} className="w-full h-full object-cover" />
+                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                   <div className="absolute bottom-6 left-8 right-8 text-white">
+                     <h2 className="text-3xl font-bold mb-2">{selectedLawyer.name}</h2>
+                     <div className="flex items-center gap-4 text-slate-200">
+                       <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" /> {selectedLawyer.city}, {selectedLawyer.state}</span>
+                       <span className="flex items-center gap-1.5"><Users className="w-4 h-4" /> {selectedLawyer.lawyersCount} {d.lawyers}</span>
+                     </div>
+                   </div>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 p-5 sm:p-8">
+                   <div className="md:col-span-2 space-y-8">
+                     <div>
+                       <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">{d.aboutFirm || 'About Firm'}</h3>
+                       <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{selectedLawyer.description}</p>
+                     </div>
+                     <div>
+                       <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">Practice Areas</h3>
+                       <div className="flex flex-wrap gap-2">
+                         {selectedLawyer.practiceAreas?.map((area, idx) => (

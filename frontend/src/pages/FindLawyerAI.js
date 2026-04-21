@@ -846,8 +846,11 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
         }));
       }
 
-      // ── Client-side matching — full pool, all cities ─────────────────────────
-      const basePool = allLawyersList; // No geography lock — covers all dummy cities
+      // ── Client-side matching — geography restricted pool ─────────────────────────
+      // The platform is strictly limited to Delhi, Haryana, and UP.
+      const ALLOWED_STATES = ['delhi', 'new delhi', 'uttar pradesh', 'haryana'];
+      
+      const basePool = allLawyersList.filter(l => ALLOWED_STATES.includes(l.state?.toLowerCase()));
 
         const scoredLawyers = basePool.map(lawyer => {
           const prediction = predictLawyerMatch(userMessage, lawyer);
@@ -970,8 +973,8 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
         const locationText = location.city || location.state;
         responseContent = `Got it, you're in ${locationText}.\n\nWhat's your legal issue?\nExample: "Property dispute" or "Divorce case"`;
       } else {
-        responseContent = `I'm sorry, I couldn't find a lawyer exactly matching your criteria. However, we have highly qualified Criminal Lawyers in Delhi, Property Lawyers in Noida, and Family Lawyers in Mumbai. Would any of those help? Or type "show all" to browse our complete directory.`;
-        setQuickChips(['Show all lawyers', 'Criminal lawyer Delhi', 'Property dispute Noida']);
+        responseContent = `I appreciate your interest, but currently, we only operate and provide verified lawyers within **Delhi, Uttar Pradesh, and Haryana**. We do not have lawyers in your requested location at this time.\n\nType "show all" to browse available lawyers in our active regions.`;
+        setQuickChips(['Show all lawyers']);
       }
       setMessages(prev => [...prev, { role: 'assistant', content: responseContent }]);
       setIsLoading(false);

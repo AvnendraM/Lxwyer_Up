@@ -1,0 +1,31 @@
+          specAliases.includes(l.specialization) ||
+          specAliases.some(alias => (l.secondarySpecializations || []).includes(alias)) ||
+          specAliases.some(alias => (l.practice_areas || []).includes(alias))
+        );
+
+        const locMatchFn = (l) => location && (
+          (location.city && (l.city === location.city || l.city?.toLowerCase() === location.city?.toLowerCase())) ||
+          (location.state && (l.state === location.state || l.state?.toLowerCase() === location.state?.toLowerCase()))
+        );
+
+        const localEnriched = scoredLawyers
+          .filter(l => {
+            const specMatch  = specMatchFn(l);
+            const locMatch   = locMatchFn(l);
+            const expReq     = requiredExp ? l.experience >= requiredExp : true;
+            const budgetReq  = budget ? ((l.feeMin || 0) <= budget.max || budget.max === 0) : true;
+            const langReq    = language ? (l.languages || []).some(lg => lg.toLowerCase().includes(language.toLowerCase())) : true;
+            const consultReq = consultType && consultType !== 'both'
+              ? (l.consultation_preferences === consultType || l.consultation_preferences === 'both')
+              : true;
+
+            // Priority: spec+location > spec-only > location-only > all
+            let baseMatch = true;
+            if (caseType && location) baseMatch = specMatch && locMatch;
+            else if (caseType) baseMatch = specMatch;
+            else if (location) baseMatch = locMatch;
+
+            return baseMatch && expReq && budgetReq && langReq && consultReq;
+          })
+          .sort((a, b) => {
+            if (urgent) return (b.experience || 0) - (a.experience || 0);

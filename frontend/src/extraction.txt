@@ -1,0 +1,101 @@
+              specCityMap[key].add(l.city);
+            }
+          }
+          (l.secondarySpecializations || []).forEach(s => specs.add(s.toLowerCase()));
+          (l.practiceAreas || []).forEach(s => specs.add(s.toLowerCase()));
+        });
+        setLiveIndex({ cities, specs, specCityMap });
+
+        // ── BUILD FULL KNOWLEDGE BASE for name queries & platform awareness ──
+        const kb = buildKnowledgeBase(merged);
+        setKnowledgeBase(kb);
+      } catch (error) {
+        console.error('Error fetching lawyers:', error);
+      }
+    };
+    fetchLawyers();
+  }, []);
+
+  // Data-driven case type detection — priority-aware 4-tier system
+  const detectCaseType = (message) => {
+    const msg = message.toLowerCase();
+
+    // ── 0: Show-all / FAQ guard ───────────────────────────────────────────────
+    if (/^(show all|browse all|see all|all lawyers|hello|hi there|thank you|thanks|how does|what is your|what is this|help me|i need help|call me)$/i.test(msg.trim())) return null;
+
+    // ── 1: High-specificity multi-word phrases (Family before Criminal, IP before Corporate) ──
+    const highPriority = [
+      ['Debt Recovery',        ['ibc insolvency','insolvency resolution','cheque bounce','cheque dishonour','sarfaesi','npa recovery','drt appeal','loan recovery','debt recovery']],
+      ['Cyber Law',            ['data breach','cyber crime','cyber fraud','online fraud','hacking of','phishing attack','identity theft','ransomware','deepfake','cyberbullying','social media crime']],
+      ['Intellectual Property',['trademark infringement','patent infringement','copyright infringement','intellectual property','patent filing','patent registration','trademark filing','ip law','trade secret','brand protection']],
+      ['Consumer Law',         ['consumer forum','consumer court','consumer complaint','consumer protection','product defect','unfair trade practice']],
+      ['Labour Law',           ['tds dispute with employer','wrongful dismissal','unfair termination','fired by employer','fired me','retrenchment','layoff','posh complaint','pf dispute','esic dispute','gratuity dispute','industrial dispute','maternity benefit','contract labour']],
+      ['Family Law',           ['498a','domestic violence','child custody','custody of child','guardianship of child','custody dispute','matrimonial dispute','alimony claim','dowry case','dowry harassment','domestic dispute','guardianship petition','adoption legal']],
+      ['Tax Law',              ['income tax notice','itr filing','tds dispute','tds notice','gst notice','gst demand','advance tax','benami property','tax tribunal','itat','tax evasion','tax raid','tax demand']],
+      ['Real Estate',          ['property dispute','property lawyer','property case','property registration','land encroachment','land dispute','tenant eviction','eviction case','eviction notice','partition of property','ancestral property','lease dispute','lease deed','commercial property','rera complaint','builder dispute','flat possession','boundary dispute','zameen','sale deed','registry help','stamp duty','conveyance deed','mutation help','possession dispute']],
+      ['Arbitration',          ['commercial arbitration','arbitration clause','arbitral award','dispute resolution','adr mediation','mediation for business']],
+      ['Environmental Law',    ['pollution case','ngt complaint','forest clearance','wildlife protection','environmental clearance','factory pollution','emission violation']],
+      ['Immigration Law',      ['visa overstay','oci card','nri legal','work permit','immigration case','deportation case','citizenship renounce','asylum claim']],
+      ['Banking Law',          ['bank fraud','banking regulation','rbi compliance','nbfc compliance','fema violation','foreign exchange violation']],
+      ['Criminal Law',         ['criminal case','fir filed','anticipatory bail','regular bail','bail application','bail for','murder case','narcotics case','ndps case','pocso case','money laundering','pmla','extortion threat','corruption case','cbi inquiry','forgery case','cheating case ipc','robbery case']],
+      ['Corporate Law',        ['company incorporation','shareholder dispute','merger acquisition','startup legal','sebi compliance','roc compliance','roc filing','llp registration','company registration','director dispute','nclt petition','due diligence','board meeting']],
+    ];
+    for (const [caseType, keywords] of highPriority) {
+      if (keywords.some(kw => msg.includes(kw))) return caseType;
+    }
+
+    // ── 2: Live specialisation index from backend data ────────────────────────
+    for (const spec of liveIndex.specs) {
+      const words = spec.split(/\s+/);
+      if (words.every(w => msg.includes(w))) {
+        return spec.replace(/\b\w/g, c => c.toUpperCase());
+      }
+    }
+
+    // ── 3: Hardcoded keyword bank (chatbotData) ───────────────────────────────
+    for (const [caseType, keywords] of Object.entries(caseTypeKeywords)) {
+      for (const kw of keywords) {
+        if (kw.length <= 4 || ['bail', 'fir', 'ed', 'tax', 'esi', 'pf', 'oc', 'pod', 'npa', 'ibc'].includes(kw)) {
+          const regex = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          if (regex.test(msg)) return caseType;
+        } else {
+          if (msg.includes(kw)) return caseType;
+        }
+      }
+    }
+
+    // ── 4: Broad single-word fallback (ordered carefully) ────────────────────
+    const broad = [
+      ['Debt Recovery',        ['insolvency','liquidation','cheque','dishonour','sarfaesi','drt','npa','debt','loan recovery']],
+      ['Cyber Law',            ['cyber','hacking','phishing','ransomware','malware','deepfake','digital crime']],
+      ['Intellectual Property',['patent','trademark','copyright','trade secret','ip','infringement','licensing','royalty']],
+      ['Consumer Law',         ['consumer','deficiency','refund','warranty','guarantee','product defect']],
+      ['Family Law',           ['divorce','custody','alimony','maintenance','matrimonial','guardianship','adoption','inheritance','will','probate','dowry','498a','domestic violence']],
+      ['Tax Law',              ['income tax','itr','tds','gst','tax evasion','advance tax','benami','tribunal','tax audit']],
+      ['Labour Law',           ['labour','employment','employee','termination','dismissal','retrenchment','salary','wages','pf','epf','esic','gratuity','bonus','maternity','posh','union']],
+      ['Real Estate',          ['land','plot','flat','apartment','registry','mutation','sale deed','encroachment','eviction','rent','landlord','tenant','lease deed','trespassing','zameen','ghar','makaan','partition']],  // consolidated label
+      ['Criminal Law',         ['criminal','crime','arrest','bail','fir','murder','fraud','cheating','assault','robbery','narcotics','corruption','bribery','forgery','blackmail','extortion']],
+      ['Corporate Law',        ['company','corporate','startup','llp','partnership','director','shareholder','sebi','roc','compliance','merger','acquisition','mou','nda','contract','agreement']],
+      ['Arbitration',          ['arbitration','mediation','conciliation','adr']],
+      ['Environmental Law',    ['pollution','environment','ngt','forest','wildlife','waste','emission']],
+      ['Immigration Law',      ['visa','passport','oci','nri','citizenship','asylum','deportation','work permit','immigration']],
+    ];
+    for (const [caseType, keywords] of broad) {
+      if (keywords.some(kw => msg.includes(kw))) return caseType;
+    }
+
+    return null;
+  };
+
+  // Emotional / non-legal message detection — respond with empathy, not legal info
+  const getEmotionalResponse = (message) => {
+    const msg = message.toLowerCase().trim();
+    // Stress / anxiety / overwhelm — most common false trigger
+    if (/\b(stress|stressed|anxious|anxiety|worried|overwhelmed|panicking|panic|scared|fear|afraid|nervous|depressed|depression|sad|upset|frustrated|helpless|hopeless|exhausted|burnt out|mental health|not okay|not fine|struggling|rough day|tough time|hard time)\b/i.test(msg)) {
+      return `I hear you — it sounds like you're going through a tough time. 💙\n\nI'm a legal AI assistant, so I can't provide mental health support, but here are some helpful resources:\n\n📞 **iCall Helpline**: 9152987821\n📞 **Vandrevala Foundation**: 1860-2662-345 (24/7)\n📞 **Vandrevala (WhatsApp)**: +91-1800-2333-330\n\nIf you also have a **legal problem** causing your stress — property, family, job, or anything else — I can help find the right lawyer. Just describe your legal issue! 🙏`;
+    }
+    // Anger / vent
+    if (/\b(angry|furious|mad|hate|upset with|so done|cheated|betrayed|screwed|ripped off)\b/i.test(msg) && !/\blawyer\b|\bcase\b|\bcourt\b/i.test(msg)) {
+      return `I understand you're frustrated. 😔 If someone has wronged you legally — cheated you, harassed you, or violated your rights — I can find the right lawyer to help you fight back.\n\nJust tell me:\n• What happened?\n• Which city are you in?\n\nI'll match you with the right advocate!`;
+    }
+    return null;

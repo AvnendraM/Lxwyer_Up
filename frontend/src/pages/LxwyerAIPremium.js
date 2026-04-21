@@ -242,9 +242,11 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
           
           // Always merge dummy lawyers to ensure robust profiles
           const dummyMatches = dummyLawyers.filter(l => {
+            const ALLOWED_STATES = ['delhi', 'new delhi', 'uttar pradesh', 'haryana'];
+            const inRegion = ALLOWED_STATES.includes((l.state || '').toLowerCase());
             const locMatch = city ? (l.city || '').toLowerCase().includes(city) : true;
             const specMatch = spec ? (l.specialization || '').toLowerCase().includes(spec.toLowerCase()) : true;
-            return locMatch && specMatch;
+            return inRegion && locMatch && specMatch;
           });
           results = [...results, ...dummyMatches];
 
@@ -282,9 +284,11 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
           
           // Always merge dummy firms to ensure robust profiles
           const dummyFirmsMatches = dummyLawFirms.filter(f => {
+            const ALLOWED_STATES = ['delhi', 'new delhi', 'uttar pradesh', 'haryana'];
+            const inRegion = ALLOWED_STATES.includes((f.state || '').toLowerCase());
             const locMatch = city ? (f.city || '').toLowerCase().includes(city) : true;
             const specMatch = spec ? (f.practiceAreas?.join(' ') || '').toLowerCase().includes(spec.toLowerCase()) : true;
-            return locMatch && specMatch;
+            return inRegion && locMatch && specMatch;
           });
           results = [...results, ...dummyFirmsMatches];
           if (results.length > 0) {
@@ -645,8 +649,8 @@ export default function LxwyerAIPremium({ embedded = false, darkMode: darkModePr
                                 ? `Great news! I found ${msg.rec_items.length} lawyer${msg.rec_items.length > 1 ? 's' : ''}` + (msg.city ? ` in ${msg.city.charAt(0).toUpperCase() + msg.city.slice(1)}` : '') + ` who match your needs. Here are the best options for you:`
                                 : `I found ${msg.rec_items.length} law firm${msg.rec_items.length > 1 ? 's' : ''}` + (msg.city ? ` in ${msg.city.charAt(0).toUpperCase() + msg.city.slice(1)}` : '') + ` that could be a great fit:`
                               : msg.rec_type === 'lawyer'
-                                ? `I'm sorry, I couldn't find lawyers matching that exact criteria. However, we have highly qualified Criminal Lawyers in Delhi, Property Lawyers in Noida, and Family Lawyers in Mumbai. Would any of those help?`
-                                : `No law firms matched that search right now. Try adjusting the location or practice area.`
+                                ? `I appreciate your interest, but currently, we only operate and provide verified lawyers within **Delhi, Uttar Pradesh, and Haryana**. We do not have lawyers in your requested location at this time.`
+                                : `I appreciate your interest, but currently, we only operate and provide verified firms within **Delhi, Uttar Pradesh, and Haryana**. We do not have firms in your requested location at this time.`
                             }
                           </p>
                         </div>

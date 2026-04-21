@@ -975,9 +975,11 @@ export default function LawyerDashboard() {
     ? [...baseNavItems, { id: "sos", icon: AlertTriangle, label: "SOS Performance" }]
     : baseNavItems;
 
+  const isSignature = user?.isSignature || user?.is_signature || user?.signature_status === 'approved' || user?.signature_tier === true;
+
   return (
     <div
-      className={`min-h-screen ${isFullScreen ? "p-0 block" : "p-2 md:p-4 flex items-center justify-center"} font-sans transition-all duration-300 relative overflow-hidden ${darkMode ? "bg-black text-gray-100" : "bg-gradient-to-br from-[#E0F2FE] via-[#F0F9FF] to-[#E0F2FE] text-[#1F2937]"}`}
+      className={`min-h-screen ${isFullScreen ? "p-0 block" : "p-2 md:p-4 flex items-center justify-center"} font-sans transition-all duration-300 relative overflow-hidden ${darkMode ? "bg-black text-gray-100" : "bg-gradient-to-br from-[#E0F2FE] via-[#F0F9FF] to-[#E0F2FE] text-[#1F2937]"} ${isSignature ? 'signature-theme theme-applied' : ''}`}
     >
       {!isFullScreen && <ParticleBackground darkMode={darkMode} />}
 

@@ -1,0 +1,41 @@
+        (f.city && f.city.toLowerCase().includes(loc))
+      );
+    }
+    filtered.sort((a, b) => (b.lawyersCount || 0) - (a.lawyersCount || 0));
+    return filtered.slice(0, 5);
+  };
+
+  // Backend smart match
+  const smartMatchFirms = async (query) => {
+    try {
+      let sessionId = sessionStorage.getItem('firm_match_session_id');
+      if (!sessionId) { sessionId = Math.random().toString(36).substring(2, 15); sessionStorage.setItem('firm_match_session_id', sessionId); }
+      const response = await axios.post(`${API}/smart-match/firms`, { query, session_id: sessionId });
+      return response.data;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  // ── Send Message ─────────────────────────────────────────────────────────
+  const handleSendMessage = async (overrideMsg) => {
+    const raw = overrideMsg || inputMessage;
+    if (!raw.trim() || isLoading) return;
+    const userMessage = raw.trim();
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setInputMessage('');
+    setIsLoading(true);
+    setQuickChips([]);
+    setTypingChips([]);
+
+    await new Promise(r => setTimeout(r, 700));
+
+    // Platform-awareness ("how many firms", "which cities")
+    if (knowledgeBase) {
+      const platformReply = getPlatformAwarenessResponse(knowledgeBase, userMessage);
+      if (platformReply) {
+        setMessages(prev => [...prev, { role: 'assistant', content: platformReply }]);
+        setQuickChips(['Corporate firms Delhi', 'IP law Mumbai', 'Show all firms']);
+        setIsLoading(false);
+        return;
+      }

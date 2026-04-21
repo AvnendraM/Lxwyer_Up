@@ -600,3 +600,83 @@ html, body {
 .safe-top {
     padding-top: env(safe-area-inset-top);
 }
+
+/* =========================================================================
+   Signature Lawyer Dashboard Theme Overrides
+   ========================================================================= */
+.signature-theme.bg-gradient-to-br {
+  background: #ffffff !important; 
+}
+.signature-theme .bg-blue-50 {
+  background-color: rgb(212 175 55 / 0.1) !important;
+}
+.signature-theme .bg-blue-100 {
+  background-color: rgb(212 175 55 / 0.2) !important;
+}
+.signature-theme .bg-blue-500 {
+  background-color: #d4af37 !important;
+}
+.signature-theme .bg-blue-600 {
+  background-color: #b5952f !important;
+}
+.signature-theme .bg-blue-700 {
+  background-color: #745b12 !important;
+}
+.signature-theme .bg-blue-800 {
+  background-color: #433306 !important;
+}
+.signature-theme .text-blue-300 {
+  color: #e5c158 !important;
+}
+.signature-theme .text-blue-400 {
+  color: #d4af37 !important;
+}
+.signature-theme .text-blue-500 {
+  color: #b5952f !important;
+}
+.signature-theme .text-blue-600 {
+  color: #aa8c2c !important;
+}
+.signature-theme .text-blue-700 {
+  color: #745b12 !important;
+}
+.signature-theme .border-blue-100 {
+  border-color: rgb(212 175 55 / 0.1) !important;
+}
+.signature-theme .border-blue-200 {
+  border-color: rgb(212 175 55 / 0.3) !important;
+}
+.signature-theme .border-blue-500 {
+  border-color: #d4af37 !important;
+}
+.signature-theme .border-blue-600 {
+  border-color: #b5952f !important;
+}
+.signature-theme .border-blue-800 {
+  border-color: #745b12 !important;
+}
+.signature-theme .ring-blue-500 {
+  --tw-ring-color: #d4af37 !important;
+}
+.signature-theme .shadow-blue-500\/25 {
+  --tw-shadow-color: rgb(212 175 55 / 0.25) !important;
+  --tw-shadow: var(--tw-shadow-colored) !important;
+}
+
+/* =========================================================================
+   Signature Card Shine Animation
+   ========================================================================= */
+@keyframes signatureShine {
+  0% { transform: translateX(-150%) skewX(-25deg); }
+  20% { transform: translateX(250%) skewX(-25deg); }
+  100% { transform: translateX(250%) skewX(-25deg); }
+}
+
+.signature-card-shine {
+  position: absolute;
+  top: 0; left: -10%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.03), rgba(212, 175, 55, 0.15), rgba(212, 175, 55, 0.03), transparent);
+  animation: signatureShine 7s infinite ease-in-out;
+  pointer-events: none;
+  z-index: 50;
+}

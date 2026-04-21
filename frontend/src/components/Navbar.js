@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X, Home, Info, HelpCircle, Sparkles, ArrowRight, ChevronDown, Scale, Building2 } from 'lucide-react';
+import { Menu, X, Home, Info, HelpCircle, Sparkles, ArrowRight, ArrowLeft, ChevronDown, Scale, Building2 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 
@@ -99,17 +99,21 @@ export const Navbar = ({ hideLinks = false, minimal = false }) => {
 
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Lxwyer Up Logo" className="w-8 h-8 object-contain rounded" style={{ mixBlendMode: 'screen' }} />
-            <span className="text-base md:text-lg font-bold tracking-tight text-slate-900 dark:text-white font-['Outfit'] select-none">
+            <img src="/logo.png" alt="Lxwyer Up Logo" className="w-7 h-7 md:w-8 md:h-8 xl:w-9 xl:h-9 object-contain rounded" style={{ mixBlendMode: 'screen' }} />
+            <span className="text-[1.15rem] md:text-xl xl:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-['Outfit'] select-none">
               Lxwyer Up
             </span>
           </Link>
 
-          {/* ── MINIMAL mode: just logo ── */}
+          {/* ── MINIMAL mode: back button on right ── */}
           {minimal ? (
-            <div className="flex items-center gap-3">
-              {/* Sign in button removed — user is already on login page */}
-            </div>
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors group px-3 py-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 border border-transparent hover:border-slate-200 dark:hover:border-white/10"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
           ) : (
             <>
               {/* Desktop Links — centered */}

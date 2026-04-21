@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { User, Building2, ArrowRight, ArrowLeft, ShieldCheck, Lock, Star } from 'lucide-react';
+import { User, Building2, ArrowRight, ShieldCheck, Lock, Star } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { useLang } from '../context/LanguageContext';
 
@@ -221,14 +221,6 @@ export default function UserGetStarted() {
           <StatItem target={3} suffix="+" label={d.stat3} delay={700} />
         </motion.div>
 
-        {/* Back link */}
-        <button
-          onClick={() => navigate('/home')}
-          className="flex items-center gap-1.5 text-xs text-white/20 hover:text-white/50 transition-colors group"
-        >
-          <ArrowLeft className="w-3 h-3 group-hover:-translate-x-0.5 transition-transform" />
-          {d.backBtn}
-        </button>
       </main>
     </div>
   );

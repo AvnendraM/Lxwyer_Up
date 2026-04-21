@@ -1,0 +1,31 @@
+            return baseMatch && expReq && budgetReq && langReq && consultReq;
+          })
+          .sort((a, b) => {
+            if (urgent) return (b.experience || 0) - (a.experience || 0);
+            if (b.score === a.score) return Math.random() - 0.5;
+            return b.score - a.score;
+          })
+          .map(l => {
+            const badges = [];
+            if (caseType && (l.specialization === caseType)) badges.push('Specialization');
+            if (location && l.city === location.city) badges.push('Location');
+            if (budget && (l.feeMin || 0) <= budget.max) badges.push('Budget');
+            if (language) badges.push('Language');
+            if (urgent) badges.push('Urgent');
+            return { ...l, matchBadges: badges };
+          })
+          .slice(0, 15);
+          
+      // Merge, filter out duplicates, and ensure robust UI
+      const combined = [...enriched, ...localEnriched];
+      enriched = Array.from(new Map(combined.map(item => [item.id || item._id, item])).values());
+
+      // --- NEW: Universal Shuffling and Signature Priority Algorithm ---
+      // We take the matches (either from backend or fallback), shuffle them randomly,
+      // and ensure exactly up to 3 signature lawyers appear at the top.
+      if (enriched.length > 0) {
+        const shuffled = [...enriched].sort(() => Math.random() - 0.5);
+        const signatureList = shuffled.filter(l => l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature');
+        const normalList = shuffled.filter(l => !(l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature'));
+        
+        const topSig = signatureList.slice(0, 3);

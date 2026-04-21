@@ -3,7 +3,7 @@ import axios from 'axios';
 import { API } from '../App';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Search, Filter, MapPin, Users, ArrowRight, Star, Globe, Phone, Mail, Award, Check, X, ChevronLeft, ChevronRight, ChevronUp, Sparkles } from 'lucide-react';
+import { Building2, Search, Filter, MapPin, Users, ArrowRight, Star, Globe, Phone, Mail, Award, Check, X, ChevronLeft, ChevronRight, ChevronUp, Sparkles, MoreHorizontal } from 'lucide-react';
 import { WaveLayout } from '../components/WaveLayout';
 import { Button } from '../components/ui/button';
 import { dummyLawFirms, states, practiceAreas } from '../data/lawFirmsData';
@@ -85,7 +85,7 @@ const FloatingCard = ({ children, delay = 0, className = "" }) => (
     animate={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.5, delay }}
     whileHover={{ y: -5, transition: { duration: 0.2 } }}
-    className={`bg-white/80 dark:bg-[#121212]/80 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl shadow-blue-900/5 dark:shadow-blue-900/20 rounded-2xl ${className}`}
+    className={`bg-[#0a0a0a] dark:bg-black backdrop-blur-xl border border-white/10 shadow-xl shadow-blue-900/5 dark:shadow-blue-900/20 rounded-2xl ${className}`}
   >
     {children}
   </motion.div>
@@ -95,16 +95,15 @@ export default function FindLawFirmManual() {
   const { lang } = useLang();
   const d = LOCAL_TEXT_FIRM_MANUAL[lang] || LOCAL_TEXT_FIRM_MANUAL.en;
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState({
-    state: '',
-    city: '',
-    practiceArea: '',
-    priceMax: ''
+  const [searchQuery, setSearchQuery] = useState(() => sessionStorage.getItem('ff_searchQuery') || '');
+  const [filters, setFilters] = useState(() => {
+    const saved = sessionStorage.getItem('ff_filters');
+    if (saved) return JSON.parse(saved);
+    return { state: '', city: '', practiceArea: '', priceMax: '' };
   });
   const [showFilters, setShowFilters] = useState(false);
   const [searchCollapsed, setSearchCollapsed] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => parseInt(sessionStorage.getItem('ff_currentPage')) || 1);
   const [selectedFirm, setSelectedFirm] = useState(null);
 
   // Lock body scroll when firm modal OR filter sheet is open
@@ -113,29 +112,45 @@ export default function FindLawFirmManual() {
 
   // Collapse search bar on mobile scroll
   useEffect(() => {
-    let lastY = window.scrollY;
-    const onScroll = () => {
-      const cur = window.scrollY;
-      if (cur > 120 && cur > lastY) setSearchCollapsed(true);
-      if (cur < 80) setSearchCollapsed(false);
-      lastY = cur;
+    const handleScroll = () => {
+      // Chrome's minimum window width on Mac is often around 500px
+      if (window.innerWidth < 1024) {
+        setSearchCollapsed(window.scrollY > 300);
+      } else {
+        setSearchCollapsed(false);
+      }
     };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Persist local state to sessionStorage
+  useEffect(() => { sessionStorage.setItem('ff_filters', JSON.stringify(filters)); }, [filters]);
+  useEffect(() => { sessionStorage.setItem('ff_searchQuery', searchQuery); }, [searchQuery]);
+  useEffect(() => { sessionStorage.setItem('ff_currentPage', currentPage); }, [currentPage]);
+
   // Fetch verified law firms from backend
-  const [dbFirms, setDbFirms] = useState([]);
+  const [dbFirms, setDbFirms] = useState(() => {
+    const saved = sessionStorage.getItem('ff_dbFirms');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
   useEffect(() => {
     const fetchFirms = async () => {
       try {
-        const response = await axios.get(`${API}/lawfirms`);
-        setDbFirms(response.data);
+        const response = await axios.get(`${API}/lawfirms`, { timeout: 5000 });
+        setDbFirms(response.data || []);
+        sessionStorage.setItem('ff_dbFirms', JSON.stringify(response.data || []));
       } catch (error) {
-        console.error('Error fetching law firms:', error);
+        console.warn('Backend unavailable, using local data:', error.message);
+        setDbFirms([]);
       }
     };
-    fetchFirms();
+    
+    // Only fetch if not already populated from cache
+    if (dbFirms.length === 0) {
+      fetchFirms();
+    }
   }, []);
 
   // Memoize DB firms mapping so shuffle only recalculates when DB data changes
@@ -221,7 +236,7 @@ export default function FindLawFirmManual() {
 
   return (
     <WaveLayout activePage="find-law-firm">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12 relative z-10">
 
         {/* Header */}
         <div className="text-center mb-6 sm:mb-12">
@@ -287,22 +302,35 @@ export default function FindLawFirmManual() {
           )}
         </AnimatePresence>
 
-        {/* Search & Filters */}
-        <div className="sticky top-20 sm:top-24 z-30 mb-6 sm:mb-12">
-          {/* Collapsed pill — visible on mobile when search is hidden */}
+        {/* Unbreakable Fixed Minimized Button — perfectly replaces filter button's visual position */}
+        <AnimatePresence>
           {searchCollapsed && (
-            <div className="sm:hidden flex justify-end mb-2">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="sm:hidden fixed pt-[2px] right-4 lg:right-8 z-[9999]" 
+              style={{ top: '6rem' }}
+            >
               <button
-                onClick={() => { setSearchCollapsed(false); }}
-                className="bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] shadow-lg rounded-full px-4 py-2 flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
+                onClick={() => setShowFilters(true)}
+                className="shrink-0 h-[46px] w-[54px] flex items-center justify-center rounded-xl bg-white dark:bg-[#1A1A1A] border border-slate-200 dark:border-[#333] shadow-lg shadow-black/10 text-slate-600 dark:text-slate-300 transition-transform active:scale-95 relative"
               >
-                <Search className="w-4 h-4 text-blue-500" />
-                Search & Filter
-                {Object.values(filters).some(v => v) && <span className="w-2 h-2 rounded-full bg-blue-600" />}
+                <MoreHorizontal className="w-5 h-5" />
+                {Object.values(filters).some(v => v) && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center shrink-0 shadow-sm">
+                    {Object.values(filters).filter(v => v).length}
+                  </span>
+                )}
               </button>
-            </div>
+            </motion.div>
           )}
-          <FloatingCard className={`w-full p-4 sm:p-6 transition-all duration-300 ${searchCollapsed ? 'hidden sm:block' : 'block'}`}>
+        </AnimatePresence>
+
+        {/* Search & Filters — sticky wrapper smoothly fades out without altering document height */}
+        <div className={`sticky top-20 sm:top-24 z-30 mb-6 sm:mb-12 transition-all duration-300 ease-out ${searchCollapsed ? 'opacity-0 pointer-events-none -translate-y-4 sm:opacity-100 sm:pointer-events-auto sm:translate-y-0' : 'opacity-100 pointer-events-auto translate-y-0'}`}>
+          <FloatingCard className="w-full p-4 sm:p-6">
             <div className="flex gap-3 items-center">
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -317,20 +345,13 @@ export default function FindLawFirmManual() {
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
-                className={`shrink-0 h-[48px] px-4 border-slate-200 dark:border-[#333] dark:bg-[#1A1A1A] ${showFilters || Object.values(filters).some(v => v) ? 'bg-blue-50 dark:bg-[#222] border-blue-200 text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-300'}`}
+                className={`shrink-0 h-[48px] px-4 border-slate-200 dark:border-[#333] dark:bg-[#1A1A1A] ${showFilters || Object.values(filters).some(v => v) ? 'bg-blue-50 dark:bg-[#222] border-blue-200 text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-300'} transition-all shadow-sm`}
               >
                 <Filter className="w-4 h-4 mr-2" />
-                {d.filters}
-                {Object.values(filters).some(v => v) && <span className="ml-2 w-2 h-2 rounded-full bg-blue-600" />}
+                <span className="hidden sm:inline">{d.filters}</span>
+                {Object.values(filters).some(v => v) && <span className="sm:hidden ml-1 text-xs">{Object.values(filters).filter(v => v).length}</span>}
+                {Object.values(filters).some(v => v) && <span className="hidden sm:inline-block ml-2 w-2 h-2 rounded-full bg-blue-600" />}
               </Button>
-              {/* Minimize button — mobile only */}
-              <button
-                onClick={() => setSearchCollapsed(true)}
-                className="sm:hidden shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-[#222] text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-[#333]"
-                title="Collapse search"
-              >
-                <ChevronUp className="w-4 h-4" />
-              </button>
             </div>
 
             {/* Desktop inline filter expansion */}
@@ -538,7 +559,10 @@ export default function FindLawFirmManual() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-4xl bg-white dark:bg-[#121212] rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+              className="relative w-full max-w-4xl bg-black dark:bg-black rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto scroll-touch"
+              style={{ overscrollBehavior: 'contain', touchAction: 'pan-y' }}
+              onWheel={e => e.stopPropagation()}
+              onTouchMove={e => e.stopPropagation()}
             >
               <div className="relative h-64">
                 <img
@@ -683,8 +707,8 @@ export default function FindLawFirmManual() {
 
 
       {/* Floating AI Lawyer Matching Button */}
-      {!selectedFirm && (
-        <div className="fixed bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-8 z-30">
+      {!selectedFirm && !showFilters && (
+        <div className="fixed bottom-6 right-4 md:right-8 z-30">
           <motion.button
             onClick={() => navigate('/ai-firm-finder')}
             initial={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -692,7 +716,7 @@ export default function FindLawFirmManual() {
             transition={{ delay: 0.5, type: 'spring', stiffness: 260, damping: 20 }}
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
-            className="flex items-center justify-center px-8 py-3.5 rounded-full bg-[#050505] border-[1.5px] border-blue-600 hover:border-blue-400 hover:bg-[#111] text-blue-50 font-bold text-sm tracking-wide shadow-2xl shadow-blue-900/40 transition-all cursor-pointer whitespace-nowrap"
+            className="flex items-center justify-center px-8 py-3.5 rounded-full bg-[#050505] border-[1.5px] border-blue-600 hover:border-blue-400 hover:bg-[#111] text-blue-50 font-bold text-sm tracking-wide shadow-2xl shadow-blue-900/40 transition-all cursor-pointer whitespace-nowrap transform scale-[0.7] md:scale-100 origin-bottom-right"
           >
             <span>{d.findFirmAI}</span>
           </motion.button>

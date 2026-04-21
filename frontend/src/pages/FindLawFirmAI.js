@@ -132,7 +132,7 @@ export default function FindLawFirmAI() {
 
   const [messages, setMessages] = useState([{
     role: 'assistant',
-    content: "Hello! I'm your AI consultant for finding the right law firm. Describe your legal requirement and city — I'll match you with the best firms.\n\nFor example: \"Looking for a corporate law firm in Mumbai\" or \"IP law firm in Delhi\"",
+    content: "Hello! I'm your AI consultant for finding the right law firm. Describe your legal requirement and city — I'll match you with the best firms.\n\nFor example: \"Corporate law firm in Delhi\" or \"IP law firm in Pune\"",
   }]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -215,7 +215,32 @@ export default function FindLawFirmAI() {
   const detectPracticeArea = (message) => {
     const msg = message.toLowerCase();
 
-    // First pass: live practice area index from backend firms
+    // ── 0: Show-all guard — never classify these as a practice area ──────────
+    if (/^(show all|browse all|see all|all firms|browse all law firms|hello|hi|hi there|hey|thank you|thanks|how does|what is your|what type|which city|i need help|help me|i need legal|call me|what is arb)/i.test(msg.trim())) return null;
+
+    // ── 1: High-specificity multi-word phrases first (order matters!) ─────────
+    const highPriority = [
+      ['Arbitration',          ['arbitration','conciliation','adr','dispute resolution','arbitral award','commercial dispute']],
+      ['Intellectual Property',['trademark infringement','patent infringement','copyright infringement','intellectual property','trade secret','brand protection','geographical indication','ip law']],
+      ['Consumer Law',         ['consumer court','consumer forum','consumer complaint','consumer protection','product defect','unfair trade practice','consumer grievance']],
+      ['Labour Law',           ['labour law','employment law','unfair termination','fired me','wrongful dismissal','retrenchment','layoff','posh','pf dispute','esic','gratuity dispute','industrial dispute','maternity benefit','contract labour','wages dispute']],
+      ['Family Law',           ['family law','family court','divorce','custody','alimony','maintenance','matrimonial','guardianship','adoption','inheritance dispute','will dispute','probate','498a','dowry harassment','domestic violence']],
+      ['Real Estate',          ['real estate','property dispute','property law','land dispute','rera','builder dispute','sale deed','lease agreement','rent dispute','flat dispute','plot dispute','conveyance deed','mutation','housing society']],
+      ['Cyber Law',            ['cyber crime','data breach','online fraud','hacking','phishing','identity theft','it act','ransomware','deepfake','social media crime','cyberbullying','digital crime']],
+      ['Environmental Law',    ['environment','pollution','ngt','forest rights','wildlife protection','waste management','emission norms','environmental clearance']],
+      ['Banking Law',          ['banking law','bank litigation','rbi regulation','nbfc','fema','foreign exchange','financial regulation','loan default bank','bank fraud','credit card fraud']],
+      ['Debt Recovery',        ['debt recovery','cheque bounce','loan recovery','npa','sarfaesi','drt','emi default','dishonour of cheque','insolvency','ibc','liquidation']],
+      ['Tax Law',              ['income tax','gst','tds','itr filing','tax evasion','advance tax','benami','tax tribunal','tax assessment','tax demand','tax audit','service tax','customs duty']],
+      ['Immigration Law',      ['immigration','visa application','passport','oci','nri legal','citizenship','asylum','deportation','work permit','foreign national']],
+      ['Corporate Law',        ['corporate law','company law','merger acquisition','shareholder dispute','director dispute','board dispute','nclt','corporate fraud','startup legal','llp registration','company registration','incorporation','mou','nda','sebi compliance','directorship','roc filing']],
+      ['Criminal Law',         ['criminal law','criminal case','arrest','bail application','fir','murder','fraud case','cheating case','assault','robbery','narcotics','pocso','kidnapping','extortion','blackmail','corruption','bribery','forgery','criminal lawyer']],
+      ['Media & Entertainment',['media law','entertainment law','film contract','music rights','publishing','defamation','celebrity dispute','ott rights','streaming rights']],
+    ];
+    for (const [type, keywords] of highPriority) {
+      if (keywords.some(kw => msg.includes(kw))) return type;
+    }
+
+    // ── 2: Live practice area index from backend firms ────────────────────────
     for (const area of liveIndex.areas) {
       const words = area.split(/\s+/);
       if (words.every(w => msg.includes(w))) {
@@ -223,30 +248,32 @@ export default function FindLawFirmAI() {
       }
     }
 
-    // Second pass: extended keyword bank (150+ terms, 15 categories)
+    // ── 3: Fallback keyword bank from chatbotData ────────────────────────────
     for (const [type, keywords] of Object.entries(caseTypeKeywords)) {
       if (keywords.some(kw => msg.includes(kw))) return type;
     }
-    const extra = {
-      'Corporate Law':           ['corporate','business','company','merger','acquisition','board','shareholder','llp','partnership','startup','venture','due diligence','mou','nda','sebi','compliance','incorporation','directorship','roc','memorandum','articles'],
-      'Intellectual Property':   ['ip','intellectual','patent','trademark','copyright','design','trade secret','infringement','licensing','royalty','brand protection','geographical indication'],
-      'Tax Law':                 ['tax','gst','tds','itr','income tax','tax evasion','advance tax','benami','tribunal','assessment','demand notice','tax audit','service tax','customs'],
-      'Real Estate':             ['real estate','property','land','plot','flat','apartment','registration','conveyance','mutation','lease','rent','sale deed','builder','reit','rera','housing'],
-      'Criminal Law':            ['criminal','crime','arrest','bail','fir','murder','fraud','cheating','assault','robbery','narcotics','pocso','kidnapping','extortion','blackmail','corruption','bribery','forgery'],
-      'Family Law':              ['family','divorce','custody','alimony','maintenance','matrimonial','guardianship','adoption','inheritance','will','probate','498a','dowry','domestic violence'],
-      'Labour Law':              ['labour','employment','employee','termination','salary','wages','pf','epf','esic','gratuity','posh','retrenchment','layoff','maternity','contract labour','industrial dispute'],
-      'Consumer Law':            ['consumer','complaint','deficiency','refund','product defect','warranty','unfair trade','consumer forum','consumer court','compensation'],
-      'Cyber Law':               ['cyber','hacking','data breach','online fraud','it act','ransomware','phishing','deepfake','identity theft','social media crime','digital'],
-      'Immigration Law':         ['immigration','visa','passport','oci','nri','citizenship','asylum','deportation','work permit','foreign national'],
-      'Debt Recovery':           ['debt','loan','recovery','cheque bounce','npa','drt','sarfaesi','emi','default','dishonour','insolvency','ibc','liquidation'],
-      'Environmental Law':       ['environment','pollution','ngt','forest','wildlife','waste','emission','green','ecb','contamination'],
-      'Arbitration':             ['arbitration','mediation','adr','dispute resolution','arbitral','commercial dispute','conciliation'],
-      'Banking Law':             ['banking','bank','nbfc','rbi','financial regulation','fema','foreign exchange','credit','loan default'],
-      'Media & Entertainment':   ['media','entertainment','film','music','publishing','defamation','content','celebrity','ott','streaming'],
-    };
-    for (const [type, keywords] of Object.entries(extra)) {
+
+    // ── 4: Broader single-word fallback ──────────────────────────────────────
+    const broad = [
+      ['Corporate Law',          ['corporate','business','company','merger','acquisition','shareholder','llp','partnership','startup','venture','compliance','incorporation','memorandum']],
+      ['Intellectual Property',  ['patent','trademark','copyright','design','infringement','licensing','royalty']],
+      ['Tax Law',                ['tax','gst','tds','itr','tribunal','assessment','customs']],
+      ['Real Estate',            ['property','land','plot','flat','apartment','rent','lease deed','lease agreement','lease dispute','builder','housing','tenant eviction','eviction case']],
+      ['Criminal Law',           ['criminal','crime','arrest','bail','fir','murder','fraud','cheating','assault','robbery','narcotics','corruption','bribery','forgery']],
+      ['Family Law',             ['family','divorce','custody','alimony','maintenance','matrimonial','guardianship','adoption','inheritance','will','probate','dowry']],
+      ['Labour Law',             ['labour','employment','employee','termination','salary','wages','pf','epf','esic','gratuity','posh','retrenchment','maternity']],
+      ['Consumer Law',           ['consumer','complaint','deficiency','refund','warranty','compensation']],
+      ['Cyber Law',              ['cyber','hacking','digital','online fraud','ransomware','phishing']],
+      ['Debt Recovery',          ['debt','loan','recovery','cheque','npa','drt','default','dishonour','insolvency','ibc','liquidation']],
+      ['Arbitration',            ['arbitration','mediation','conciliation']],
+      ['Banking Law',            ['banking','bank','nbfc','rbi','fema','credit']],
+      ['Environmental Law',      ['environment','pollution','ngt','forest','wildlife','waste','emission']],
+      ['Immigration Law',        ['immigration','visa','passport','oci','nri','citizenship','asylum','deportation']],
+    ];
+    for (const [type, keywords] of broad) {
       if (keywords.some(kw => msg.includes(kw))) return type;
     }
+
     return null;
   };
 
@@ -320,7 +347,11 @@ export default function FindLawFirmAI() {
 
   // ── Firm Matching ─────────────────────────────────────────────────────────
   const localMatchFirms = (practiceArea, location) => {
-    let filtered = [...allFirms];
+    // ── Client-side matching — geography restricted pool ─────────────────────────
+    // The platform is strictly limited to Delhi, Haryana, and UP.
+    const ALLOWED_STATES = ['delhi', 'new delhi', 'uttar pradesh', 'haryana'];
+    let filtered = allFirms.filter(f => ALLOWED_STATES.includes(f.state?.toLowerCase()));
+    
     if (practiceArea) {
       filtered = filtered.filter(f =>
         f.practiceAreas?.some(pa => pa.toLowerCase().includes(practiceArea.toLowerCase()) || practiceArea.toLowerCase().includes(pa.toLowerCase()))
@@ -491,9 +522,9 @@ export default function FindLawFirmAI() {
     } else if (practiceArea && location) {
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `I'm sorry, I couldn't find a firm exactly matching your criteria. However, we have highly qualified Corporate Firms in Delhi, IP Firms in Mumbai, and Criminal Firms in Bangalore. Would any of those help? Or type "show all firms" to browse our complete directory.`
+        content: `I appreciate your interest, but currently, we only operate and provide verified firms within **Delhi, Uttar Pradesh, and Haryana**. We do not have firms in your requested location at this time.\n\nType "show all firms" to browse available law firms in our active regions.`
       }]);
-      setQuickChips(['Corporate firm in Delhi', 'IP firm in Mumbai', 'Criminal firm in Bangalore', 'Show all firms']);
+      setQuickChips(['Show all firms', 'Corporate firm in Delhi', 'Criminal firm in Gurgaon']);
     } else {
       setMessages(prev => [...prev, {
         role: 'assistant',
@@ -522,13 +553,19 @@ export default function FindLawFirmAI() {
   return (
     <WaveLayout activePage="find-law-firm">
       <div
-        style={{ display: 'flex', height: 'calc(100dvh - 64px)', overflow: 'hidden', background: '#000', color: '#fff' }}
+        style={{ display: 'flex', height: '100dvh', background: '#000', color: '#fff', paddingTop: '4rem', position: 'relative', overflow: 'hidden' }}
       >
         {/* ── Left: Chat Panel ── */}
-        <div className={`flex flex-col transition-all duration-500
-          ${mobileView === 'results' ? 'hidden lg:flex' : 'flex'}
-          ${recommendedFirms.length > 0 ? 'w-full lg:w-[52%]' : 'w-full'}
-          border-r border-slate-800/60`}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minWidth: 0,
+            maxWidth: recommendedFirms.length > 0 ? '52%' : '100%',
+          }}
+          className={`${mobileView === 'results' ? 'hidden lg:flex' : 'flex'} border-r border-slate-800/60 transition-all duration-500`}
+        >
 
           {/* Top bar */}
           <div className="shrink-0 h-14 border-b border-slate-800/60 bg-black/80 backdrop-blur-sm px-5 flex items-center justify-between">
@@ -623,17 +660,10 @@ export default function FindLawFirmAI() {
                 value={inputMessage}
                 onChange={(e) => { setInputMessage(e.target.value); if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current); if (e.target.value.length > 2 && knowledgeBase) { suggestDebounceRef.current = setTimeout(() => setTypingChips(getSuggestiveChips(knowledgeBase, e.target.value, memory)), 280); } else { setTypingChips([]); } }}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder={isListening ? 'Listening...' : followUpQueue[followUpIndex]?.text || 'Describe your legal requirement...'}
+                placeholder={followUpQueue[followUpIndex]?.text || 'Describe your legal requirement...'}
                 className="flex-1 bg-transparent border-none text-white placeholder-slate-600 font-medium py-2 text-sm"
                 style={{ outline: 'none', boxShadow: 'none' }}
               />
-              <button
-                onClick={() => setShowVoiceMode(true)}
-                title="Voice Mode"
-                className="p-2.5 rounded-full transition-all text-slate-500 hover:text-indigo-400 hover:bg-indigo-400/10"
-              >
-                <Mic className="w-4 h-4" />
-              </button>
               <button
                 onClick={() => handleSendMessage()}
                 disabled={!inputMessage.trim() || isLoading}

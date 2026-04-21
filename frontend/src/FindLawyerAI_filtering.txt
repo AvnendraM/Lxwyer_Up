@@ -1,0 +1,16 @@
+          score: r.score,
+        }));
+      }
+
+      // ── Client-side matching — full pool, all cities ─────────────────────────
+      const basePool = allLawyersList; // No geography lock — covers all dummy cities
+
+        const scoredLawyers = basePool.map(lawyer => {
+          const prediction = predictLawyerMatch(userMessage, lawyer);
+          return { ...lawyer, ...prediction };
+        });
+
+        // Build spec alias list: if AI returns 'Real Estate', also match 'Property Law' etc.
+        const specAliases = caseType ? (SPEC_ALIASES[caseType] || [caseType]) : [];
+        const specMatchFn = (l) => caseType && (
+          specAliases.includes(l.specialization) ||
