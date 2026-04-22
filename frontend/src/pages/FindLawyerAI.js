@@ -1067,7 +1067,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
   const content = (
     <>
       <div
-        style={{ display: 'flex', height: '100dvh', background: '#000', color: '#fff', paddingTop: embedded ? 0 : '4rem', position: 'relative', overflow: 'hidden' }}
+        style={{ display: 'flex', height: '100dvh', background: '#000', color: '#fff', position: 'relative', overflow: 'hidden' }}
       >
 
         {/* ── Left: Chat Panel ── */}
@@ -1077,7 +1077,9 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
             flexDirection: 'column',
             flex: 1,
             minWidth: 0,
+            minHeight: 0,
             maxWidth: recommendedLawyers.length > 0 ? '52%' : '100%',
+            paddingTop: embedded ? 0 : '4rem',
             borderRight: recommendedLawyers.length > 0 ? '1px solid rgba(51,65,85,0.6)' : 'none',
             transition: 'max-width 0.5s',
             overflow: 'hidden',
@@ -1282,17 +1284,19 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
                   </button>
                 </div>
               </div>
-              {/* Scrollable cards */}
+              {/* Scrollable cards — flex:1 + minHeight:0 is the correct
+                  cross-browser way to make a flex child scrollable */}
               <div
                 ref={scrollPanelRef}
                 style={{
-                  display: 'block',
-                  height: `calc(100% - 56px)`,
+                  flex: 1,
+                  minHeight: 0,
                   overflowY: 'scroll',
                   WebkitOverflowScrolling: 'touch',
                   touchAction: 'pan-y',
                   overscrollBehavior: 'contain',
-                  padding: '16px',
+                  padding: '12px 16px',
+                  paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
                   boxSizing: 'border-box',
                 }}
               >
