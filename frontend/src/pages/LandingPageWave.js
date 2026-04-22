@@ -619,7 +619,7 @@ const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
                         {legalDataItems.filter(i => i.type === 'feature').map((item, i) => (
                             <div key={i} style={{
                                 padding: '8px 24px',
-                                color: '#64748b', // Slate 500 for light mode
+                                color: '#ffffff',
                                 fontSize: '15px',
                                 fontWeight: 600,
                                 display: 'flex',
@@ -627,7 +627,7 @@ const ScalesOfJusticeIntro = React.memo(({ justTransitioned }) => {
                                 whiteSpace: 'nowrap',
                                 textTransform: 'uppercase',
                                 letterSpacing: '0.08em',
-                            }} className="dark:text-slate-300"> {/* Slate 300 (off-white/grey) for dark mode */}
+                            }}>
                                 {t(item.label)}
                             </div>
                         ))}
@@ -1961,7 +1961,7 @@ const FloatingEmergencyButton = () => {
             onClick={() => navigate('/emergency')}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 1.2, type: 'spring', stiffness: 200, damping: 15 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 15 }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.92 }}
             style={{

@@ -287,16 +287,20 @@ export const NavbarWave = () => {
 
                     {/* ── Mobile Toggle ─────────────────────────────────── */}
                     <div className="md:hidden flex items-center gap-1.5">
-                        {/* LxwyerAI mobile inline */}
-                        <div className="lxwyer-wrap scale-[0.8] origin-right">
-                          <div className="lxwyer-spin" />
-                          <button
+                        {/* LxwyerAI mobile — labelled pill with blue glow border */}
+                        <button
                             onClick={() => navigate('/lxwyerai')}
-                            className="lxwyer-inner px-2 py-1 flex items-center"
-                          >
-                            <Sparkles className="w-4 h-4 text-white/70" />
-                          </button>
-                        </div>
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap"
+                            style={{
+                                background: 'rgba(37,99,235,0.12)',
+                                border: '1px solid rgba(96,165,250,0.55)',
+                                color: '#93c5fd',
+                                boxShadow: '0 0 8px rgba(59,130,246,0.25)',
+                            }}
+                        >
+                            <Sparkles className="w-3 h-3" />
+                            <span>Lxwyer<span style={{ color: '#60a5fa' }}>AI</span></span>
+                        </button>
 
                         {/* Find Lawyer mobile inline */}
                         <button

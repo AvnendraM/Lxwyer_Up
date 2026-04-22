@@ -187,27 +187,34 @@ export default function LawyerProfile({ lawyerId, onCloseModal }) {
 
             {/* Achievements */}
             {lawyer.achievements && lawyer.achievements.length > 0 && (
-              <div className="p-6 sm:p-8 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-[#05150f] dark:to-[#020a07] rounded-3xl border border-emerald-200 dark:border-emerald-900/50 relative overflow-hidden">
+              <div className="p-5 sm:p-8 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-[#05150f] dark:to-[#020a07] rounded-3xl border border-emerald-200 dark:border-emerald-900/50 relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                   <Award className="w-48 h-48 text-emerald-500" />
                 </div>
                 <h3 className="text-sm font-black text-emerald-800 dark:text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-3 relative z-10">
-                  <Award className="w-5 h-5" /> Milestones & Achievements
+                  <Award className="w-5 h-5 shrink-0" /> Milestones & Achievements
                   <div className="h-px flex-1 bg-emerald-200 dark:bg-emerald-900/50" />
                 </h3>
                 <div className="space-y-4 relative z-10">
                   {lawyer.achievements.map((ach, i) => (
-                    <div key={i} className="bg-white/80 dark:bg-[#1A1A1A] backdrop-blur-md rounded-2xl p-5 border border-emerald-100 dark:border-[#333] flex items-center gap-5">
+                    <div key={i} className="bg-white/80 dark:bg-[#1A1A1A] backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-emerald-100 dark:border-[#333] flex items-start gap-4">
                       {ach.photo ? (
-                        <img src={ach.photo} alt="achievement" className="w-16 h-16 rounded-xl object-cover shrink-0 border border-emerald-200 dark:border-emerald-700" />
+                        <img src={ach.photo} alt="achievement" className="w-14 h-14 rounded-xl object-cover shrink-0 border border-emerald-200 dark:border-emerald-700" />
                       ) : (
-                         <div className="w-16 h-16 rounded-xl flex items-center justify-center shrink-0 bg-emerald-100 dark:bg-slate-800 border-emerald-200">
-                          <Award className="w-8 h-8 text-emerald-500" />
+                        <div className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 bg-emerald-100 dark:bg-slate-800 border-emerald-200">
+                          <Award className="w-7 h-7 text-emerald-500" />
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-lg text-slate-900 dark:text-white mb-1 break-words">{ach.title}</p>
-                        {ach.date && <p className="text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5"><Calendar className="w-4 h-4 shrink-0"/> {ach.date}</p>}
+                        <div className="flex flex-wrap items-start gap-2 mb-1">
+                          <p className="font-bold text-base text-slate-900 dark:text-white leading-snug break-words">{ach.title}</p>
+                          {ach.featured && (
+                            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800 flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5" /> Featured
+                            </span>
+                          )}
+                        </div>
+                        {ach.date && <p className="text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5 shrink-0"/> {ach.date}</p>}
                       </div>
                     </div>
                   ))}
@@ -215,22 +222,22 @@ export default function LawyerProfile({ lawyerId, onCloseModal }) {
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-slate-50 dark:bg-[#1A1A1A] p-6 rounded-2xl border border-slate-100 dark:border-[#333]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Consultation Fee — full-width stacked layout on mobile */}
+              <div className="bg-slate-50 dark:bg-[#1A1A1A] p-5 rounded-2xl border border-slate-100 dark:border-[#333]">
                 <p className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-3">Consultation Fee</p>
-                <div className="flex gap-4 items-center">
-                  <div>
-                    <span className="text-xs text-slate-500 font-medium block">30 mins</span>
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">₹{lawyer.feeMin !== 'N/A' ? lawyer.feeMin : '--'}</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white dark:bg-[#222] rounded-xl px-4 py-3 border border-slate-100 dark:border-[#333]">
+                    <span className="text-[10px] text-slate-500 font-medium block mb-0.5">30 mins</span>
+                    <span className="text-base font-bold text-slate-900 dark:text-white">₹{lawyer.feeMin !== 'N/A' ? lawyer.feeMin : '--'}</span>
                   </div>
-                  <div className="w-px h-8 bg-slate-200 dark:bg-[#333]" />
-                  <div>
-                    <span className="text-xs text-slate-500 font-medium block">1 hour</span>
-                    <span className="text-lg font-bold text-slate-900 dark:text-white">₹{lawyer.feeMax !== 'N/A' ? lawyer.feeMax : '--'}</span>
+                  <div className="bg-white dark:bg-[#222] rounded-xl px-4 py-3 border border-slate-100 dark:border-[#333]">
+                    <span className="text-[10px] text-slate-500 font-medium block mb-0.5">1 hour</span>
+                    <span className="text-base font-bold text-slate-900 dark:text-white">₹{lawyer.feeMax !== 'N/A' ? lawyer.feeMax : '--'}</span>
                   </div>
                 </div>
               </div>
-              <div className="bg-slate-50 dark:bg-[#1A1A1A] p-6 rounded-2xl border border-slate-100 dark:border-[#333]">
+              <div className="bg-slate-50 dark:bg-[#1A1A1A] p-5 rounded-2xl border border-slate-100 dark:border-[#333]">
                 <p className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-3">Practice Area</p>
                 <div className="flex flex-wrap gap-2">
                   <span className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
