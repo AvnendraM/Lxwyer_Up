@@ -589,18 +589,18 @@ export default function FindLawFirmAI() {
   return (
     <WaveLayout activePage="find-law-firm">
       <div
-        style={{ display: 'flex', height: '100dvh', background: '#000', color: '#fff', paddingTop: '4rem', position: 'relative', overflow: 'hidden' }}
+        style={{ display: 'flex', height: '100dvh', background: '#000', color: '#fff', position: 'relative', overflow: 'hidden' }}
       >
         {/* ── Left: Chat Panel ── */}
         <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            minWidth: 0,
-            maxWidth: recommendedFirms.length > 0 ? '52%' : '100%',
-          }}
-          className={`${mobileView === 'results' ? 'hidden lg:flex' : 'flex'} border-r border-slate-800/60 transition-all duration-500`}
+          className={`flex-col flex-1 min-w-0 min-h-0 overflow-hidden transition-all duration-500 ${
+            mobileView === 'results' ? 'hidden lg:flex' : 'flex'
+          } ${
+            recommendedFirms.length > 0
+              ? 'w-full lg:max-w-[52%] border-r border-slate-800/60'
+              : 'w-full max-w-full border-r-0'
+          }`}
+          style={{ paddingTop: '4rem' }}
         >
 
           {/* Top bar */}
@@ -751,14 +751,16 @@ export default function FindLawFirmAI() {
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
-              className={mobileView === 'results' ? 'absolute inset-0 z-50' : 'hidden lg:flex'}
+              className={`flex flex-col bg-black overflow-hidden border-l border-slate-800/60 shrink-0 ${
+                mobileView === 'results'
+                  ? 'fixed inset-0 z-50 w-full'
+                  : 'hidden lg:flex lg:w-[48%]'
+              }`}
               style={{
-                flexDirection: 'column',
-                width: '48%',
-                height: '100%',
-                overflow: 'hidden',
-                flexShrink: 0,
-                background: '#000',
+                top: 64, // below navbar
+                right: 0,
+                bottom: 0,
+                position: mobileView === 'results' ? 'fixed' : 'absolute',
               }}
             >
               <div style={{ flexShrink: 0, height: 56, borderBottom: '1px solid rgba(51,65,85,0.6)', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -793,7 +795,9 @@ export default function FindLawFirmAI() {
                   minHeight: 0,
                   overflowY: 'auto',
                   WebkitOverflowScrolling: 'touch',
-                  padding: '16px',
+                  padding: '12px 16px',
+                  paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+                  boxSizing: 'border-box',
                 }}
               >
                 {recommendedFirms.map((firm, index) => (

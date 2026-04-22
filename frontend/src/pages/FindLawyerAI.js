@@ -1072,19 +1072,14 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
 
         {/* ── Left: Chat Panel ── */}
         <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            flex: 1,
-            minWidth: 0,
-            minHeight: 0,
-            maxWidth: recommendedLawyers.length > 0 ? '52%' : '100%',
-            paddingTop: embedded ? 0 : '4rem',
-            borderRight: recommendedLawyers.length > 0 ? '1px solid rgba(51,65,85,0.6)' : 'none',
-            transition: 'max-width 0.5s',
-            overflow: 'hidden',
-          }}
-          className={mobileView === 'matches' ? 'hidden lg:flex' : 'flex'}
+          className={`flex-col flex-1 min-w-0 min-h-0 overflow-hidden transition-all duration-500 ${
+            mobileView === 'matches' ? 'hidden lg:flex' : 'flex'
+          } ${
+            recommendedLawyers.length > 0
+              ? 'w-full lg:max-w-[52%] border-r border-slate-800/60'
+              : 'w-full max-w-full border-r-0'
+          }`}
+          style={{ paddingTop: embedded ? 0 : '4rem' }}
         >
 
           {/* Top bar */}
@@ -1243,18 +1238,16 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
+              className={`flex flex-col bg-black overflow-hidden border-l border-slate-800/60 ${
+                mobileView === 'matches'
+                  ? 'fixed inset-0 z-50 w-full'
+                  : 'hidden lg:flex lg:w-[48%]'
+              }`}
               style={{
-                display: recommendedLawyers.length > 0 ? 'flex' : 'none',
-                position: 'fixed',
                 top: embedded ? 0 : 64,
                 right: 0,
                 bottom: 0,
-                width: mobileView === 'matches' ? '100%' : '48%',
-                flexDirection: 'column',
-                background: '#000',
-                zIndex: mobileView === 'matches' ? 50 : 20,
-                borderLeft: '1px solid rgba(51,65,85,0.6)',
-                overflow: 'hidden',
+                position: mobileView === 'matches' ? 'fixed' : 'absolute',
               }}
             >
               {/* Fixed header */}
