@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
 
 function createBeam(width, height) {
@@ -46,15 +45,15 @@ export function BeamsBackground({
 
         const updateCanvasSize = () => {
             const isMobile = window.innerWidth <= 768;
-            // Cap DPR to 1 on mobile to prevent extreme lag, 1.5 on desktop
-            const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.5); 
+            // Cap DPR to 1 on mobile to prevent extreme lag, 1.25 on desktop
+            const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1 : 1.25); 
             canvas.width = window.innerWidth * dpr;
             canvas.height = window.innerHeight * dpr;
             canvas.style.width = `${window.innerWidth}px`;
             canvas.style.height = `${window.innerHeight}px`;
             ctx.scale(dpr, dpr);
 
-            const effectiveMinBeams = isMobile ? Math.floor(MINIMUM_BEAMS / 2.5) : MINIMUM_BEAMS;
+            const effectiveMinBeams = isMobile ? Math.floor(MINIMUM_BEAMS / 2.5) : Math.floor(MINIMUM_BEAMS / 1.5);
             const totalBeams = effectiveMinBeams * 1.5;
             beamsRef.current = Array.from({ length: totalBeams }, () =>
                 createBeam(canvas.width, canvas.height)
@@ -93,35 +92,27 @@ export function BeamsBackground({
                 (0.8 + Math.sin(beam.pulse) * 0.2) *
                 opacityMap[intensity];
 
-            const gradient = ctx.createLinearGradient(0, 0, 0, beam.length);
+            ctx.globalAlpha = pulsingOpacity;
 
-            // Enhanced gradient with multiple color stops
-            gradient.addColorStop(0, `hsla(${beam.hue}, 85%, 65%, 0)`);
-            gradient.addColorStop(
-                0.1,
-                `hsla(${beam.hue}, 85%, 65%, ${pulsingOpacity * 0.5})`
-            );
-            gradient.addColorStop(
-                0.4,
-                `hsla(${beam.hue}, 85%, 65%, ${pulsingOpacity})`
-            );
-            gradient.addColorStop(
-                0.6,
-                `hsla(${beam.hue}, 85%, 65%, ${pulsingOpacity})`
-            );
-            gradient.addColorStop(
-                0.9,
-                `hsla(${beam.hue}, 85%, 65%, ${pulsingOpacity * 0.5})`
-            );
-            gradient.addColorStop(1, `hsla(${beam.hue}, 85%, 65%, 0)`);
+            // Cache gradient to avoid creating it every frame
+            if (!beam.gradient) {
+                const gradient = ctx.createLinearGradient(0, 0, 0, beam.length);
+                gradient.addColorStop(0, `hsla(${beam.hue}, 85%, 65%, 0)`);
+                gradient.addColorStop(0.1, `hsla(${beam.hue}, 85%, 65%, 0.5)`);
+                gradient.addColorStop(0.4, `hsla(${beam.hue}, 85%, 65%, 1)`);
+                gradient.addColorStop(0.6, `hsla(${beam.hue}, 85%, 65%, 1)`);
+                gradient.addColorStop(0.9, `hsla(${beam.hue}, 85%, 65%, 0.5)`);
+                gradient.addColorStop(1, `hsla(${beam.hue}, 85%, 65%, 0)`);
+                beam.gradient = gradient;
+            }
 
-            ctx.fillStyle = gradient;
+            ctx.fillStyle = beam.gradient;
             ctx.fillRect(-beam.width / 2, 0, beam.width, beam.length);
             ctx.restore();
         }
 
         let lastTime = 0;
-        const TARGET_FPS = 45;
+        const TARGET_FPS = 30;
         const FRAME_INTERVAL = 1000 / TARGET_FPS;
 
         function animate(timestamp) {
@@ -200,17 +191,7 @@ export function BeamsBackground({
                 className="absolute inset-0"
             />
 
-            <motion.div
-                className="absolute inset-0 bg-black/40 pointer-events-none"
-                animate={{
-                    opacity: [0.05, 0.15, 0.05],
-                }}
-                transition={{
-                    duration: 10,
-                    ease: "easeInOut",
-                    repeat: Infinity,
-                }}
-            />
+            <div className="absolute inset-0 bg-black/40 pointer-events-none" />
 
             <div className="relative z-10 flex h-full w-full items-center justify-center">
                 {children}
