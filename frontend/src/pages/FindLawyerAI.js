@@ -1238,22 +1238,23 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
-              className={`flex flex-col bg-black overflow-hidden border-l border-slate-800/60 ${
-                mobileView === 'matches'
-                  ? 'fixed inset-0 z-50 w-full'
-                  : 'hidden lg:flex lg:w-[48%]'
-              }`}
               style={{
+                display: mobileView === 'matches' ? 'block' : 'none',
+                position: 'fixed',
                 top: embedded ? 0 : 64,
+                left: 0,
                 right: 0,
                 bottom: 0,
-                position: mobileView === 'matches' ? 'fixed' : 'absolute',
+                background: '#000',
+                zIndex: 50,
+                borderLeft: '1px solid rgba(51,65,85,0.6)',
               }}
+              // Desktop: visible as right sidebar
+              className="lg:!block lg:!left-auto lg:!w-[48%] lg:!z-20"
             >
               {/* Fixed header */}
-              <div style={{ flexShrink: 0, height: 56, borderBottom: '1px solid rgba(51,65,85,0.6)', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#000' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 56, borderBottom: '1px solid rgba(51,65,85,0.6)', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#000', zIndex: 2 }}>
                 <h3 className="font-bold text-white text-sm flex items-center gap-2">
-
                   {d.topMatches}
                   <span className="ml-1 text-[10px] bg-slate-900 border border-slate-700 text-slate-400 px-2 py-0.5 rounded-full font-bold">
                     {recommendedLawyers.length} {d.found}
@@ -1267,7 +1268,7 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
                   >
                     <ArrowLeft className="w-3.5 h-3.5" /> {d.chat}
                   </button>
-                  {/* Close / dismiss panel — visible on all screens */}
+                  {/* Close / dismiss panel */}
                   <button
                     onClick={() => { setRecommendedLawyers([]); setMobileView('chat'); setQuickChips([]); setFollowUpQueue([]); }}
                     title="Close results"
@@ -1277,19 +1278,21 @@ export default function FindLawyerAI({ hideNavbar = false, embedded = false }) {
                   </button>
                 </div>
               </div>
-              {/* Scrollable cards — flex:1 + minHeight:0 is the correct
-                  cross-browser way to make a flex child scrollable */}
+
+              {/* Scroll area — absolutely anchored below header */}
               <div
                 ref={scrollPanelRef}
                 style={{
-                  flex: 1,
-                  minHeight: 0,
+                  position: 'absolute',
+                  top: 56,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
                   overflowY: 'scroll',
                   WebkitOverflowScrolling: 'touch',
-                  touchAction: 'pan-y',
                   overscrollBehavior: 'contain',
                   padding: '12px 16px',
-                  paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+                  paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
                   boxSizing: 'border-box',
                 }}
               >

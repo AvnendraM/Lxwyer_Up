@@ -751,19 +751,20 @@ export default function FindLawFirmAI() {
               initial={{ opacity: 0, x: 40 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 40 }}
-              className={`flex flex-col bg-black overflow-hidden border-l border-slate-800/60 shrink-0 ${
-                mobileView === 'results'
-                  ? 'fixed inset-0 z-50 w-full'
-                  : 'hidden lg:flex lg:w-[48%]'
-              }`}
               style={{
-                top: 64, // below navbar
+                display: mobileView === 'results' ? 'block' : 'none',
+                position: 'fixed',
+                top: 64,
+                left: 0,
                 right: 0,
                 bottom: 0,
-                position: mobileView === 'results' ? 'fixed' : 'absolute',
+                background: '#000',
+                zIndex: 50,
+                borderLeft: '1px solid rgba(51,65,85,0.6)',
               }}
+              className="lg:!block lg:!left-auto lg:!w-[48%] lg:!z-20"
             >
-              <div style={{ flexShrink: 0, height: 56, borderBottom: '1px solid rgba(51,65,85,0.6)', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 56, borderBottom: '1px solid rgba(51,65,85,0.6)', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#000', zIndex: 2 }}>
                 <h3 className="font-bold text-white text-sm flex items-center gap-2">
                   <Building2 className="w-4 h-4 text-indigo-400" />
                   {d.topMatches}
@@ -791,12 +792,16 @@ export default function FindLawFirmAI() {
 
               <div
                 style={{
-                  flex: 1,
-                  minHeight: 0,
-                  overflowY: 'auto',
+                  position: 'absolute',
+                  top: 56,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  overflowY: 'scroll',
                   WebkitOverflowScrolling: 'touch',
+                  overscrollBehavior: 'contain',
                   padding: '12px 16px',
-                  paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+                  paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
                   boxSizing: 'border-box',
                 }}
               >
