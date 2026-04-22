@@ -321,6 +321,20 @@ export default function QuickChat({ embedded = false, darkMode: darkModeProp }) 
             const all = dummyLawyers;
             results = city ? all.filter(l => (l.city || '').toLowerCase().includes(city)) : all;
           }
+          
+          // --- Universal Shuffling and Signature Priority Algorithm ---
+          if (results.length > 0) {
+            const shuffled = [...results].sort(() => Math.random() - 0.5);
+            const signatureList = shuffled.filter(l => l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature');
+            const normalList = shuffled.filter(l => !(l.isSignature || String(l.package).toLowerCase() === 'signature' || String(l.plan).toLowerCase() === 'signature'));
+            
+            const topSig = signatureList.slice(0, 3);
+            const remainingSlots = Math.max(0, results.length - topSig.length);
+            const fillers = normalList.slice(0, remainingSlots);
+            
+            results = [...topSig, ...fillers];
+          }
+
           setMessages(prev => [...prev, {
             role: 'assistant',
             id: Date.now() + 1,
@@ -353,6 +367,20 @@ export default function QuickChat({ embedded = false, darkMode: darkModeProp }) 
             const all = dummyLawFirms;
             results = city ? all.filter(f => (f.city || '').toLowerCase().includes(city)) : all;
           }
+          
+          // --- Universal Shuffling and Signature Priority Algorithm ---
+          if (results.length > 0) {
+            const shuffled = [...results].sort(() => Math.random() - 0.5);
+            const signatureList = shuffled.filter(f => f.isSignature || String(f.package).toLowerCase() === 'signature' || String(f.plan).toLowerCase() === 'signature');
+            const normalList = shuffled.filter(f => !(f.isSignature || String(f.package).toLowerCase() === 'signature' || String(f.plan).toLowerCase() === 'signature'));
+            
+            const topSig = signatureList.slice(0, 3);
+            const remainingSlots = Math.max(0, results.length - topSig.length);
+            const fillers = normalList.slice(0, remainingSlots);
+            
+            results = [...topSig, ...fillers];
+          }
+
           setMessages(prev => [...prev, {
             role: 'assistant',
             id: Date.now() + 1,
