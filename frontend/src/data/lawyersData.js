@@ -109,10 +109,17 @@ const educations = [
 ];
 
 
-// Curated professional-looking portrait indices for randomuser.me
-// Indices 1-25 for men and women consistently produce formal/office headshots
-const MALE_PRO_INDICES   = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
-const FEMALE_PRO_INDICES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
+// Curated professional-looking portrait IDs from Unsplash for HD quality
+const MALE_PRO_INDICES = [
+  '1560250097-0b93528c311a', '1519085360753-af0119f7cbe7', '1556157382-97eda2d62296', 
+  '1507003211169-0a1dd7228f2d', '1472099645785-5658abf4ff4e', '1500648767791-00dcc994a43e', 
+  '1519345182560-3f2917c472ef', '1543610892-0b1f7e6d8ef1', '1566492031-7361f58667e4', '1506794778202-cad84cf45f1d'
+];
+const FEMALE_PRO_INDICES = [
+  '1573496359142-b8d87734a5a2', '1580489944761-15a19d654956', '1598550874175-4d0ef436c909', 
+  '1573497019940-1c28c88b4f3e', '1567532939604-b6b5b0db2604', '1551836022-d5d88e9218df', 
+  '1534528741775-53994a69daeb', '1508214751196-bfd47c62756f', '1573496799826-0e0a943ee6de', '1573497491208-6f46ab6883e6'
+];
 
 // Female first names for gender detection
 const femaleFirstNames = new Set([
@@ -206,13 +213,13 @@ const generateLawyers = () => {
       const fee_60min = 1500 + Math.floor(Math.random() * 4000);
       const fee_30min = Math.ceil(fee_60min / 2);
 
-      // Assign gender-matched photo from curated professional-looking indices
+      // Assign gender-matched photo from curated professional-looking Unsplash IDs
       let photo;
       if (isFemale) {
-        photo = `https://randomuser.me/api/portraits/women/${FEMALE_PRO_INDICES[femaleIdx % FEMALE_PRO_INDICES.length]}.jpg`;
+        photo = `https://images.unsplash.com/photo-${FEMALE_PRO_INDICES[femaleIdx % FEMALE_PRO_INDICES.length]}?q=80&w=800&auto=format&fit=crop`;
         femaleIdx++;
       } else {
-        photo = `https://randomuser.me/api/portraits/men/${MALE_PRO_INDICES[maleIdx % MALE_PRO_INDICES.length]}.jpg`;
+        photo = `https://images.unsplash.com/photo-${MALE_PRO_INDICES[maleIdx % MALE_PRO_INDICES.length]}?q=80&w=800&auto=format&fit=crop`;
         maleIdx++;
       }
 

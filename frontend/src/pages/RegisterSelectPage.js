@@ -256,7 +256,7 @@ export default function RegisterSelectPage() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 0.9, duration: 0.5 }}
-                        className="mt-12 flex items-center gap-6"
+                        className="mt-12 flex flex-wrap items-center gap-4 md:gap-6"
                     >
                         {[t('reg_verified'), t('reg_review'), t('reg_secure'), t('reg_network')].map((txt, i) => (
                             <div key={i} className="flex items-center gap-1.5">

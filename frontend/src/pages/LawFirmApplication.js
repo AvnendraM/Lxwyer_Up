@@ -495,23 +495,23 @@ export default function LawFirmApplication() {
           {steps.map((s, idx) => {
             const Icon = s.icon;
             return (
-              <div key={s.num} className="flex items-center">
-                <div className="flex flex-col items-center min-w-[60px] mx-2">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+              <div key={s.num} className="flex items-center flex-shrink-0">
+                <div className="flex flex-col items-center w-[50px] sm:w-[70px] mx-0.5 sm:mx-2 text-center">
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
                     step > s.num
                       ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25'
                       : step === s.num
                         ? 'bg-teal-500 text-white shadow-lg shadow-teal-500/30'
                         : 'bg-white/10 text-slate-400 border border-white/15'
                   }`}>
-                    {step > s.num ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                    {step > s.num ? <Check className="w-4 h-4 sm:w-5 sm:h-5" /> : <Icon className="w-4 h-4 sm:w-5 sm:h-5" />}
                   </div>
-                  <span className={`text-xs mt-1 ${
+                  <span className={`text-[10px] sm:text-xs mt-1 leading-tight ${
                     step >= s.num ? 'text-teal-400 font-semibold' : 'text-slate-500'
                   }`}>{s.title}</span>
                 </div>
                 {idx !== steps.length - 1 && (
-                  <div className={`w-8 h-1 mx-1 rounded ${
+                  <div className={`w-3 sm:w-8 h-1 mx-0.5 sm:mx-1 rounded ${
                     step > s.num ? 'bg-indigo-500' : 'bg-white/10'
                   }`} />
                 )}

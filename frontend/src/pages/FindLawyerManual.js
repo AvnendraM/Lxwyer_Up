@@ -118,7 +118,8 @@ export default function FindLawyerManual() {
       consultationType: '',
       priceMax: '',
       withAchievement: false,
-      onlySignature: false
+      onlySignature: false,
+      noSignature: false
     };
   });
   const [showFilters, setShowFilters] = useState(false);
@@ -274,6 +275,7 @@ export default function FindLawyerManual() {
   const filteredLawyers = useMemo(() => shuffledLawyers.filter(lawyer => {
     // 1. Filter by Signature if toggled
     if (filters.onlySignature && !lawyer.isSignature) return false;
+    if (filters.noSignature && lawyer.isSignature) return false;
 
     // 2. Filter by Search
     const matchesSearch =
@@ -362,7 +364,8 @@ export default function FindLawyerManual() {
       consultationType: '',
       priceMax: '',
       withAchievement: false,
-      onlySignature: false
+      onlySignature: false,
+      noSignature: false
     });
     setSearchQuery('');
     setDebouncedQuery('');
@@ -403,11 +406,12 @@ export default function FindLawyerManual() {
     { key: 'consultationType', value: filters.consultationType },
     { key: 'priceMax', value: filters.priceMax ? `${d.under} ₹${filters.priceMax}` : '' },
     ...(filters.withAchievement ? [{ key: 'withAchievement', value: d.hasAchievements }] : []),
-    ...(filters.onlySignature ? [{ key: 'onlySignature', value: 'Signature' }] : [])
+    ...(filters.onlySignature ? [{ key: 'onlySignature', value: 'Signature' }] : []),
+    ...(filters.noSignature ? [{ key: 'noSignature', value: 'No Signature' }] : [])
   ].filter(f => f.value);
 
   return (
-    <WaveLayout activePage="find-lawyer">
+    <WaveLayout activePage="find-lawyer" className="!bg-black" hideOrbs={true}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12 relative z-10">
 
         {/* Header Section */}
@@ -589,7 +593,7 @@ export default function FindLawyerManual() {
               {currentFilters.map(f => (
                 <span key={f.key} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-[#222] text-slate-700 dark:text-slate-300 border dark:border-[#333] rounded-lg text-sm font-medium">
                   {f.key === 'consultationType' ? (f.value === 'both' ? d.bothVideoInPerson : (f.value === 'video' ? d.videoCall : d.inPerson)) : f.value}
-                  <button onClick={() => handleFilterChange(f.key, (f.key === 'withAchievement' || f.key === 'onlySignature') ? false : '')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                  <button onClick={() => handleFilterChange(f.key, (f.key === 'withAchievement' || f.key === 'onlySignature' || f.key === 'noSignature') ? false : '')} className="text-slate-400 hover:text-slate-600 dark:hover:text-white">
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -720,7 +724,10 @@ export default function FindLawyerManual() {
                     {/* Signature Filter */}
                     <div className="flex items-center gap-2">
                        <button
-                         onClick={() => handleFilterChange('onlySignature', !filters.onlySignature)}
+                         onClick={() => {
+                            handleFilterChange('onlySignature', !filters.onlySignature);
+                            if (!filters.onlySignature) handleFilterChange('noSignature', false);
+                         }}
                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${filters.onlySignature ? 'bg-[#d4af37]' : 'bg-slate-300 dark:bg-slate-700'}`}
                        >
                          <span className="sr-only">Toggle Signature</span>
@@ -728,6 +735,23 @@ export default function FindLawyerManual() {
                        </button>
                        <span className="text-xl" style={{ color: '#d4af37', fontFamily: '"Great Vibes", cursive' }}>
                          Signature Lawyers
+                       </span>
+                    </div>
+
+                    {/* No Signature Filter */}
+                    <div className="flex items-center gap-2 ml-4">
+                       <button
+                         onClick={() => {
+                            handleFilterChange('noSignature', !filters.noSignature);
+                            if (!filters.noSignature) handleFilterChange('onlySignature', false);
+                         }}
+                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${filters.noSignature ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700'}`}
+                       >
+                         <span className="sr-only">Toggle No Signature</span>
+                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${filters.noSignature ? 'translate-x-6' : 'translate-x-1'}`} />
+                       </button>
+                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                         Standard Lawyers
                        </span>
                     </div>
 

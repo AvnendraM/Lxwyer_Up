@@ -101,12 +101,12 @@ export default function ProfilePhotoUpload({ value, onChange, label = 'Profile P
       <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
         {/* ── Upload / Preview zone ── */}
-        <div style={{ flex: '0 0 auto' }}>
+        <div style={{ flex: '0 0 auto', width: '100%', maxWidth: 180, margin: '0 auto' }}>
           {value ? (
-            <div style={{ position: 'relative', width: 180, height: 180 }}>
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '1/1', maxWidth: 180, margin: '0 auto' }}>
               {/* Preview frame */}
               <div style={{
-                width: 180, height: 180, borderRadius: 20,
+                width: '100%', height: '100%', borderRadius: 20,
                 border: '2px solid rgba(99,102,241,0.6)',
                 boxShadow: '0 0 0 4px rgba(99,102,241,0.15), 0 8px 32px rgba(0,0,0,0.5)',
                 overflow: 'hidden', background: '#0f172a',
@@ -155,7 +155,7 @@ export default function ProfilePhotoUpload({ value, onChange, label = 'Profile P
             /* Drop zone */
             <div onClick={() => inputRef.current?.click()} onDrop={handleDrop} onDragOver={handleDragOver} onDragLeave={handleDragLeave}
               style={{
-                width: 180, height: 180, borderRadius: 20,
+                width: '100%', aspectRatio: '1/1', maxWidth: 180, margin: '0 auto', borderRadius: 20,
                 border: `2px dashed ${dragging ? '#818cf8' : 'rgba(255,255,255,0.15)'}`,
                 background: dragging ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.04)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -191,7 +191,7 @@ export default function ProfilePhotoUpload({ value, onChange, label = 'Profile P
 
           {value && (
             <button type="button" onClick={() => inputRef.current?.click()} style={{
-              marginTop: 12, width: 180, padding: '7px 0',
+              marginTop: 12, width: '100%', maxWidth: 180, padding: '7px 0',
               background: 'linear-gradient(135deg,#6366f1,#0d9488)',
               color: 'white', border: 'none', borderRadius: 10,
               fontSize: 12, fontWeight: 700, letterSpacing: '0.04em',

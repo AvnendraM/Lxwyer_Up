@@ -71,9 +71,9 @@ export const InteractiveNeuralVortex = ({ children, className }) => {
         noise += pow(noise, 10.);
         noise = max(.0, noise - .5);
         noise *= (1. - length(vUv - .5));
-        color = vec3(0.5, 0.15, 0.65);
-        color = mix(color, vec3(0.02, 0.7, 0.9), 0.32 + 0.16 * sin(2.0 * u_scroll_progress + 1.2));
-        color += vec3(0.15, 0.0, 0.6) * sin(2.0 * u_scroll_progress + 1.5);
+        color = vec3(0.05, 0.25, 0.7);
+        color = mix(color, vec3(0.1, 0.5, 0.9), 0.32 + 0.16 * sin(2.0 * u_scroll_progress + 1.2));
+        color += vec3(0.0, 0.15, 0.5) * sin(2.0 * u_scroll_progress + 1.5);
         color = color * noise;
         gl_FragColor = vec4(color, noise);
       }

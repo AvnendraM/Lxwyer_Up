@@ -118,7 +118,7 @@ const SmoothScrolling = () => {
   return null;
 };
 
-export const WaveLayout = ({ children, hideNavbar = false, className = '', style = {} }) => {
+export const WaveLayout = ({ children, hideNavbar = false, hideOrbs = false, className = '', style = {} }) => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
@@ -129,7 +129,7 @@ export const WaveLayout = ({ children, hideNavbar = false, className = '', style
   return (
     <div className={`min-h-screen relative bg-[#f8faff] dark:bg-black transition-colors duration-300 ${className}`} style={mergedStyle}>
       <StyleInjector />
-      <GradientOrbs />
+      {!hideOrbs && <GradientOrbs />}
 
       {/* Content Level */}
       <div className="relative" style={{ zIndex: 2 }}>

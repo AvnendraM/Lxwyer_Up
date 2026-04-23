@@ -1669,7 +1669,7 @@ const EcosystemSection = () => {
                     transition={{ duration: 0.9, ease: 'easeOut' }}
                     className="text-center mb-32"
                 >
-                    <h2 className="text-5xl md:text-7xl font-bold text-slate-900 dark:text-white mb-6 tracking-tight leading-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                    <h2 className="text-4xl md:text-7xl font-bold text-slate-900 dark:text-white mb-6 tracking-tight leading-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
                         {t('eco_from').split('').map((ch, i) => (
                             <motion.span key={`f${i}`} initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ delay: 0.2 + i * 0.04, duration: 0.4 }}>{ch}</motion.span>
                         ))}
@@ -1680,7 +1680,7 @@ const EcosystemSection = () => {
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={isInView ? { opacity: 1, scale: 1 } : {}}
                             transition={{ delay: 1.1, type: 'spring', stiffness: 100 }}
-                            className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300 text-6xl md:text-8xl"
+                            className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 dark:from-blue-400 dark:to-cyan-300 text-5xl sm:text-6xl md:text-8xl"
                         >{t('eco_confident')}</motion.span>
                     </h2>
                     <motion.p
@@ -1790,7 +1790,7 @@ const StatsSection = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={isInView ? { opacity: 1, y: 0 } : {}}
                     transition={{ duration: 0.6 }}
-                    className="grid grid-cols-1 sm:grid-cols-3 gap-10 max-w-3xl mx-auto"
+                    className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-10 max-w-3xl mx-auto"
                 >
                     {stats.map((s, i) => (
                         <motion.div
@@ -1798,12 +1798,12 @@ const StatsSection = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={isInView ? { opacity: 1, y: 0 } : {}}
                             transition={{ duration: 0.5, delay: i * 0.1 }}
-                            className="text-center"
+                            className="text-center flex flex-col items-center sm:block"
                         >
-                            <div className="text-4xl md:text-5xl font-extrabold text-white mb-2 tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-1 md:mb-2 tracking-tight" style={{ fontFamily: "'Outfit', sans-serif" }}>
                                 <AnimatedCounter target={s.value} suffix={s.suffix} />
                             </div>
-                            <div className="text-xs uppercase tracking-[0.25em] font-medium text-blue-100/80">{s.label}</div>
+                            <div className="text-[10px] sm:text-xs uppercase tracking-[0.15em] sm:tracking-[0.25em] font-medium text-blue-100/80">{s.label}</div>
                         </motion.div>
                     ))}
                 </motion.div>

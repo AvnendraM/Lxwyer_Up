@@ -159,15 +159,15 @@ export default function FirmLawyerApplication() {
 
       <div className="pt-24 pb-12 px-4 max-w-2xl mx-auto">
         {/* Progress Steps */}
-        <div className="flex items-center justify-center gap-4 mb-8">
+        <div className="flex items-center justify-center gap-2 sm:gap-4 mb-8">
           {[1, 2, 3, 4].map((s) => (
-            <div key={s} className="flex items-center gap-2">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${
+            <div key={s} className="flex items-center gap-1 sm:gap-2">
+              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold ${
                 step >= s ? 'bg-[#0F2944] text-white' : 'bg-gray-200 text-gray-500'
               }`}>
                 {s}
               </div>
-              {s < 4 && <div className={`w-12 h-0.5 ${step > s ? 'bg-[#0F2944]' : 'bg-gray-200'}`} />}
+              {s < 4 && <div className={`w-4 sm:w-12 h-0.5 ${step > s ? 'bg-[#0F2944]' : 'bg-gray-200'}`} />}
             </div>
           ))}
         </div>

@@ -977,24 +977,24 @@ export default function LawyerApplication() {
       <div className="flex-1 flex flex-col items-center justify-center p-4 sm:px-6 lg:px-8 pt-24 pb-12" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Progress Steps */}
-        <div className="w-full max-w-2xl flex md:items-center overflow-x-auto justify-start md:justify-center mb-8 px-2 hide-scrollbar">
+        <div className="w-full max-w-2xl flex md:items-center overflow-x-auto justify-center md:justify-center mb-8 px-2 hide-scrollbar">
           {Array.from({ length: formData.applicationType.includes("sos") ? 6 : 5 }, (_, i) => i + 1).map((s) => (
             <div key={s} className="flex items-center flex-shrink-0">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all text-sm ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold transition-all text-xs sm:text-sm duration-300 ${
                   s === step
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.6)] border-2 border-blue-400/50 scale-110'
                     : s < step
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white/10 text-slate-400 border border-white/15'
+                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50'
+                      : 'bg-white/5 text-slate-500 border border-white/10'
                 }`}
               >
                 {s < step ? '✓' : s}
               </div>
               {s < (formData.applicationType.includes("sos") ? 6 : 5) && (
                 <div
-                  className={`w-8 md:w-16 h-1 mx-1 md:mx-2 rounded ${
-                    s < step ? 'bg-blue-600' : 'bg-white/10'
+                  className={`w-3 sm:w-8 md:w-16 h-1 mx-1.5 sm:mx-2 rounded transition-all duration-300 ${
+                    s < step ? 'bg-gradient-to-r from-blue-500/80 to-indigo-500/80' : 'bg-white/10'
                   }`}
                 />
               )}
@@ -1009,13 +1009,13 @@ export default function LawyerApplication() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           style={{
-            background: 'rgba(255,255,255,0.04)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
+            background: 'rgba(255,255,255,0.02)',
+            backdropFilter: 'blur(30px)',
+            WebkitBackdropFilter: 'blur(30px)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.08)',
           }}
-          className="w-full max-w-2xl rounded-2xl p-4 sm:p-6 md:p-8"
+          className="w-full max-w-2xl rounded-2xl p-6 sm:p-8 md:p-10 border border-white/5"
         >
           {/* Step 1: Personal Info + Lawyer Type */}
           {step === 1 && (
@@ -1045,7 +1045,7 @@ export default function LawyerApplication() {
                 <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-200 mb-2">
                     Full Name *
@@ -1056,7 +1056,7 @@ export default function LawyerApplication() {
                       value={formData.name}
                       onChange={(e) => updateField("name", e.target.value)}
                       placeholder="Adv. Rajesh Kumar"
-                      className="pl-10 bg-white/5 border-white/10 text-white focus:border-blue-500 focus:ring-blue-500/20"
+                      className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                     />
                   </div>
                 </div>
@@ -1072,7 +1072,7 @@ export default function LawyerApplication() {
                       value={formData.email}
                       onChange={(e) => updateField("email", e.target.value)}
                       placeholder="advocate@example.com"
-                      className="pl-10 bg-white/5 border-white/10 text-white focus:border-blue-500 focus:ring-blue-500/20"
+                      className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                     />
                   </div>
                 </div>
@@ -1098,7 +1098,7 @@ export default function LawyerApplication() {
                           updateField("password", e.target.value)
                         }
                         placeholder="••••••••"
-                        className="pl-10 pr-10 bg-white/5 border-white/10 text-white focus:border-blue-500 focus:ring-blue-500/20"
+                        className="pl-10 pr-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                       />
                       <button
                         type="button"
@@ -1126,7 +1126,7 @@ export default function LawyerApplication() {
                           updateField("confirmPassword", e.target.value)
                         }
                         placeholder="••••••••"
-                        className="pl-10 pr-10 bg-white/5 border-white/10 text-white focus:border-blue-500 focus:ring-blue-500/20"
+                        className="pl-10 pr-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                       />
                       <button
                         type="button"
@@ -1145,12 +1145,108 @@ export default function LawyerApplication() {
                   </div>
                 </div>
 
+                {/* Professional Type */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-200 mb-3">
+                    Professional Type *
+                  </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateFields({
+                          lawyerType: "independent",
+                          lawFirmId: "",
+                          lawFirmName: "",
+                        });
+                      }}
+                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${formData.lawyerType === "independent"
+                        ? "border-blue-600 bg-blue-50/50 dark:bg-blue-900/20"
+                        : "border-white/10 hover:border-blue-200 dark:hover:border-blue-800 bg-white/5"
+                        }`}
+                    >
+                      <User
+                        className={`w-8 h-8 ${formData.lawyerType === "independent" ? "text-blue-600" : "text-slate-400"}`}
+                      />
+                      <span
+                        className={`font-medium ${formData.lawyerType === "independent" ? "text-blue-900" : "text-slate-600"}`}
+                      >
+                        Independent
+                      </span>
+                      <span className="text-xs text-slate-500 text-center">
+                        Personal practice
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => updateField("lawyerType", "law_firm")}
+                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${formData.lawyerType === "law_firm"
+                        ? "border-blue-600 bg-blue-50/50 dark:bg-blue-900/20"
+                        : "border-white/10 hover:border-blue-200 dark:hover:border-blue-800 bg-white/5"
+                        }`}
+                    >
+                      <Building2
+                        className={`w-8 h-8 ${formData.lawyerType === "law_firm" ? "text-blue-600" : "text-slate-400"}`}
+                      />
+                      <span
+                        className={`font-medium ${formData.lawyerType === "law_firm" ? "text-blue-900" : "text-slate-600"}`}
+                      >
+                        Associate
+                      </span>
+                      <span className="text-xs text-slate-500 text-center">
+                        Law Firm
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Law Firm Selection (if law_firm type selected) */}
+                <AnimatePresence>
+                  {formData.lawyerType === "law_firm" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <label className="block text-sm font-medium text-slate-200 mb-2 mt-4">
+                        Select Your Law Firm *
+                      </label>
+                      <select
+                        value={formData.lawFirmId}
+                        onChange={(e) => {
+                          const selectedFirm = lawFirms.find(
+                            (f) => f.id === e.target.value,
+                          );
+                          updateFields({
+                            lawFirmId: e.target.value,
+                            lawFirmName: selectedFirm?.firm_name || "",
+                          });
+                        }}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                      >
+                        <option value="">Select a law firm</option>
+                        {lawFirms.map((firm) => (
+                          <option key={firm.id} value={firm.id}>
+                            {firm.firm_name} - {firm.city}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Don't see your firm? Ask your firm admin to register
+                        first.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Application Type Selection — only for Independent lawyers */}
                 {formData.lawyerType === "law_firm" ? (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 dark:bg-blue-900/20 dark:border-blue-800"
+                    className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 dark:bg-blue-900/20 dark:border-blue-800 mt-4"
                   >
                     <div className="flex items-start gap-3">
                       <Building2 className="w-6 h-6 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
@@ -1162,7 +1258,7 @@ export default function LawyerApplication() {
                     </div>
                   </motion.div>
                 ) : formData.lawyerType === "independent" ? (
-                <div>
+                <div className="mt-4">
                   <label className="block text-sm font-medium text-slate-200 mb-3">
                     Application Type (Select one or both) *
                   </label>
@@ -1245,107 +1341,12 @@ export default function LawyerApplication() {
                 </div>
                 ) : null}
 
-                {/* Lawyer Type Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-3">
-                    Professional Type *
-                  </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateFields({
-                          lawyerType: "independent",
-                          lawFirmId: "",
-                          lawFirmName: "",
-                        });
-                      }}
-                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${formData.lawyerType === "independent"
-                        ? "border-blue-600 bg-blue-50/50 dark:bg-blue-900/20"
-                        : "border-white/10 hover:border-blue-200 dark:hover:border-blue-800 bg-white/5"
-                        }`}
-                    >
-                      <User
-                        className={`w-8 h-8 ${formData.lawyerType === "independent" ? "text-blue-600" : "text-slate-400"}`}
-                      />
-                      <span
-                        className={`font-medium ${formData.lawyerType === "independent" ? "text-blue-900" : "text-slate-600"}`}
-                      >
-                        Independent
-                      </span>
-                      <span className="text-xs text-slate-500 text-center">
-                        Personal practice
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => updateField("lawyerType", "law_firm")}
-                      className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${formData.lawyerType === "law_firm"
-                        ? "border-blue-600 bg-blue-50/50 dark:bg-blue-900/20"
-                        : "border-white/10 hover:border-blue-200 dark:hover:border-blue-800 bg-white/5"
-                        }`}
-                    >
-                      <Building2
-                        className={`w-8 h-8 ${formData.lawyerType === "law_firm" ? "text-blue-600" : "text-slate-400"}`}
-                      />
-                      <span
-                        className={`font-medium ${formData.lawyerType === "law_firm" ? "text-blue-900" : "text-slate-600"}`}
-                      >
-                        Associate
-                      </span>
-                      <span className="text-xs text-slate-500 text-center">
-                        Law Firm
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Law Firm Selection (if law_firm type selected) */}
-                <AnimatePresence>
-                  {formData.lawyerType === "law_firm" && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <label className="block text-sm font-medium text-slate-200 mb-2">
-                        Select Your Law Firm *
-                      </label>
-                      <select
-                        value={formData.lawFirmId}
-                        onChange={(e) => {
-                          const selectedFirm = lawFirms.find(
-                            (f) => f.id === e.target.value,
-                          );
-                          updateFields({
-                            lawFirmId: e.target.value,
-                            lawFirmName: selectedFirm?.firm_name || "",
-                          });
-                        }}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                      >
-                        <option value="">Select a law firm</option>
-                        {lawFirms.map((firm) => (
-                          <option key={firm.id} value={firm.id}>
-                            {firm.firm_name} - {firm.city}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-slate-500 mt-2">
-                        Don't see your firm? Ask your firm admin to register
-                        first.
-                      </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <div>
+                {/* Profile Photo */}
+                <div className="mt-4">
                   <ProfilePhotoUpload
                    value={formData.photo}
                    onChange={(dataUrl) => updateField('photo', dataUrl)}
-                   label="Profile Photo"
+                   label="Profile Photo *"
                    hint="This is the first thing clients see on your profile card — make it count!"
                  />
                 </div>
@@ -1378,7 +1379,7 @@ export default function LawyerApplication() {
                         updateField("barCouncilNumber", e.target.value)
                       }
                       placeholder="D/1234/2015"
-                      className="pl-10 bg-white/5 border-white/10 text-white focus:border-blue-500 focus:ring-blue-500/20"
+                      className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                     />
                   </div>
                 </div>
@@ -1396,7 +1397,7 @@ export default function LawyerApplication() {
                         onChange={(e) =>
                           handleDocumentUpload("barCouncilPhoto", e)
                         }
-                        className="pl-10 bg-white/5 border-white/10 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 text-white"
+                        className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
                       />
                     </div>
                     {formData.barCouncilPhoto && (
@@ -1438,7 +1439,7 @@ export default function LawyerApplication() {
                         type="file"
                         accept="image/*"
                         onChange={(e) => handleDocumentUpload("aadharCardFront", e)}
-                        className="pl-10 bg-white/5 border-white/10 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 text-white"
+                        className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
                       />
                     </div>
                     {formData.aadharCardFront && (
@@ -1462,7 +1463,7 @@ export default function LawyerApplication() {
                         type="file"
                         accept="image/*"
                         onChange={(e) => handleDocumentUpload("aadharCardBack", e)}
-                        className="pl-10 bg-white/5 border-white/10 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 dark:file:bg-purple-900/30 dark:file:text-purple-400 text-white"
+                        className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 dark:file:bg-purple-900/30 dark:file:text-purple-400"
                       />
                     </div>
                     {formData.aadharCardBack && (
@@ -1486,7 +1487,7 @@ export default function LawyerApplication() {
                         type="file"
                         accept="image/*"
                         onChange={(e) => handleDocumentUpload("panCard", e)}
-                        className="pl-10 bg-white/5 border-white/10 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-blue-100 dark:file:bg-emerald-900/30 dark:file:text-blue-400 text-white"
+                        className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-blue-100 dark:file:bg-emerald-900/30 dark:file:text-blue-400"
                       />
                     </div>
                     {formData.panCard && (
@@ -1532,7 +1533,7 @@ export default function LawyerApplication() {
                         onChange={(e) =>
                           updateField("practiceStart", e.target.value)
                         }
-                        className="pl-10 bg-white/5 border-white/10 text-white focus:border-blue-500 focus:ring-blue-500/20"
+                        className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                         max={new Date().toISOString().slice(0, 10)}
                       />
                     </div>
@@ -1574,7 +1575,7 @@ export default function LawyerApplication() {
                         courts: [""],
                       });
                     }}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full bg-white/[0.03] hover:bg-white/[0.05] hover:border-blue-400/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-300"
                   >
                     <option value="">Select State</option>
                     {states.map((state) => (
@@ -1592,7 +1593,7 @@ export default function LawyerApplication() {
                   <select
                     value={formData.city}
                     onChange={(e) => updateField("city", e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full bg-white/[0.03] hover:bg-white/[0.05] hover:border-blue-400/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-300"
                     disabled={!formData.state}
                   >
                     <option value="">Select City</option>
@@ -1627,7 +1628,7 @@ export default function LawyerApplication() {
                               setFormData(prev => ({ ...prev, detailed_court_experience: newExp }));
                             }
                           }}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          className="w-full bg-white/[0.03] hover:bg-white/[0.05] hover:border-blue-400/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-300"
                           disabled={!formData.state}
                         >
                           <option value="">Select Court</option>
@@ -1656,7 +1657,7 @@ export default function LawyerApplication() {
                             newExp[index].years = e.target.value;
                             setFormData(prev => ({ ...prev, detailed_court_experience: newExp }));
                           }}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          className="w-full bg-white/[0.03] hover:bg-white/[0.05] hover:border-blue-400/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-300"
                         />
                       </div>
                       
@@ -1704,7 +1705,7 @@ export default function LawyerApplication() {
                   <select
                     value={formData.primary_court}
                     onChange={(e) => updateField("primary_court", e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full bg-white/[0.03] hover:bg-white/[0.05] hover:border-blue-400/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-300"
                     disabled={formData.detailed_court_experience.filter(c => c.court_name).length === 0}
                   >
                     <option value="">Select Primary Court</option>
@@ -1737,7 +1738,7 @@ export default function LawyerApplication() {
                         }}
                         placeholder="e.g. Chamber 405, Delhi High Court..."
                         rows={2}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                        className="w-full bg-white/[0.03] hover:bg-white/[0.05] hover:border-blue-400/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-300"
                       />
                       {index > 0 && (
                         <Button
@@ -1786,7 +1787,7 @@ export default function LawyerApplication() {
                         onChange={(e) =>
                           handleDocumentUpload("officeAddressPhoto", e)
                         }
-                        className="pl-10 bg-white/5 border-white/10 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 text-white"
+                        className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
                       />
                     </div>
                     {formData.officeAddressPhoto && (
@@ -1825,7 +1826,7 @@ export default function LawyerApplication() {
                       value={formData.education}
                       onChange={(e) => updateField("education", e.target.value)}
                       placeholder="LLB from Delhi University, LLM from NLS"
-                      className="pl-10 bg-white/5 border-white/10 text-white focus:border-blue-500 focus:ring-blue-500/20"
+                      className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                     />
                   </div>
                 </div>
@@ -1843,7 +1844,7 @@ export default function LawyerApplication() {
                         onChange={(e) =>
                           handleDocumentUpload("collegeDegreePhoto", e)
                         }
-                        className="pl-10 bg-white/5 border-white/10 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400 text-white"
+                        className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
                       />
                     </div>
                     {formData.collegeDegreePhoto && (
@@ -1870,7 +1871,7 @@ export default function LawyerApplication() {
                       onChange={(e) =>
                         updateField("graduationDate", e.target.value)
                       }
-                      className="pl-10 bg-white/5 border-white/10 text-white focus:border-blue-500 focus:ring-blue-500/20"
+                      className="pl-10 bg-white/[0.03] border-white/10 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                       max={new Date().toISOString().slice(0, 10)}
                     />
                   </div>
@@ -1920,7 +1921,7 @@ export default function LawyerApplication() {
                           value={formData.charge30min}
                           onChange={(e) => updateField("charge30min", e.target.value)}
                           placeholder="e.g. 500"
-                          className="pl-9 bg-white/5 border-slate-200 dark:border-slate-700 text-white focus:border-blue-500"
+                          className="pl-9 bg-white/[0.03] border-slate-700/50 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                         />
                       </div>
                       <p className="text-[10px] text-slate-500 mt-1.5">Suggested: ₹300 – ₹800</p>
@@ -1934,7 +1935,7 @@ export default function LawyerApplication() {
                           value={formData.charge60min}
                           onChange={(e) => updateField("charge60min", e.target.value)}
                           placeholder="e.g. 900"
-                          className="pl-9 bg-white/5 border-slate-200 dark:border-slate-700 text-white focus:border-blue-500"
+                          className="pl-9 bg-white/[0.03] border-slate-700/50 text-white hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl"
                         />
                       </div>
                       <p className="text-[10px] text-slate-500 mt-1.5">Suggested: ₹500 – ₹1500</p>
@@ -1950,7 +1951,7 @@ export default function LawyerApplication() {
                     value={formData.catchphrase || ""}
                     onChange={(e) => updateField("catchphrase", e.target.value)}
                     placeholder="Why should clients choose you? (Max 20 words)"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-slate-400 mb-1"
+                    className="bg-white/[0.03] border-white/10 text-white placeholder:text-slate-500 hover:bg-white/[0.05] hover:border-blue-400/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 transition-all duration-300 rounded-xl mb-1"
                   />
                   <div className="flex justify-between items-center mb-6">
                      <p className={`text-xs ${formData.catchphrase.trim().split(/\s+/).length > 20 ? "text-red-500" : "text-slate-500"}`}>
@@ -1968,7 +1969,7 @@ export default function LawyerApplication() {
                     onChange={(e) => updateField("bio", e.target.value)}
                     placeholder="Write a brief description about your practice, areas of expertise, and professional background..."
                     rows={6}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    className="w-full bg-white/[0.03] hover:bg-white/[0.05] hover:border-blue-400/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all duration-300"
                   />
                   <div className="flex justify-between items-center mt-2">
                     <p
@@ -2303,12 +2304,12 @@ export default function LawyerApplication() {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8 pt-4 border-t border-slate-100">
+          <div className="flex justify-between mt-8 pt-4 border-t border-white/10">
             {step > 1 ? (
               <Button
                 variant="ghost"
                 onClick={() => setStep(step - 1)}
-                className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 -ml-4"
+                className="text-slate-400 hover:text-white hover:bg-white/10 transition-colors -ml-4"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Previous
@@ -2320,7 +2321,7 @@ export default function LawyerApplication() {
             {step < (formData.applicationType.includes("sos") ? 6 : 5) ? (
               <Button
                 onClick={handleNext}
-                className="bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-blue-900/40 rounded-xl px-8"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 shadow-[0_0_20px_rgba(59,130,246,0.5)] rounded-xl px-8 transition-all duration-300"
               >
                 Next Step
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -2329,10 +2330,10 @@ export default function LawyerApplication() {
               <Button
                 onClick={handleSubmit}
                 disabled={loading || (formData.applicationType.includes("sos") && !formData.sosTermsAccepted)}
-                className={`text-white shadow-lg rounded-xl px-8 w-full md:w-auto text-lg h-12 transition-all ${
+                className={`text-white rounded-xl px-8 w-full md:w-auto text-lg h-12 transition-all duration-300 ${
                   formData.applicationType.includes("sos") && !formData.sosTermsAccepted
                     ? 'bg-slate-600 cursor-not-allowed opacity-60 shadow-none'
-                    : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200 dark:shadow-blue-900/40'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-[0_0_20px_rgba(59,130,246,0.5)]'
                 }`}
               >
                 {loading ? (

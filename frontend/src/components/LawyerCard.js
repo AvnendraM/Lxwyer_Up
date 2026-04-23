@@ -1,8 +1,10 @@
 import React, { memo } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, ArrowRight, Eye, Sparkles, Scale, ShieldCheck } from 'lucide-react';
+import { MapPin, ArrowRight, Eye, Scale, ShieldCheck } from 'lucide-react';
 import { getInitials } from '../utils/lawyerPhoto';
 import { useLang } from '../context/LanguageContext';
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const TEXT = {
   en: {
@@ -13,6 +15,9 @@ const TEXT = {
     location: 'Location',
     profile: 'Profile',
     bookConsultation: 'Book Consultation',
+    fee30m: 'Fee',
+    fee60m: 'Fee (60m)',
+    courts: 'Courts',
   },
   hi: {
     verified: 'सत्यापित',
@@ -22,12 +27,14 @@ const TEXT = {
     location: 'स्थान',
     profile: 'प्रोफ़ाइल',
     bookConsultation: 'परामर्श बुक करें',
+    fee30m: 'Fee',
+    fee60m: 'Fee (60m)',
+    courts: 'Courts',
   }
 };
 
 /* ── Specialization → professional banner color ── */
 const SPEC_COLORS = {
-  // All cards will use professional shades of blue, slate, black, and white
   'criminal law':        { from: '#020617', to: '#0f172a', accent: '#60a5fa' },
   'criminal':            { from: '#020617', to: '#0f172a', accent: '#60a5fa' },
   'corporate law':       { from: '#00101f', to: '#003366', accent: '#3b82f6' },
@@ -55,18 +62,29 @@ const SPEC_COLORS = {
   'divorce':             { from: '#000814', to: '#001730', accent: '#60a5fa' },
 };
 
-const DEFAULT_COLOR = { from: '#0a1020', to: '#162040', accent: '#60a5fa' };
+const DEFAULT_COLOR = { from: '#0a1020', to: '#162040', accent: '#3b82f6' };
 
 function getColors(spec = '') {
-  const key = spec.toLowerCase().trim();
-  return SPEC_COLORS[key] || DEFAULT_COLOR;
+  return DEFAULT_COLOR;
 }
 
-function LawyerCard({ lawyer, index = 0, onProfileClick, onBookClick }) {
+// Define stat item component for DRY principle
+const StatItem = ({ label, value }) => (
+  <div className="flex flex-col text-center px-1 flex-1">
+    <span className="text-[13px] font-bold text-[#f0f4ff]">{value}</span>
+    <span className="text-[9px] text-[#94a3b8] uppercase tracking-wider mt-1">{label}</span>
+  </div>
+);
+
+const LawyerCard = ({ className, lawyer, index = 0, onProfileClick, onBookClick, ...props }) => {
   const { lang } = useLang();
   const d = TEXT[lang] || TEXT.en;
+  
   const hasPhoto = !!(lawyer.photo && lawyer.photo.length > 5);
-  const colors   = getColors(lawyer.specialization);
+  // Fallback professional lawyer image
+  const imageUrl = hasPhoto ? lawyer.photo : "https://images.unsplash.com/photo-1556856425-366d6618905d?q=80&w=2070&auto=format&fit=crop";
+  
+  const colors = getColors(lawyer.specialization);
   const themeColor = lawyer.isSignature ? '#d4af37' : colors.accent;
 
   const charge30 = lawyer.charge_30min || lawyer.consultation_fee_30min;
@@ -88,272 +106,143 @@ function LawyerCard({ lawyer, index = 0, onProfileClick, onBookClick }) {
     fee60 = fee30 * 2;
   }
 
-  const courts = (lawyer.court_experience || lawyer.courts || [])
-    .slice(0, 2)
-    .map(c => (typeof c === 'object' ? c.court_name : c))
+  const rawCourts = lawyer.court_experience || lawyer.court || lawyer.courts || [];
+  const courtsArray = Array.isArray(rawCourts) ? rawCourts : [rawCourts];
+  
+  const courts = courtsArray
+    .map(c => (typeof c === 'object' ? c?.court_name : c))
     .filter(Boolean);
-  const tags = courts.length ? courts : [];
+
+  const isSignature = lawyer.isSignature;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 22 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.38, delay: index * 0.04 }}
-      whileHover={{ y: -4, transition: { duration: 0.18 } }}
-      style={{
-        background: '#040404',
-        border: '1px solid rgba(255,255,255,0.07)',
-        borderRadius: 20,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
-        willChange: 'transform',
-        minHeight: 380,
-        position: 'relative',
-      }}
+      transition={{ type: "spring", stiffness: 300, damping: 20, delay: index * 0.04 }}
+      className={cn(
+        "w-full overflow-hidden rounded-2xl bg-[#040404] shadow-lg relative group border text-left",
+        isSignature ? "border-[#d4af37]/40 shadow-[0_8px_32px_rgba(212,175,55,0.15)]" : "border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.55)]",
+        className
+      )}
+      whileHover={{ y: -5, scale: 1.02 }}
+      {...props}
     >
-      {lawyer.isSignature && <div className="signature-card-shine" />}
-      {/* ════ BANNER ════ */}
-      <div style={{
-        height: 90,
-        background: '#040404',
-        position: 'relative',
-        overflow: 'hidden',
-        flexShrink: 0,
-      }}>
-        {/* "Lxwyer Up" watermark — centred & visible */}
-        <span style={{
-          position: 'absolute',
-          top: 14, right: 18,
-          transform: 'none',
-          fontSize: 28, fontWeight: 900,
-          color: '#000000',
-          letterSpacing: '-0.03em',
-          userSelect: 'none', pointerEvents: 'none',
-          whiteSpace: 'nowrap', lineHeight: 1,
-          fontFamily: 'inherit',
-        }}>
-          Lxwyer Up
-        </span>
-        {lawyer.isSignature && (
-          <span style={{
-            position: 'absolute', top: 46, right: 18,
-            fontFamily: '"Great Vibes", cursive', fontSize: 24, color: '#d4af37',
-            opacity: 0.85
-          }}>
-            Signature
-          </span>
-        )}
+      {isSignature && <div className="absolute inset-0 bg-gradient-to-tr from-[#d4af37]/5 to-transparent pointer-events-none z-0" />}
 
-
+      {/* Top section with background image and content */}
+      <div className="relative h-[280px] w-full z-10 overflow-hidden">
+        <img
+          src={imageUrl}
+          alt={lawyer.name}
+          className="h-full w-full object-cover object-[center_5%] transition-transform duration-700 group-hover:scale-105"
+          onError={(e) => {
+             e.target.src = "https://images.unsplash.com/photo-1556856425-366d6618905d?q=80&w=2070&auto=format&fit=crop";
+          }}
+        />
         
+        {/* Gradients to make text readable */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#040404] via-[#040404]/60 to-transparent opacity-100" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#040404]/60 via-transparent to-transparent opacity-80" />
 
-        
-
-        {/* Verified badge */}
-        {lawyer.verified && (
-          <div style={{
-            position: 'absolute', top: 12, left: 12,
-            display: 'flex', alignItems: 'center', gap: 4,
-            padding: '2px 6px', borderRadius: 999,
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid rgba(16, 185, 129, 0.35)',
-            fontSize: 7, fontWeight: 700, color: '#34d399',
-          }}>
-            <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 5px #10b981' }} />
-            {d.verified}
+        {/* Top Badges */}
+        <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start z-20">
+          {isSignature ? (
+            <div className="relative flex items-center px-2 py-1">
+              <span className="text-[26px] font-[cursive] font-bold text-[#d4af37] drop-shadow-md capitalize pb-[1px]" style={{ fontFamily: '"Great Vibes", cursive' }}>Signature</span>
+            </div>
+          ) : <div />}
+          
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-[22px] font-black text-white/40 tracking-tighter select-none">Lxwyer Up</span>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* ════ AVATAR ROW ════ */}
-      <div style={{
-        padding: '0 16px',
-        marginTop: -50,
-        marginBottom: 8,
-        zIndex: 2,
-        position: 'relative',
-      }}>
-        <div style={{
-          width: 100, height: 100, borderRadius: '50%',
-          border: `2px solid ${themeColor}60`,
-          outline: '3px solid #0b0f1a',
-          overflow: 'hidden', flexShrink: 0,
-          background: `linear-gradient(135deg, ${colors.from}, ${colors.to})`,
-          boxShadow: `0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px ${themeColor}25`,
-        }}>
-          {hasPhoto ? (
-            <img
-              src={lawyer.photo}
-              alt={lawyer.name}
-              style={{
-                width: '100%', height: '100%',
-                objectFit: 'cover', objectPosition: 'center 5%',
-                display: 'block',
-              }}
-              onError={e => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
-              }}
-            />
-          ) : null}
-          {/* Initials fallback */}
-          <div style={{
-            width: '100%', height: '100%',
-            display: hasPhoto ? 'none' : 'flex',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{
-              fontSize: 26, fontWeight: 900,
-              color: themeColor,
-              letterSpacing: '-0.03em',
-              opacity: 0.85,
-            }}>
-              {getInitials(lawyer.name)}
-            </span>
+        <div className="absolute bottom-0 left-0 w-full p-5 flex flex-col justify-end z-20">
+          <div className="flex justify-between items-end w-full">
+            <div className="text-white overflow-hidden pr-2 transition-all duration-300 group-hover:max-w-[50%]">
+              <h3 className="text-[22px] font-extrabold text-[#f0f4ff] tracking-tight leading-tight mb-1 truncate">
+                {lawyer.name}
+              </h3>
+              <div className="flex items-center gap-1.5 text-white/80 text-sm">
+                <MapPin className="w-3.5 h-3.5 flex-shrink-0" style={{ color: themeColor }} />
+                <span className="truncate text-[13px] font-medium text-[#cbd5e1]">{lawyer.city || lawyer.state || '—'}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end justify-end">
+               {/* Buttons moved to bottom */}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ════ CARD BODY ════ */}
-      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-
-        {/* Name */}
-        <h3 style={{
-          fontSize: 15, fontWeight: 800, color: '#f0f4ff',
-          letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: 2,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
-          {lawyer.name}
-        </h3>
-
-        <p style={{
-          fontSize: 11, fontWeight: 600, marginBottom: 10,
-          color: themeColor,
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>
-          {lawyer.specialization || d.legalExpert}
-        </p>
-
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
-            {tags.map((t, i) => (
-              <span key={i} style={{
-                padding: '2px 8px', borderRadius: 999,
-                background: `${themeColor}14`,
-                border: `1px solid ${themeColor}30`,
-                fontSize: 10, fontWeight: 600,
-                color: themeColor,
-                letterSpacing: '0.02em', whiteSpace: 'nowrap',
-              }}>{t}</span>
-            ))}
+      {/* Bottom section with trail details */}
+      <div className="p-5 z-10 relative bg-[#040404]">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex-1">
+            <p className="font-bold text-[14px]" style={{ color: themeColor }}>
+              {lawyer.specialization || d.legalExpert}
+            </p>
+            <p className="text-[12px] text-[#94a3b8] mt-0.5 font-medium">
+              {lawyer.experience} {d.yr} {d.exp}
+            </p>
           </div>
-        )}
+          
+          {lawyer.verified && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex-shrink-0">
+               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+               <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">{d.verified}</span>
+            </div>
+          )}
+        </div>
 
-        {/* Catchphrase */}
         {lawyer.catchphrase && (
-          <p style={{
-            fontSize: 12, fontStyle: 'italic', color: '#94a3b8',
-            marginBottom: 10, lineHeight: 1.4,
-            display: '-webkit-box', WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          }}>
+          <p className="text-[12px] italic text-[#64748b] mt-3 line-clamp-2 leading-relaxed">
             "{lawyer.catchphrase}"
           </p>
         )}
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        {/* Stats row */}
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          padding: '8px 0',
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
-          marginBottom: 12,
-        }}>
-          {/* Experience */}
-          <div style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#f0f4ff', letterSpacing: '-0.01em', lineHeight: 1 }}>
-              {lawyer.experience}<span style={{ fontSize: 9, fontWeight: 600, color: '#475569', marginLeft: 2 }}>{d.yr}</span>
-            </div>
-            <div style={{ fontSize: 8, color: '#475569', fontWeight: 600, marginTop: 2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{d.exp}</div>
-          </div>
-
-          <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.07)' }} />
-
-          {/* Location */}
-          <div style={{ flex: 1, textAlign: 'center', padding: '0 4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-              <MapPin style={{ width: 10, height: 10, color: themeColor, flexShrink: 0 }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#cbd5e1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>
-                {lawyer.city || lawyer.state || '—'}
-              </span>
-            </div>
-            <div style={{ fontSize: 9, color: '#475569', fontWeight: 600, marginTop: 2, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{d.location}</div>
-          </div>
-
-          {(fee30 || fallback) && (
-            <>
-              <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.07)' }} />
-              <div style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: themeColor, letterSpacing: '-0.01em', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
-                  {fee30 ? <div>₹{fee30}/30m</div> : <div>{fallback}</div>}
-                </div>
-              </div>
-            </>
-          )}
+        <div className="my-4 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        
+        <div className="flex justify-between items-center px-2 mt-4">
+          <StatItem label={d.fee30m} value={fee30 ? `₹${fee30}` : (fallback || '—')} />
+          <div className="w-px h-6 bg-white/10" />
+          <StatItem label={d.courts} value={courts.length > 0 ? `${courts[0]}${courts.length > 1 ? ` + ${courts.length - 1} more` : ''}` : '—'} />
         </div>
 
-        {/* Action row — Profile + Book side by side */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {/* Profile button */}
-          <button
-            onClick={e => { e.stopPropagation(); onProfileClick(lawyer); }}
-            style={{
-              flex: '0 0 auto',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-              padding: '11px 16px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              background: `${themeColor}15`,
-              border: `1px solid ${themeColor}40`,
-              color: themeColor,
-              fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
-              transition: 'all 0.18s',
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = `${themeColor}25`; e.currentTarget.style.border = `1px solid ${themeColor}60`; }}
-            onMouseLeave={e => { e.currentTarget.style.background = `${themeColor}15`; e.currentTarget.style.border = `1px solid ${themeColor}40`; }}
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-3 mt-5">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onProfileClick(lawyer); }}
+            className={cn(
+              "w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl transition-colors",
+              isSignature && "hover:bg-[#d4af37]/10 border-[#d4af37]/20 text-[#d4af37]"
+            )}
           >
-            <Eye style={{ width: 13, height: 13 }} />
+            <Eye className="mr-2 h-4 w-4" />
             {d.profile}
-          </button>
-
-          {/* Book button — always professional blue */}
-          <button
-            onClick={e => { e.stopPropagation(); onBookClick(lawyer); }}
-            style={{
-              flex: 1,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-              padding: '8px 0', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: lawyer.isSignature ? 'linear-gradient(135deg, #d4af37 0%, #b5952f 100%)' : 'linear-gradient(135deg, #1d4ed8, #4338ca)',
-              color: lawyer.isSignature ? '#000000' : '#fff', fontSize: 12, fontWeight: 700,
-              letterSpacing: '0.02em', fontFamily: 'inherit',
-              boxShadow: '0 4px 16px rgba(29,78,216,0.35)',
-              transition: 'all 0.18s ease',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = lawyer.isSignature ? 'linear-gradient(135deg, #e5bd3d, #c5a336)' : 'linear-gradient(135deg,#2563eb,#4f46e5)'; e.currentTarget.style.boxShadow = lawyer.isSignature ? '0 6px 22px rgba(212,175,55,0.4)' : '0 6px 22px rgba(29,78,216,0.5)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = lawyer.isSignature ? 'linear-gradient(135deg, #d4af37 0%, #b5952f 100%)' : 'linear-gradient(135deg,#1d4ed8,#4338ca)'; e.currentTarget.style.boxShadow = lawyer.isSignature ? '0 4px 16px rgba(212,175,55,0.25)' : '0 4px 16px rgba(29,78,216,0.35)'; }}
+          </Button>
+          <Button
+            size="sm"
+            onClick={(e) => { e.stopPropagation(); onBookClick(lawyer); }}
+            className={cn(
+              "w-full rounded-xl border-0 shadow-[0_4px_15px_rgba(0,0,0,0.3)] transition-all",
+              isSignature 
+                ? "bg-gradient-to-r from-[#d4af37] to-[#b5952f] text-black hover:from-[#e5bd3d] hover:to-[#c5a336]" 
+                : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500"
+            )}
           >
             {d.bookConsultation}
-            <ArrowRight style={{ width: 13, height: 13 }} />
-          </button>
+          </Button>
         </div>
       </div>
     </motion.div>
   );
-}
+};
+
+LawyerCard.displayName = "LawyerCard";
 
 export default memo(LawyerCard);
