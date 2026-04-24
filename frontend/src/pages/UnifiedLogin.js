@@ -7,6 +7,7 @@ import axios from 'axios';
 import { API } from '../App';
 import { useLang } from '../context/LanguageContext';
 import { ProceduralGroundBackground } from '../components/ui/animated-pattern-cloud';
+import { dummyLawyers } from '../data/lawyersData';
 
 const redirectMap = {
   client: '/user-dashboard',
@@ -34,6 +35,8 @@ const UnifiedLogin = () => {
     }
     setLoading(true);
     try {
+
+
       // Unified endpoint — role is determined by backend
       const response = await axios.post(`${API}/auth/login`, {
         email: loginData.email,

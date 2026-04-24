@@ -65,6 +65,7 @@ import axios from "axios";
 import { API } from "../App";
 import CalendarView from "../components/dashboard/CalendarView";
 import HowToUseModal from "../components/dashboard/lawyer/HowToUseModal";
+import { useLang } from "../context/LanguageContext";
 
 
 // Convert a booking time string like "9:05 PM" + date like "2026-02-24" → valid ISO "2026-02-24T21:05:00"
@@ -85,6 +86,16 @@ function to24hrISO(dateStr, timeStr) {
   return `${dateStr}T${String(hours).padStart(2, '0')}:${minutes}:00`;
 }
 import ParticleBackground from "../components/ParticleBackground";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 // New Components
 import StatCard from "../components/dashboard/lawyer/StatCard";
@@ -98,7 +109,9 @@ import CasesView from "../components/dashboard/lawyer/CasesView";
 
 export default function LawyerDashboard() {
   const navigate = useNavigate();
+  const { t, lang, setLang } = useLang();
   const [user, setUser] = useState(null);
+  const [isNewUser, setIsNewUser] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -123,7 +136,14 @@ export default function LawyerDashboard() {
   const [loading, setLoading] = useState(false);
 
   // Theme State
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('lxwyerDashboardTheme');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('lxwyerDashboardTheme', JSON.stringify(darkMode));
+  }, [darkMode]);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   const toggleFullScreen = () => {
@@ -371,10 +391,50 @@ export default function LawyerDashboard() {
   useEffect(() => {
     const storedUser = sessionStorage.getItem("user");
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      setUser(parsedUser);
+      
+      // Determine if it's a first-time login (within 24 hours)
+      if (parsedUser.created_at) {
+        const createdDate = new Date(parsedUser.created_at);
+        const now = new Date();
+        const diffHours = Math.abs(now - createdDate) / 36e5;
+        if (diffHours <= 24) {
+          setIsNewUser(true);
+        }
+      }
+      
       fetchData();
     }
   }, [fetchData]);
+
+  // Inject onboarding notifications for new users
+  useEffect(() => {
+    if (isNewUser && notifications.length >= 0) {
+      const hasOnboarding = notifications.some(n => n.id === 'onboarding_1');
+      if (!hasOnboarding) {
+        setNotifications(prev => [
+          {
+            id: 'onboarding_1',
+            title: t('Welcome to LxwyerUp!'),
+            message: t('Click the ? icon in the top right to learn how to use your new dashboard.'),
+            type: 'info',
+            is_read: false,
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 'onboarding_2',
+            title: t('Complete Your Profile'),
+            message: t('Make sure your profile is complete so clients can find you easily.'),
+            type: 'info',
+            is_read: false,
+            created_at: new Date().toISOString()
+          },
+          ...prev
+        ]);
+      }
+    }
+  }, [isNewUser, notifications.length, t]);
 
   // ── SOS Polling ──
   useEffect(() => {
@@ -958,28 +1018,28 @@ export default function LawyerDashboard() {
   const [showHowToUse, setShowHowToUse] = useState(false);
 
   const baseNavItems = [
-    { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { id: "appointments", icon: CalendarCheck, label: "Appointments" },
-    { id: "signature_apply", icon: Star, label: "Signature Tier" },
-    { id: "cases", icon: FileText, label: "Cases" },
-    { id: "calendar", icon: CalendarIcon, label: "Calendar" },
-    { id: "messages", icon: MessageSquare, label: "Messages" },
-    { id: "documents", icon: FileText, label: "Documents" },
-    { id: "network", icon: Users, label: "Lxwyer Network" },
-    { id: "achievements", icon: Trophy, label: "Achievements" },
-    { id: "paralegal", icon: Bot, label: "Lxwyer Paralegal AI" },
-    { id: "earnings", icon: TrendingUp, label: "Earnings" },
+    { id: "dashboard", icon: LayoutDashboard, label: t("Dashboard") },
+    { id: "appointments", icon: CalendarCheck, label: t("Appointments") },
+    { id: "signature_apply", icon: Star, label: t("Signature Tier") },
+    { id: "cases", icon: FileText, label: t("Cases") },
+    { id: "calendar", icon: CalendarIcon, label: t("Calendar") },
+    { id: "messages", icon: MessageSquare, label: t("Messages") },
+    { id: "documents", icon: FileText, label: t("Documents") },
+    { id: "network", icon: Users, label: t("Lxwyer Network") },
+    { id: "achievements", icon: Trophy, label: t("Achievements") },
+    { id: "paralegal", icon: Bot, label: t("Lxwyer Paralegal AI") },
+    { id: "earnings", icon: TrendingUp, label: t("Earnings") },
   ];
 
   const navItems = user?.application_type?.includes("sos")
-    ? [...baseNavItems, { id: "sos", icon: AlertTriangle, label: "SOS Performance" }]
+    ? [...baseNavItems, { id: "sos", icon: AlertTriangle, label: t("SOS Performance") }]
     : baseNavItems;
 
   const isSignature = user?.isSignature || user?.is_signature || user?.signature_status === 'approved' || user?.signature_tier === true;
 
   return (
     <div
-      className={`min-h-screen ${isFullScreen ? "p-0 block" : "p-2 md:p-4 flex items-center justify-center"} font-sans transition-all duration-300 relative overflow-hidden ${darkMode ? "bg-black text-gray-100" : "bg-gradient-to-br from-[#E0F2FE] via-[#F0F9FF] to-[#E0F2FE] text-[#1F2937]"} ${isSignature ? 'signature-theme theme-applied' : ''}`}
+      className={`h-screen ${darkMode ? "bg-black text-gray-100" : "bg-gradient-to-br from-[#E0F2FE] via-[#F0F9FF] to-[#E0F2FE] text-[#1F2937]"} ${isFullScreen ? "p-0 block" : "p-2 md:p-4 flex items-center justify-center"} font-sans transition-all duration-300 relative overflow-hidden ${isSignature ? 'signature-theme theme-applied' : ''}`}
     >
       {!isFullScreen && <ParticleBackground darkMode={darkMode} />}
 
@@ -1002,7 +1062,7 @@ export default function LawyerDashboard() {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className={`${isFullScreen ? "w-screen h-screen rounded-none border-0 fixed inset-0" : "w-full max-w-[1440px] h-[96vh] rounded-[2.5rem] border relative"} ${darkMode ? "bg-[#0f1012] border-gray-800" : "bg-white border-white"} shadow-2xl overflow-hidden flex z-10 transition-all duration-300`}
+        className={`${isFullScreen ? "w-screen h-screen rounded-none border-0 fixed inset-0" : "w-full max-w-[1440px] h-[96vh] rounded-[2.5rem] border relative"} ${darkMode ? "bg-[#0f1012] border-gray-800" : "bg-white border-slate-200"} shadow-2xl overflow-hidden flex z-10 transition-all duration-300`}
       >
         <aside
           className={`w-44 flex flex-col py-3 border-r z-10 relative transition-colors duration-300 shrink-0 ${darkMode ? 'border-white/5 bg-black/40 backdrop-blur-md' : 'border-white/20 bg-white/60 backdrop-blur-md'
@@ -1010,8 +1070,8 @@ export default function LawyerDashboard() {
         >
           {/* Logo */}
           <div className="px-4 py-3 flex items-center gap-2.5 mb-1">
-            <img src="/logo.png" alt="Lxwyer Up Logo" className="w-8 h-8 xl:w-9 xl:h-9 object-contain rounded-md" style={{ mixBlendMode: "screen" }} />
-            <span className={`font-bold text-xs tracking-tight ${darkMode ? 'text-white' : 'text-slate-800'}`}>Lxwyer Up</span>
+            <img src="/logo.png" alt="Lxwyer Up Logo" className="w-8 h-8 xl:w-9 xl:h-9 object-contain rounded-md" />
+            <span className={`font-bold text-[14px] tracking-tight ${darkMode ? 'text-white' : 'text-[#0F2944]'}`}>Lxwyer Up</span>
           </div>
 
           {/* Navigation Items */}
@@ -1022,11 +1082,11 @@ export default function LawyerDashboard() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 text-left ${isActive
-                    ? 'bg-blue-600 text-white'
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-200 text-left ${isActive
+                    ? 'bg-blue-600 text-white shadow-md'
                     : darkMode
                       ? 'text-gray-400 hover:bg-white/10 hover:text-white'
-                      : 'text-slate-500 hover:bg-blue-50 hover:text-blue-600'
+                      : 'text-slate-600 hover:bg-blue-50 hover:text-[#0F2944] font-medium'
                     }`}
                 >
                   <item.icon className="w-[15px] h-[15px] shrink-0" />
@@ -1039,13 +1099,28 @@ export default function LawyerDashboard() {
           {/* Bottom: Theme + Profile + Logout */}
           <div className={`px-2 pb-3 pt-2 border-t flex flex-col gap-0.5 ${darkMode ? 'border-white/5' : 'border-slate-200'
             }`}>
+
+            {/* Language Toggle */}
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg mb-0.5 ${darkMode ? 'bg-white/5' : 'bg-slate-100'}`}>
+              <Globe className={`w-[14px] h-[14px] shrink-0 ${darkMode ? 'text-gray-400' : 'text-slate-500'}`} />
+              <div className="flex gap-0.5 flex-1">
+                <button
+                  onClick={() => setLang('en')}
+                  className={`flex-1 py-0.5 text-[10px] font-bold rounded transition-all ${lang === 'en' ? 'bg-blue-600 text-white' : (darkMode ? 'text-gray-500 hover:text-white' : 'text-slate-500 hover:text-slate-800')}`}
+                >EN</button>
+                <button
+                  onClick={() => setLang('hi')}
+                  className={`flex-1 py-0.5 text-[10px] font-bold rounded transition-all ${lang === 'hi' ? 'bg-blue-600 text-white' : (darkMode ? 'text-gray-500 hover:text-white' : 'text-slate-500 hover:text-slate-800')}`}
+                >हिं</button>
+              </div>
+            </div>
+
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all ${darkMode ? 'text-yellow-400 hover:bg-white/10' : 'text-slate-500 hover:bg-slate-100'
-                }`}
+              className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all ${darkMode ? 'text-gray-300 hover:bg-white/10' : 'text-slate-600 hover:bg-slate-100'}`}
             >
               {darkMode ? <Sun className="w-[14px] h-[14px] shrink-0" /> : <Moon className="w-[14px] h-[14px] shrink-0" />}
-              <span className="text-[11px] font-semibold">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+              <span className="text-[11px] font-semibold truncate">{darkMode ? t('sidebar_light_mode') : t('sidebar_dark_mode')}</span>
             </button>
             <button
               onClick={() => setShowProfileModal(true)}
@@ -1060,7 +1135,7 @@ export default function LawyerDashboard() {
                   <span className="text-[8px] font-bold">{user?.full_name?.[0] || 'L'}</span>
                 )}
               </div>
-              <span className="text-[11px] font-semibold truncate">My Profile</span>
+              <span className="text-[11px] font-semibold truncate">{t('sidebar_my_profile') || 'My Profile'}</span>
             </button>
             <button
               onClick={handleLogout}
@@ -1068,7 +1143,7 @@ export default function LawyerDashboard() {
                 }`}
             >
               <LogOut className="w-[14px] h-[14px] shrink-0" />
-              <span className="text-[11px] font-semibold">Sign Out</span>
+              <span className="text-[11px] font-semibold">{t('sidebar_sign_out')}</span>
             </button>
           </div>
         </aside>
@@ -1076,7 +1151,7 @@ export default function LawyerDashboard() {
         {/* Main Content Area */}
         <main className="flex-1 flex overflow-hidden relative">
           {/* Center Content */}
-          <div className="flex-1 overflow-y-auto p-8 no-scrollbar">
+          <div className="flex-1 overflow-y-auto p-8 custom-scrollbar dashboard-scroll">
             {/* Paralegal Tab */}
             {activeTab === "paralegal" && (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-in fade-in zoom-in duration-300 h-full">
@@ -1241,6 +1316,36 @@ export default function LawyerDashboard() {
             {/* Dashboard Tab */}
             {activeTab === "dashboard" && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              
+                {/* 24-Hour First-Time Login Banner */}
+                {isNewUser && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-6 rounded-2xl border shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative overflow-hidden ${darkMode ? 'bg-gradient-to-r from-indigo-900/40 to-blue-900/40 border-indigo-500/30' : 'bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200'}`}
+                  >
+                    <div className="absolute top-0 right-0 p-3 opacity-10 pointer-events-none">
+                      <Trophy className="w-32 h-32" />
+                    </div>
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-3xl">🎉</span>
+                        <h2 className={`text-2xl font-black tracking-tight ${darkMode ? 'text-white' : 'text-indigo-950'}`}>
+                          {t('Welcome to your Apex Dashboard!')}
+                        </h2>
+                      </div>
+                      <p className={`text-base font-medium max-w-2xl ${darkMode ? 'text-indigo-200' : 'text-indigo-800'}`}>
+                        {t('Your account was successfully provisioned. We recommend clicking the "?" icon above to read the Quick Start Guide. Our smart matching system is now actively looking for clients that fit your expertise.')}
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={() => setShowHowToUse(true)}
+                      className="shrink-0 relative z-10 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-6 rounded-xl shadow-lg shadow-indigo-500/20"
+                    >
+                      {t('Read Quick Start Guide')}
+                    </Button>
+                  </motion.div>
+                )}
                 {/* Application Pending Banner */}
                 {(!user?.is_approved || user?.status === 'pending') && (
                   <div className={`p-5 rounded-2xl border flex items-start gap-4 shadow-sm ${darkMode ? 'bg-amber-900/20 border-amber-800' : 'bg-amber-50 border-amber-200'}`}>
@@ -1297,12 +1402,12 @@ export default function LawyerDashboard() {
                     <h1
                       className={`text-3xl font-bold mb-1 ${darkMode ? "text-white" : "text-slate-900"}`}
                     >
-                      Hi, {user?.full_name?.split(" ")[0] || "Lawyer"} 👋
+                      {lang === 'hi' ? `नमस्ते, ${user?.full_name?.split(" ")[0] || "वकील"} 👋` : `Hi, ${user?.full_name?.split(" ")[0] || "Lawyer"} 👋`}
                     </h1>
                     <p
                       className={`text-sm ${darkMode ? "text-gray-400" : "text-slate-500"}`}
                     >
-                      Here's what's happening with your practice today.
+                      {lang === 'hi' ? 'आज आपकी प्रैक्टिस में क्या हो रहा है, यह देखें।' : "Here's what's happening with your practice today."}
                     </p>
                     {user?.unique_id && (
                       <div className="mt-2 text-xs font-mono bg-blue-500/10 text-blue-400 px-2.5 py-1 rounded-md border border-blue-500/20 inline-block">
@@ -1381,14 +1486,14 @@ export default function LawyerDashboard() {
                           <div className={`absolute right-0 top-14 w-96 max-h-[480px] rounded-2xl shadow-2xl border z-40 overflow-hidden flex flex-col ${darkMode ? 'bg-[#1a1b1e] border-white/10' : 'bg-white border-slate-200'}`}>
                             {/* Header */}
                             <div className={`flex items-center justify-between px-5 py-4 border-b ${darkMode ? 'border-white/5' : 'border-slate-100'}`}>
-                              <h3 className={`font-bold text-base ${darkMode ? 'text-white' : 'text-slate-900'}`}>Notifications</h3>
+                              <h3 className={`font-bold text-base ${darkMode ? 'text-white' : 'text-slate-900'}`}>{lang === 'hi' ? 'सूचनाएं' : 'Notifications'}</h3>
                               <div className="flex items-center gap-2">
                                 {notifications.filter(n => !n.is_read).length > 0 && (
                                   <button
                                     onClick={markAllNotificationsRead}
                                     className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
                                   >
-                                    Mark all read
+                                    {lang === 'hi' ? 'सभी पढ़ा' : 'Mark all read'}
                                   </button>
                                 )}
                                 <button onClick={() => setShowNotifications(false)} className={`p-1 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -1402,8 +1507,8 @@ export default function LawyerDashboard() {
                               {notifications.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-12 text-center">
                                   <Bell className={`w-10 h-10 mb-3 ${darkMode ? 'text-slate-600' : 'text-slate-300'}`} />
-                                  <p className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>No notifications yet</p>
-                                  <p className={`text-xs mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>New updates will appear here</p>
+                                  <p className={`text-sm font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{lang === 'hi' ? 'अभी कोई सूचना नहीं' : 'No notifications yet'}</p>
+                                  <p className={`text-xs mt-1 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>{lang === 'hi' ? 'नई अपडेट यहाँ दिखेंगी' : 'New updates will appear here'}</p>
                                 </div>
                               ) : (
                                 notifications.slice(0, 20).map((notif) => {
@@ -1466,7 +1571,10 @@ export default function LawyerDashboard() {
                                   onClick={() => { setShowNotifications(false); setShowPendingModal(true); }}
                                   className="w-full text-center text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline"
                                 >
-                                  View {pendingBookings.length} pending appointment{pendingBookings.length > 1 ? 's' : ''}
+                                  {lang === 'hi'
+                                    ? `${pendingBookings.length} पेंडिंग अपॉइंटमेंट देखें`
+                                    : `View ${pendingBookings.length} pending appointment${pendingBookings.length > 1 ? 's' : ''}`
+                                  }
                                 </button>
                               </div>
                             )}
@@ -1480,7 +1588,7 @@ export default function LawyerDashboard() {
                 {/* Dashboard Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <StatCard
-                    title="Total Clients"
+                    title={lang === 'hi' ? 'कुल क्लाइंट' : 'Total Clients'}
                     value={dashboardData.stats.total_clients || "0"}
                     icon={Users}
                     colorClass="bg-blue-50 text-blue-600"
@@ -1488,7 +1596,7 @@ export default function LawyerDashboard() {
                     darkMode={darkMode}
                   />
                   <StatCard
-                    title="Active Cases"
+                    title={lang === 'hi' ? 'सक्रिय मामले' : 'Active Cases'}
                     value={dashboardData.stats.active_cases || "0"}
                     icon={FileText}
                     colorClass="bg-red-50 text-red-600"
@@ -1496,7 +1604,7 @@ export default function LawyerDashboard() {
                     darkMode={darkMode}
                   />
                   <StatCard
-                    title="Appointments"
+                    title={lang === 'hi' ? 'अपॉइंटमेंट' : 'Appointments'}
                     value={dashboardData.stats.consultations_this_month || "0"}
                     icon={CalendarIcon}
                     colorClass="bg-cyan-50 text-cyan-500"
@@ -1508,10 +1616,10 @@ export default function LawyerDashboard() {
                 {/* Row 2: Analytics & Cases */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[350px]">
                   <div className="lg:col-span-2 h-full">
-                    <AnalyticsChart bookings={bookings} darkMode={darkMode} />
+                    <AnalyticsChart bookings={bookings} darkMode={darkMode} lang={lang} />
                   </div>
                   <div className="h-full">
-                    <DemographicsChart cases={cases} darkMode={darkMode} />
+                    <DemographicsChart cases={cases} darkMode={darkMode} lang={lang} />
                   </div>
                 </div>
 
@@ -1521,6 +1629,7 @@ export default function LawyerDashboard() {
                     <RecentActivityTable
                       cases={cases.slice(0, 10)}
                       darkMode={darkMode}
+                      lang={lang}
                     />
                   </div>
                 </div>
@@ -1530,13 +1639,13 @@ export default function LawyerDashboard() {
             {/* ─── Appointments Tab ─────────────────────────── */}
             {activeTab === "appointments" && (() => {
               const statusConfig = {
-                pending: { label: 'Pending', bg: darkMode ? 'bg-amber-900/20 border-amber-800 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700' },
-                confirmed: { label: 'Confirmed', bg: darkMode ? 'bg-emerald-900/20 border-emerald-800 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700' },
-                cancelled: { label: 'Cancelled', bg: darkMode ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-red-50 border-red-200 text-red-700' },
-                rescheduled: { label: 'Rescheduled', bg: darkMode ? 'bg-blue-900/20 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700' },
-                rescheduled_by_lawyer: { label: 'Awaiting Client', bg: darkMode ? 'bg-amber-900/20 border-amber-700 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-700' },
-                rescheduled_by_user: { label: 'Client Counter', bg: darkMode ? 'bg-violet-900/20 border-violet-700 text-violet-400' : 'bg-violet-50 border-violet-300 text-violet-700' },
-                completed: { label: 'Completed', bg: darkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600' },
+                pending: { label: lang === 'hi' ? 'अनुरोधाधीन' : 'Pending', bg: darkMode ? 'bg-amber-900/20 border-amber-800 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700' },
+                confirmed: { label: lang === 'hi' ? 'पुष्टित' : 'Confirmed', bg: darkMode ? 'bg-emerald-900/20 border-emerald-800 text-emerald-400' : 'bg-emerald-50 border-emerald-200 text-emerald-700' },
+                cancelled: { label: lang === 'hi' ? 'रद्द' : 'Cancelled', bg: darkMode ? 'bg-red-900/20 border-red-800 text-red-400' : 'bg-red-50 border-red-200 text-red-700' },
+                rescheduled: { label: lang === 'hi' ? 'पुनर्निधारित' : 'Rescheduled', bg: darkMode ? 'bg-blue-900/20 border-blue-800 text-blue-400' : 'bg-blue-50 border-blue-200 text-blue-700' },
+                rescheduled_by_lawyer: { label: lang === 'hi' ? 'क्लाइंट की प्रतीक्षा' : 'Awaiting Client', bg: darkMode ? 'bg-amber-900/20 border-amber-700 text-amber-400' : 'bg-amber-50 border-amber-300 text-amber-700' },
+                rescheduled_by_user: { label: lang === 'hi' ? 'क्लाइंट सुझाव' : 'Client Counter', bg: darkMode ? 'bg-violet-900/20 border-violet-700 text-violet-400' : 'bg-violet-50 border-violet-300 text-violet-700' },
+                completed: { label: lang === 'hi' ? 'पूर्ण' : 'Completed', bg: darkMode ? 'bg-slate-800 border-slate-700 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600' },
               };
               const typeIcon = { video: '🎥', audio: '📞', in_person: '🏛️' };
               const sortedBookings = [...bookings].sort((a, b) => {
@@ -1588,14 +1697,14 @@ export default function LawyerDashboard() {
                       <div className="flex items-center gap-2 flex-wrap">
                         {booking.price != null && (
                           <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${darkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'}`}>
-                            {booking.is_free_trial ? 'Free Trial' : `₹${booking.price}`}
+                            {booking.is_free_trial ? (lang === 'hi' ? 'फ्री ट्रायल' : 'Free Trial') : `₹${booking.price}`}
                           </span>
                         )}
                         {isPending && (
                           <>
-                            <button onClick={() => handleAcceptBooking(booking.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors">✓ Accept</button>
-                            <button onClick={() => { setSelectedBookingForReschedule(booking); setShowRescheduleModal(true); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>↻ Reschedule</button>
-                            <button onClick={() => setBookingToDecline(booking.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${darkMode ? 'border-red-800 text-red-400 hover:bg-red-900/25' : 'border-red-200 text-red-600 hover:bg-red-50'}`}>✕ Decline</button>
+                            <button onClick={() => handleAcceptBooking(booking.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors">✓ {lang === 'hi' ? 'स्वीकार करें' : 'Accept'}</button>
+                            <button onClick={() => { setSelectedBookingForReschedule(booking); setShowRescheduleModal(true); }} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${darkMode ? 'border-slate-700 text-slate-300 hover:bg-slate-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>↻ {lang === 'hi' ? 'पुनर्निधारित' : 'Reschedule'}</button>
+                            <button onClick={() => setBookingToDecline(booking.id)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${darkMode ? 'border-red-800 text-red-400 hover:bg-red-900/25' : 'border-red-200 text-red-600 hover:bg-red-50'}`}>✕ {lang === 'hi' ? 'अस्वीकार' : 'Decline'}</button>
                           </>
                         )}
                         {isConfirmed && (() => {
@@ -1612,16 +1721,16 @@ export default function LawyerDashboard() {
                           const canJoin = fiveMinBefore && now >= fiveMinBefore && !meetingEnded;
                           if (!booking.meet_link || meetingEnded) return null;
                           return canJoin
-                            ? <a href={booking.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors animate-pulse">🎥 Join Meet</a>
-                            : <span title="Join opens 5 minutes before the meeting" className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-not-allowed opacity-60 ${darkMode ? 'border-slate-700 text-slate-400 bg-slate-800' : 'border-slate-200 text-slate-400 bg-slate-100'}`}>🎥 Join Meet</span>;
+                            ? <a href={booking.meet_link} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors animate-pulse">🎥 {lang === 'hi' ? 'मीट ज्वाइन करें' : 'Join Meet'}</a>
+                            : <span title={lang === 'hi' ? 'मीटिंग से 5 मिनट पहले जॉइन खुलता है' : 'Join opens 5 minutes before the meeting'} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border cursor-not-allowed opacity-60 ${darkMode ? 'border-slate-700 text-slate-400 bg-slate-800' : 'border-slate-200 text-slate-400 bg-slate-100'}`}>🎥 {lang === 'hi' ? 'मीट ज्वाइन करें' : 'Join Meet'}</span>;
                         })()}
                         {isConfirmed && (
-                          <button onClick={() => handleBookingStatus(booking.id, 'completed')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${darkMode ? 'border-emerald-800 text-emerald-400 hover:bg-emerald-900/25' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}>✓ Mark Complete</button>
+                          <button onClick={() => handleBookingStatus(booking.id, 'completed')} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${darkMode ? 'border-emerald-800 text-emerald-400 hover:bg-emerald-900/25' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}>✓ {lang === 'hi' ? 'पूर्ण हिसाब लगाईए' : 'Mark Complete'}</button>
                         )}
                       </div>
                     </div>
                     {isConfirmed && (booking.consultation_type === 'video' || booking.consultation_type === 'audio') && (
-                      <p className={`mt-2 text-[11px] ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>⏱ Sessions are limited to <strong>1 hour</strong>. Join becomes active 5 minutes before the scheduled time.</p>
+                      <p className={`mt-2 text-[11px] ${darkMode ? 'text-slate-600' : 'text-gray-400'}`}>⏱ {lang === 'hi' ? 'सत्र <strong>1 घंटे</strong> तक सीमित है। जॉइन बटन निर्धारित समय से 5 मिनट पहले सक्रिय होता है।' : 'Sessions are limited to <strong>1 hour</strong>. Join becomes active 5 minutes before the scheduled time.'}</p>
                     )}
                     {booking.description && (
                       <div className={`mt-4 px-4 py-2.5 rounded-xl text-sm ${darkMode ? 'bg-black/20 text-slate-300 border border-white/5' : 'bg-slate-50 text-slate-600 border border-slate-100'}`}>
@@ -1853,19 +1962,19 @@ export default function LawyerDashboard() {
                       <h1
                         className={`text-3xl font-bold ${darkMode ? "text-white" : "text-[#0F2944]"}`}
                       >
-                        Messages
+                        {lang === 'hi' ? 'संदेश' : 'Messages'}
                       </h1>
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center ${darkMode ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-green-100 text-green-700 border-green-200"}`}
                       >
                         <Shield className="w-3 h-3 mr-1" />
-                        End-to-End Encrypted
+                        {lang === 'hi' ? 'एंड-टू-एंड एन्क्रिप्टेड' : 'End-to-End Encrypted'}
                       </span>
                     </div>
                     <p
                       className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}
                     >
-                      Secure communication with your clients
+                      {lang === 'hi' ? 'अपने क्लाइंट्स के साथ सुरक्षित संचार' : 'Secure communication with your clients'}
                     </p>
                   </div>
                   <div className="relative">
@@ -1873,7 +1982,7 @@ export default function LawyerDashboard() {
                       onClick={() => setShowNewMsg(v => !v)}
                       className={`${darkMode ? "bg-blue-600 hover:bg-blue-500" : "bg-[#0F2944] hover:bg-[#0F2944]/90"} text-white rounded-xl px-6 shadow-lg`}
                     >
-                      + New Message
+                      {lang === 'hi' ? '+ नया संदेश' : '+ New Message'}
                     </Button>
                     {showNewMsg && (() => {
                       const seen = new Set();
@@ -1887,12 +1996,12 @@ export default function LawyerDashboard() {
                       });
                       if (contacts.length === 0) return (
                         <div className={`absolute right-0 top-12 w-64 rounded-2xl shadow-2xl border p-4 z-50 ${darkMode ? 'bg-[#1c1c1c] border-white/10 text-gray-400' : 'bg-white border-gray-200 text-gray-500'}`}>
-                          <p className="text-sm text-center">No clients yet. Clients who book you will appear here.</p>
+                          <p className="text-sm text-center">{lang === 'hi' ? 'अभी कोई क्लाइंट नहीं है। जो क्लाइंट आपको बुक करेंगे, वे यहाँ दिखाई देंगे।' : 'No clients yet. Clients who book you will appear here.'}</p>
                         </div>
                       );
                       return (
                         <div className={`absolute right-0 top-12 w-72 rounded-2xl shadow-2xl border z-50 overflow-hidden ${darkMode ? 'bg-[#1c1c1c] border-white/10' : 'bg-white border-gray-200'}`}>
-                          <p className={`px-4 py-3 text-xs font-bold uppercase tracking-widest border-b ${darkMode ? 'text-gray-500 border-white/5' : 'text-gray-400 border-gray-100'}`}>Message a Client</p>
+                          <p className={`px-4 py-3 text-xs font-bold uppercase tracking-widest border-b ${darkMode ? 'text-gray-500 border-white/5' : 'text-gray-400 border-gray-100'}`}>{lang === 'hi' ? 'क्लाइंट को संदेश भेजें' : 'Message a Client'}</p>
                           {contacts.map(c => (
                             <div key={c.id} onClick={() => { handleSelectChat(c); setShowNewMsg(false); }} className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${darkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'}`}>
                               <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${darkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>{c.avatar}</div>
@@ -1918,7 +2027,7 @@ export default function LawyerDashboard() {
                           className={`w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 ${darkMode ? "text-gray-500" : "text-gray-400"}`}
                         />
                         <Input
-                          placeholder="Search conversations..."
+                          placeholder={lang === 'hi' ? 'बातचीत खोजें...' : 'Search conversations...'}
                           className={`pl-10 rounded-xl focus:ring-2 ${darkMode ? "bg-white/5 border-white/5 text-white placeholder-gray-500 focus:ring-blue-500/50" : "bg-gray-50 border-gray-200 text-[#0F2944] placeholder-gray-400 focus:ring-[#0F2944]/20"}`}
                         />
                       </div>
@@ -1986,7 +2095,7 @@ export default function LawyerDashboard() {
                         <div
                           className={`p-8 text-center ${darkMode ? "text-gray-500" : "text-gray-500"}`}
                         >
-                          No messages yet.
+                          {lang === 'hi' ? 'अभी कोई संदेश नहीं।' : 'No messages yet.'}
                         </div>
                       )}
                     </div>
@@ -2021,7 +2130,7 @@ export default function LawyerDashboard() {
                               >
                                 {selectedChat.name}
                               </p>
-                              <p className="text-xs text-green-600">Online</p>
+                              <p className="text-xs text-green-600">{lang === 'hi' ? 'ऑनलाइन' : 'Online'}</p>
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
@@ -2043,7 +2152,7 @@ export default function LawyerDashboard() {
                             <span
                               className={`px-3 py-1 rounded-full text-xs ${darkMode ? "bg-white/10 text-gray-400" : "bg-gray-200 text-gray-600"}`}
                             >
-                              Today
+                              {lang === 'hi' ? 'आज' : 'Today'}
                             </span>
                           </div>
 
@@ -2143,10 +2252,10 @@ export default function LawyerDashboard() {
                       >
                         <MessageSquare className="w-16 h-16 mb-4 opacity-20" />
                         <p className="text-lg font-medium">
-                          Select a conversation
+                          {lang === 'hi' ? 'एक बातचीत चुनें' : 'Select a conversation'}
                         </p>
                         <p className="text-sm">
-                          Choose a chat from the list to start messaging
+                          {lang === 'hi' ? 'संदेश करने के लिए सूची से कोई चैट चुनें' : 'Choose a chat from the list to start messaging'}
                         </p>
                       </div>
                     )}
@@ -2515,214 +2624,293 @@ export default function LawyerDashboard() {
             )}
 
             {/* Earnings Tab */}
-            {activeTab === "earnings" && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-8"
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h1
-                      className={`text-3xl font-bold mb-2 ${darkMode ? "text-white" : "text-[#0F2944]"}`}
-                    >
-                      Earnings & Billing
-                    </h1>
-                    <p
-                      className={`${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                    >
-                      Track your income and manage your finances
-                    </p>
-                  </div>
-                  <Button
-                    onClick={generateEarningsReport}
-                    className={`${darkMode ? "bg-white text-black hover:bg-gray-200" : "bg-[#0F2944] hover:bg-[#0F2944]/90 text-white"} rounded-xl px-6 shadow-lg`}
-                  >
-                    Generate Report
-                  </Button>
-                </div>
+            {activeTab === "earnings" && (() => {
+              // ── Build last-30-day daily data from bookings ──
+              const days = 30;
+              const today = new Date();
+              const dailyEarningsData = Array.from({ length: days }, (_, i) => {
+                const d = new Date(today);
+                d.setDate(d.getDate() - (days - 1 - i));
+                const label = `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
+                const earned = bookings
+                  .filter(b => (b.status === 'confirmed' || b.status === 'completed') && b.created_at)
+                  .filter(b => {
+                    const bd = new Date(b.created_at);
+                    return bd.toDateString() === d.toDateString();
+                  })
+                  .reduce((sum, b) => sum + (Number(b.price) || 0), 0);
+                const pending = bookings
+                  .filter(b => (b.status === 'pending' || b.status === 'rescheduled') && b.created_at)
+                  .filter(b => {
+                    const bd = new Date(b.created_at);
+                    return bd.toDateString() === d.toDateString();
+                  })
+                  .reduce((sum, b) => sum + (Number(b.price) || 0), 0);
+                return { date: label, earned, pending };
+              });
 
-                {/* Revenue Stats */}
-                <div className={`grid grid-cols-1 md:grid-cols-${user?.application_type?.includes('sos') ? '4' : '3'} gap-6 mb-8`}>
-                  <div
-                    className={`backdrop-blur-xl rounded-2xl border p-6 relative overflow-hidden group shadow-lg ${darkMode ? "bg-[#1c1c1c] border-white/5" : "bg-white/70 border-white/50"}`}
-                  >
-                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-100 rounded-full blur-2xl opacity-50"></div>
-                    <p
-                      className={`text-sm mb-2 relative z-10 uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                    >
-                      Total Revenue
-                    </p>
-                    <h3
-                      className={`text-4xl font-bold relative z-10 ${darkMode ? "text-white" : "text-[#0F2944]"}`}
-                    >
-                      ₹{(billingStats.total_earned || dashboardData.stats.revenue || 0).toLocaleString('en-IN')}
-                    </h3>
-                    <p className={`text-xs mt-1 relative z-10 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                      {billingStats.total_transactions || 0} consultations
-                    </p>
-                  </div>
+              // Fallback: if no real data, sprinkle some mock data for visual
+              const hasRealData = dailyEarningsData.some(d => d.earned > 0 || d.pending > 0);
+              const chartData = hasRealData ? dailyEarningsData : dailyEarningsData.map((d, i) => ({
+                ...d,
+                earned: Math.round(500 + Math.sin(i * 0.4) * 400 + Math.random() * 300),
+                pending: Math.round(200 + Math.cos(i * 0.3) * 200 + Math.random() * 150),
+              }));
 
-                  <div
-                    className={`backdrop-blur-xl rounded-2xl border p-6 relative overflow-hidden group shadow-lg ${darkMode ? "bg-[#1c1c1c] border-white/5" : "bg-white/70 border-white/50"}`}
-                  >
-                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-100 rounded-full blur-2xl opacity-50"></div>
-                    <p
-                      className={`text-sm mb-2 relative z-10 uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                    >
-                      This Month
-                    </p>
-                    <h3
-                      className={`text-4xl font-bold relative z-10 ${darkMode ? "text-white" : "text-[#0F2944]"}`}
-                    >
-                      ₹{thisMonthEarnings.toLocaleString('en-IN')}
-                    </h3>
-                  </div>
-
-                  <div
-                    className={`backdrop-blur-xl rounded-2xl border p-6 relative overflow-hidden group shadow-lg ${darkMode ? "bg-[#1c1c1c] border-white/5" : "bg-white/70 border-white/50"}`}
-                  >
-                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-100 rounded-full blur-2xl opacity-50"></div>
-                    <p
-                      className={`text-sm mb-2 relative z-10 uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                    >
-                      Pending Payments
-                    </p>
-                    <h3
-                      className={`text-4xl font-bold relative z-10 ${darkMode ? "text-white" : "text-[#0F2944]"}`}
-                    >
-                      ₹{pendingPayments.toLocaleString('en-IN')}
-                    </h3>
-                  </div>
-
-                  {user?.application_type?.includes('sos') && (
-                    <div
-                      className={`backdrop-blur-xl rounded-2xl border p-6 relative overflow-hidden group shadow-lg ${darkMode ? "bg-red-900/10 border-red-500/10" : "bg-red-50/70 border-red-200"}`}
-                    >
-                      <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-100 rounded-full blur-2xl opacity-50"></div>
-                      <p
-                        className={`text-sm mb-2 relative z-10 uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                      >
-                        SOS Penalties
+              // Custom tooltip component
+              const CustomTooltip = ({ active, payload, label }) => {
+                if (!active || !payload?.length) return null;
+                return (
+                  <div className={`rounded-xl shadow-xl border px-4 py-3 text-sm ${darkMode ? 'bg-[#1c1c1e] border-white/10 text-white' : 'bg-white border-slate-200 text-slate-800'}`}>
+                    <p className="font-bold mb-1.5 text-xs uppercase tracking-wider opacity-60">{label}</p>
+                    {payload.map((p, i) => (
+                      <p key={i} style={{ color: p.color }} className="font-semibold">
+                        {p.name}: ₹{(p.value || 0).toLocaleString('en-IN')}
                       </p>
-                      <h3
-                        className={`text-4xl font-bold relative z-10 text-red-500`}
-                      >
-                        -₹{totalSosPenalties.toLocaleString('en-IN')}
-                      </h3>
-                      <p className={`text-xs mt-1 relative z-10 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                        Deducted from payouts
-                      </p>
-                    </div>
-                  )}
-                </div>
+                    ))}
+                  </div>
+                );
+              };
 
-                {/* Billing History */}
-                <div
-                  className={`rounded-2xl border shadow-sm overflow-hidden ${darkMode ? "bg-[#1c1c1c] border-white/5" : "bg-white border-gray-200"}`}
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-6 md:p-8 space-y-8"
                 >
-                  <div
-                    className={`p-6 border-b ${darkMode ? "border-white/5" : "border-gray-100"}`}
-                  >
-                    <h2
-                      className={`text-xl font-bold ${darkMode ? "text-white" : "text-[#0F2944]"}`}
-                    >
-                      Billing History
-                    </h2>
+                  {/* Header */}
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <h1 className={`text-3xl font-bold mb-1 ${darkMode ? 'text-white' : 'text-[#0F2944]'}`}>
+                        {lang === 'hi' ? 'आमदनी और बिलिंग' : 'Earnings & Billing'}
+                      </h1>
+                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {lang === 'hi' ? 'अपनी आय और वित्त को ट्रैक करें' : 'Track your income and manage your finances'}
+                      </p>
+                      {!hasRealData && (
+                        <span className={`inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                          darkMode ? 'bg-amber-900/20 border-amber-700/30 text-amber-400' : 'bg-amber-50 border-amber-200 text-amber-700'
+                        }`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                          {lang === 'hi' ? 'ग्राफ में डेमो डेटा दिखाया जा रहा है' : 'Demo data shown — real data updates daily'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {/* Language toggle for earnings */}
+                      <div className={`flex items-center rounded-lg p-0.5 text-xs font-semibold ${darkMode ? 'bg-white/8 border border-white/10' : 'bg-slate-100 border border-slate-200'}`}>
+                        <button onClick={() => setLang('en')} className={`px-3 py-1.5 rounded-md transition-all ${lang === 'en' ? 'bg-blue-600 text-white shadow' : (darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800')}`}>EN</button>
+                        <button onClick={() => setLang('hi')} className={`px-3 py-1.5 rounded-md transition-all ${lang === 'hi' ? 'bg-blue-600 text-white shadow' : (darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800')}`}>हिं</button>
+                      </div>
+                      <Button
+                        onClick={generateEarningsReport}
+                        className={`${darkMode ? 'bg-white text-black hover:bg-gray-200' : 'bg-[#0F2944] hover:bg-[#0F2944]/90 text-white'} rounded-xl px-6 shadow-lg`}
+                      >
+                        {lang === 'hi' ? 'रिपोर्ट बनाएं' : 'Generate Report'}
+                      </Button>
+                    </div>
                   </div>
 
-                  <div className="overflow-x-auto w-full">
-                    <table className="w-full min-w-[700px]">
-                    <thead
-                      className={`border-b ${darkMode ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100"}`}
-                    >
-                      <tr>
-                        <th
-                          className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                        >
-                          Invoice ID
-                        </th>
-                        <th
-                          className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                        >
-                          Client Name
-                        </th>
-                        <th
-                          className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                        >
-                          Case
-                        </th>
-                        <th
-                          className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                        >
-                          Date
-                        </th>
-                        <th
-                          className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                        >
-                          Amount
-                        </th>
-                        <th
-                          className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? "text-gray-400" : "text-gray-500"}`}
-                        >
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {billingHistory.length > 0 ? (
-                        billingHistory.map((bill, idx) => {
-                          const status = bill.status || 'paid';
-                          const displayStatus = status.charAt(0).toUpperCase() + status.slice(1);
-                          const statusClass = status === 'paid'
-                            ? darkMode ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-green-100 text-green-700 border border-green-200'
-                            : status === 'pending'
-                              ? darkMode ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-amber-100 text-amber-700 border border-amber-200'
-                              : darkMode ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-red-100 text-red-700 border border-red-200';
-                          return (
-                            <tr
-                              key={idx}
-                              className={`border-b transition-all duration-200 ${darkMode ? "border-white/5 hover:bg-white/5" : "border-gray-100 hover:bg-gray-50"}`}
-                            >
-                              <td className={`px-6 py-4 font-mono text-xs font-medium ${darkMode ? "text-blue-400" : "text-blue-600"}`}>
-                                #{(bill.id || '').substring(0, 8).toUpperCase()}
-                              </td>
-                              <td className={`px-6 py-4 ${darkMode ? "text-gray-300" : "text-[#0F2944]"}`}>
-                                {bill.description?.replace('Consultation with ', '') || 'Client'}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500 capitalize">
-                                {bill.consultation_type || '—'}
-                              </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">
-                                {bill.date ? new Date(bill.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
-                              </td>
-                              <td className={`px-6 py-4 font-semibold ${darkMode ? "text-white" : "text-[#0F2944]"}`}>
-                                ₹{Number(bill.amount || 0).toLocaleString('en-IN')}
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusClass}`}>
-                                  {displayStatus}
-                                </span>
+                  {/* Revenue Stats Cards */}
+                  <div className={`grid grid-cols-2 md:grid-cols-${user?.application_type?.includes('sos') ? '4' : '3'} gap-4`}>
+                    {[
+                      {
+                        label: lang === 'hi' ? 'कुल आमदनी' : 'Total Revenue',
+                        value: billingStats.total_earned || dashboardData.stats.revenue || 0,
+                        sub: `${billingStats.total_transactions || 0} ${lang === 'hi' ? 'परामर्श' : 'consultations'}`,
+                        color: 'from-blue-500 to-blue-600',
+                        bg: darkMode ? 'bg-blue-900/10 border-blue-800/30' : 'bg-blue-50 border-blue-200',
+                        textColor: darkMode ? 'text-blue-300' : 'text-blue-800',
+                      },
+                      {
+                        label: lang === 'hi' ? 'इस महीने' : 'This Month',
+                        value: thisMonthEarnings,
+                        sub: lang === 'hi' ? 'जारी माह' : 'Current period',
+                        color: 'from-emerald-500 to-emerald-600',
+                        bg: darkMode ? 'bg-emerald-900/10 border-emerald-800/30' : 'bg-emerald-50 border-emerald-200',
+                        textColor: darkMode ? 'text-emerald-300' : 'text-emerald-800',
+                      },
+                      {
+                        label: lang === 'hi' ? 'पेंडिंग भुगतान' : 'Pending Payments',
+                        value: pendingPayments,
+                        sub: lang === 'hi' ? 'अभी तक नहीं मिला' : 'Amount not received',
+                        color: 'from-amber-500 to-orange-500',
+                        bg: darkMode ? 'bg-amber-900/10 border-amber-800/30' : 'bg-amber-50 border-amber-200',
+                        textColor: darkMode ? 'text-amber-300' : 'text-amber-800',
+                      },
+                    ].map((card, i) => (
+                      <div key={i} className={`rounded-2xl border p-5 relative overflow-hidden shadow-sm ${card.bg}`}>
+                        <div className={`absolute -right-6 -top-6 w-20 h-20 rounded-full opacity-20 bg-gradient-to-br ${card.color}`} />
+                        <p className={`text-xs font-semibold uppercase tracking-wider mb-2 opacity-70 ${card.textColor}`}>{card.label}</p>
+                        <h3 className={`text-3xl font-black mb-1 ${card.textColor}`}>₹{Number(card.value || 0).toLocaleString('en-IN')}</h3>
+                        <p className={`text-xs opacity-60 ${card.textColor}`}>{card.sub}</p>
+                      </div>
+                    ))}
+                    {user?.application_type?.includes('sos') && (
+                      <div className={`rounded-2xl border p-5 relative overflow-hidden shadow-sm ${darkMode ? 'bg-red-900/10 border-red-800/30' : 'bg-red-50 border-red-200'}`}>
+                        <div className="absolute -right-6 -top-6 w-20 h-20 rounded-full opacity-20 bg-gradient-to-br from-red-500 to-rose-600" />
+                        <p className={`text-xs font-semibold uppercase tracking-wider mb-2 opacity-70 ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                          {lang === 'hi' ? 'SOS पेनल्टी' : 'SOS Penalties'}
+                        </p>
+                        <h3 className="text-3xl font-black mb-1 text-red-500">-₹{totalSosPenalties.toLocaleString('en-IN')}</h3>
+                        <p className={`text-xs opacity-60 ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                          {lang === 'hi' ? 'भुगतान से काटा गया' : 'Deducted from payouts'}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── TRENDLINE CHART ── */}
+                  <div className={`rounded-2xl border p-6 shadow-sm ${darkMode ? 'bg-[#111315] border-white/5' : 'bg-white border-slate-200'}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                      <div>
+                        <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-[#0F2944]'}`}>
+                          {lang === 'hi' ? 'आय ट्रेंड (पिछले 30 दिन)' : 'Income Trend (Last 30 Days)'}
+                        </h2>
+                        <p className={`text-xs mt-0.5 ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                          {lang === 'hi' ? 'प्राप्त आय बनाम लंबित राशि — प्रतिदिन अपडेट होती है' : 'Earned income vs. pending amounts — updates daily'}
+                        </p>
+                      </div>
+                      {/* Legend */}
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-blue-500" />
+                          <span className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                            {lang === 'hi' ? 'प्राप्त' : 'Earned'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-3 h-3 rounded-full bg-amber-400" />
+                          <span className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+                            {lang === 'hi' ? 'लंबित' : 'Pending'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                        <defs>
+                          <linearGradient id="earnedGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="pendingGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke={darkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fill: darkMode ? '#6b7280' : '#9ca3af', fontSize: 10 }}
+                          tickLine={false}
+                          axisLine={false}
+                          interval={4}
+                        />
+                        <YAxis
+                          tick={{ fill: darkMode ? '#6b7280' : '#9ca3af', fontSize: 10 }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                          width={50}
+                        />
+                        <RechartsTooltip content={<CustomTooltip />} />
+                        <Line
+                          type="monotone"
+                          dataKey="earned"
+                          name={lang === 'hi' ? 'प्राप्त' : 'Earned'}
+                          stroke="#3b82f6"
+                          strokeWidth={2.5}
+                          dot={false}
+                          activeDot={{ r: 5, fill: '#3b82f6', strokeWidth: 0 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="pending"
+                          name={lang === 'hi' ? 'लंबित' : 'Pending'}
+                          stroke="#f59e0b"
+                          strokeWidth={2.5}
+                          strokeDasharray="5 4"
+                          dot={false}
+                          activeDot={{ r: 5, fill: '#f59e0b', strokeWidth: 0 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Billing History */}
+                  <div className={`rounded-2xl border shadow-sm overflow-hidden ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-gray-200'}`}>
+                    <div className={`p-6 border-b ${darkMode ? 'border-white/5' : 'border-gray-100'}`}>
+                      <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-[#0F2944]'}`}>
+                        {lang === 'hi' ? 'बिलिंग इतिहास' : 'Billing History'}
+                      </h2>
+                    </div>
+
+                    <div className="overflow-x-auto w-full">
+                      <table className="w-full min-w-[700px]">
+                        <thead className={`border-b ${darkMode ? 'bg-white/5 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                          <tr>
+                            {[
+                              lang === 'hi' ? 'इनवॉइस ID' : 'Invoice ID',
+                              lang === 'hi' ? 'क्लाइंट' : 'Client Name',
+                              lang === 'hi' ? 'प्रकार' : 'Case',
+                              lang === 'hi' ? 'तारीख' : 'Date',
+                              lang === 'hi' ? 'राशि' : 'Amount',
+                              lang === 'hi' ? 'स्थिति' : 'Status',
+                            ].map(h => (
+                              <th key={h} className={`text-left px-6 py-4 text-xs font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {billingHistory.length > 0 ? (
+                            billingHistory.map((bill, idx) => {
+                              const status = bill.status || 'paid';
+                              const displayStatus = lang === 'hi'
+                                ? (status === 'paid' ? 'भुगतान हुआ' : status === 'pending' ? 'लंबित' : 'रद्द')
+                                : (status.charAt(0).toUpperCase() + status.slice(1));
+                              const statusClass = status === 'paid'
+                                ? darkMode ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-green-100 text-green-700 border border-green-200'
+                                : status === 'pending'
+                                  ? darkMode ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-amber-100 text-amber-700 border border-amber-200'
+                                  : darkMode ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-red-100 text-red-700 border border-red-200';
+                              return (
+                                <tr key={idx} className={`border-b transition-all duration-200 ${darkMode ? 'border-white/5 hover:bg-white/5' : 'border-gray-100 hover:bg-gray-50'}`}>
+                                  <td className={`px-6 py-4 font-mono text-xs font-medium ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>#{(bill.id || '').substring(0, 8).toUpperCase()}</td>
+                                  <td className={`px-6 py-4 ${darkMode ? 'text-gray-300' : 'text-[#0F2944]'}`}>{bill.description?.replace('Consultation with ', '') || 'Client'}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-500 capitalize">{bill.consultation_type || '—'}</td>
+                                  <td className="px-6 py-4 text-sm text-gray-500">{bill.date ? new Date(bill.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}</td>
+                                  <td className={`px-6 py-4 font-semibold ${darkMode ? 'text-white' : 'text-[#0F2944]'}`}>₹{Number(bill.amount || 0).toLocaleString('en-IN')}</td>
+                                  <td className="px-6 py-4"><span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusClass}`}>{displayStatus}</span></td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan="6" className={`px-6 py-12 text-center ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                <TrendingUp className="w-10 h-10 mx-auto mb-3 opacity-20" />
+                                <p className="text-sm">{lang === 'hi' ? 'अभी कोई बिलिंग इतिहास नहीं — पूरी हुई परामर्श यहाँ दिखेंगी।' : 'No billing history yet — completed consultations will appear here.'}</p>
                               </td>
                             </tr>
-                          );
-                        })
-                      ) : (
-                        <tr>
-                          <td
-                            colSpan="6"
-                            className={`px-6 py-8 text-center ${darkMode ? "text-gray-500" : "text-gray-500"}`}
-                          >
-                            No billing history found — completed consultations will appear here.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              );
+            })()}
+
+
+
+
+
+
 
             {/* SOS Performance Tab */}
             {activeTab === "sos" && (

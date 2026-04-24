@@ -186,7 +186,15 @@ export default function UserDashboard() {
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [darkMode, setDarkMode] = useState(true);
+  // Theme State
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('lxwyerDashboardTheme');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('lxwyerDashboardTheme', JSON.stringify(darkMode));
+  }, [darkMode]);
   const [lawyerSearch, setLawyerSearch] = useState('');
   const [lawyerFilter, setLawyerFilter] = useState('');
   const [expandedCaseId, setExpandedCaseId] = useState(null);
@@ -292,7 +300,7 @@ export default function UserDashboard() {
     return { totalStorageBytes: bytes, storagePercent: pct, isStorageFull: full, totalStorageDisplay: display, recentUploadsCount: recent, STORAGE_LIMIT_BYTES: LIMIT };
   }, [documents]);
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+
 
   // SOS: short-poll for lawyer match when in searching state
   useEffect(() => {
@@ -742,8 +750,14 @@ export default function UserDashboard() {
   // Load saved profile image
   useEffect(() => {
     const saved = sessionStorage.getItem('profileImage');
-    if (saved) setProfileImage(saved);
-  }, []);
+    if (saved && saved !== 'null' && saved !== 'undefined') {
+      setProfileImage(saved);
+    } else if (user && user.photo) {
+      setProfileImage(user.photo);
+    } else {
+      setProfileImage(null);
+    }
+  }, [user]);
 
   // Sync profileForm when user loads
   useEffect(() => {
@@ -752,7 +766,7 @@ export default function UserDashboard() {
 
   return (
     <>
-    <div className={`bg-[#ecf5ff] ${darkMode ? '!bg-black' : ''} flex overflow-hidden font-sans transition-colors duration-300`}
+    <div className={`${darkMode ? 'bg-black' : 'bg-gradient-to-br from-[#E0F2FE] via-[#F0F9FF] to-[#E0F2FE]'} flex overflow-hidden font-sans`}
       style={{ height: '100dvh' }}
     >
       {showHowToUse && (
@@ -804,6 +818,13 @@ export default function UserDashboard() {
 
         {/* Bottom buttons */}
         <div className={`px-2 pb-2 pt-2 border-t ${darkMode ? 'border-slate-800' : 'border-gray-100'} flex flex-col gap-0.5`}>
+          <button
+            onClick={() => setDarkMode(!darkMode)}
+            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all ${darkMode ? 'text-slate-500 hover:bg-slate-800 hover:text-blue-400' : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'}`}
+          >
+            {darkMode ? <Sun className="w-[14px] h-[14px] shrink-0" /> : <Moon className="w-[14px] h-[14px] shrink-0" />}
+            <span className="text-[11px] font-semibold truncate">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
           {/* SOS Emergency — inline in dashboard */}
           <button
             onClick={() => setActiveTab('sos')}
@@ -816,13 +837,7 @@ export default function UserDashboard() {
             <PhoneCall className="w-[14px] h-[14px] shrink-0" />
             <span className="text-[11px] font-semibold">SOS / Emergency</span>
           </button>
-          <button
-            onClick={toggleDarkMode}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all ${darkMode ? 'text-blue-300 hover:bg-slate-800' : 'text-gray-400 hover:bg-blue-50 hover:text-blue-600'}`}
-          >
-            {darkMode ? <Sun className="w-[14px] h-[14px] shrink-0" /> : <Moon className="w-[14px] h-[14px] shrink-0" />}
-            <span className="text-[11px] font-semibold">{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-          </button>
+
           <button
             data-testid="logout-btn"
             onClick={handleLogout}
@@ -921,14 +936,14 @@ export default function UserDashboard() {
             >
               <div className={`w-full h-full rounded-full ${darkMode ? 'bg-slate-900' : 'bg-white'} flex items-center justify-center overflow-hidden`}>
                 {profileImage
-                  ? <img src={profileImage} alt="Profile" className="w-full h-full object-cover rounded-full" />
+                  ? <img src={profileImage} alt="Profile" className="w-full h-full object-cover rounded-full" onError={(e) => { e.target.style.display = 'none'; setProfileImage(null); }} />
                   : <User className="w-5 h-5 text-gray-400" />}
               </div>
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-0 pb-16 md:pb-0">
+        <div className="flex-1 overflow-y-auto dashboard-scroll custom-scrollbar p-0 pb-16 md:pb-0">
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="p-4 md:p-8 space-y-8">
@@ -2660,7 +2675,7 @@ export default function UserDashboard() {
                     <div className="relative flex-shrink-0">
                       <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-blue-600 to-blue-900 flex items-center justify-center shadow-lg ring-4 ring-blue-500/20">
                         {profileImage
-                          ? <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
+                          ? <img src={profileImage} alt="Profile" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; setProfileImage(null); }} />
                           : <span className="text-3xl font-bold text-white">{user?.full_name?.[0]?.toUpperCase() || 'U'}</span>}
                       </div>
                       <label htmlFor="profileImageUpload" className="absolute -bottom-1 -right-1 w-8 h-8 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center justify-center cursor-pointer shadow-md transition-colors">

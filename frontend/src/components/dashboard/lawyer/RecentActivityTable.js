@@ -1,7 +1,13 @@
 import { Calendar, MoreVertical, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const RecentActivityTable = ({ cases = [], darkMode = true }) => {
+const RecentActivityTable = ({ cases = [], darkMode = true, lang = 'en' }) => {
+
+    const statusLabel = (status) => {
+        if (lang !== 'hi') return status || 'Active';
+        const map = { active: 'सक्रिय', Active: 'सक्रिय', pending: 'विचाराधीन', Pending: 'विचाराधीन', closed: 'बंद', Closed: 'बंद', completed: 'पूर्ण', Completed: 'पूर्ण' };
+        return map[status] || status || 'सक्रिय';
+    };
 
     return (
         <motion.div
@@ -10,10 +16,12 @@ const RecentActivityTable = ({ cases = [], darkMode = true }) => {
             className={`p-6 rounded-[2.5rem] shadow-sm border h-full flex flex-col transition-colors duration-300 hover:shadow-xl ${darkMode ? 'bg-[#1c1c1c] border-white/5' : 'bg-white border-blue-50'}`}
         >
             <div className="flex items-center justify-between mb-6">
-                <h3 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Recent Cases</h3>
+                <h3 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+                    {lang === 'hi' ? 'हाल के मामले' : 'Recent Cases'}
+                </h3>
                 <button className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${darkMode ? 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>
                     <Calendar className="w-3 h-3" />
-                    All Time
+                    {lang === 'hi' ? 'सभी समय' : 'All Time'}
                 </button>
             </div>
 
@@ -22,12 +30,12 @@ const RecentActivityTable = ({ cases = [], darkMode = true }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className={`text-xs uppercase tracking-wider border-b ${darkMode ? 'text-gray-500 border-white/5' : 'text-gray-400 border-gray-100'}`}>
-                                <th className="pb-3 pl-2 font-medium">Case No.</th>
-                                <th className="pb-3 font-medium">Client Name</th>
-                                <th className="pb-3 font-medium">Type</th>
-                                <th className="pb-3 font-medium">Date Joined</th>
-                                <th className="pb-3 font-medium">Status</th>
-                                <th className="pb-3 font-medium text-right pr-2">Action</th>
+                                <th className="pb-3 pl-2 font-medium">{lang === 'hi' ? 'केस नं.' : 'Case No.'}</th>
+                                <th className="pb-3 font-medium">{lang === 'hi' ? 'क्लाइंट का नाम' : 'Client Name'}</th>
+                                <th className="pb-3 font-medium">{lang === 'hi' ? 'प्रकार' : 'Type'}</th>
+                                <th className="pb-3 font-medium">{lang === 'hi' ? 'तारीख' : 'Date Joined'}</th>
+                                <th className="pb-3 font-medium">{lang === 'hi' ? 'स्थिति' : 'Status'}</th>
+                                <th className="pb-3 font-medium text-right pr-2">{lang === 'hi' ? 'क्रिया' : 'Action'}</th>
                             </tr>
                         </thead>
                         <tbody className="text-sm">
@@ -39,17 +47,17 @@ const RecentActivityTable = ({ cases = [], darkMode = true }) => {
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${darkMode ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
                                                 {c.client_name ? c.client_name.charAt(0) : 'U'}
                                             </div>
-                                            <span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{c.client_name || 'Unknown Client'}</span>
+                                            <span className={`font-semibold ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{c.client_name || (lang === 'hi' ? 'अज्ञात क्लाइंट' : 'Unknown Client')}</span>
                                         </div>
                                     </td>
-                                    <td className="py-4 text-gray-500">{c.title || c.case_type || 'Legal Case'}</td>
-                                    <td className="py-4 text-gray-500">{c.created_at ? new Date(c.created_at).toLocaleDateString() : 'N/A'}</td>
+                                    <td className="py-4 text-gray-500">{c.title || c.case_type || (lang === 'hi' ? 'कानूनी मामला' : 'Legal Case')}</td>
+                                    <td className="py-4 text-gray-500">{c.created_at ? new Date(c.created_at).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN') : (lang === 'hi' ? 'उपलब्ध नहीं' : 'N/A')}</td>
                                     <td className="py-4">
                                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${(c.status === 'Active' || c.status === 'active') ? (darkMode ? 'bg-green-500/10 text-green-400' : 'bg-green-100 text-green-700') :
                                             (c.status === 'Pending' || c.status === 'pending') ? (darkMode ? 'bg-yellow-500/10 text-yellow-400' : 'bg-yellow-100 text-yellow-700') :
                                                 (darkMode ? 'bg-gray-500/10 text-gray-400' : 'bg-gray-100 text-gray-700')
                                             }`}>
-                                            {c.status || 'Active'}
+                                            {statusLabel(c.status)}
                                         </span>
                                     </td>
                                     <td className="py-4 text-right pr-2 rounded-r-xl">
@@ -64,7 +72,7 @@ const RecentActivityTable = ({ cases = [], darkMode = true }) => {
                 ) : (
                     <div className="flex flex-col items-center justify-center h-48 text-gray-500">
                         <FileText className="w-12 h-12 mb-2 opacity-20" />
-                        <p>No recent cases found</p>
+                        <p>{lang === 'hi' ? 'हाल का कोई मामला नहीं मिला' : 'No recent cases found'}</p>
                     </div>
                 )}
             </div>

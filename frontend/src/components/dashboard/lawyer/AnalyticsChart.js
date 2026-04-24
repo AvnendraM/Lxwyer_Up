@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Calendar, ChevronRight } from 'lucide-react';
-import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks, isThisWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, addWeeks } from 'date-fns';
 import { motion } from 'framer-motion';
 
-const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
-    const [weekOffset, setWeekOffset] = useState(0); // 0 = this week, 1 = next week
+const AnalyticsChart = ({ bookings = [], darkMode = true, lang = 'en' }) => {
+    const [weekOffset, setWeekOffset] = useState(0);
 
     const today = new Date();
     const referenceDate = addWeeks(today, weekOffset);
     const start = startOfWeek(referenceDate, { weekStartsOn: 0 });
     const end = endOfWeek(referenceDate, { weekStartsOn: 0 });
     const days = eachDayOfInterval({ start, end });
+
+    // Day-name map for Hindi
+    const hiDay = { Sun: 'रवि', Mon: 'सोम', Tue: 'मंगल', Wed: 'बुध', Thu: 'गुरु', Fri: 'शुक्र', Sat: 'शनि' };
 
     const chartData = days.map(day => {
         const dayBookings = bookings.filter(b => {
@@ -21,9 +24,7 @@ const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
         });
 
         const now = new Date();
-
         const cancelled = dayBookings.filter(b => b.status === 'cancelled').length;
-
         const active = dayBookings.filter(b => {
             if (b.status === 'cancelled' || b.status === 'completed') return false;
             const timeStr = b.time && b.time.length === 5 ? b.time : (b.time ? b.time.padStart(5, '0') : '00:00');
@@ -31,7 +32,6 @@ const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
             if (isNaN(meetingTime.getTime())) return true;
             return meetingTime > now && (b.status === 'confirmed' || b.status === 'pending' || !b.status || b.status === 'reschedule_proposed');
         }).length;
-
         const completed = dayBookings.filter(b => {
             if (b.status === 'cancelled') return false;
             if (b.status === 'completed') return true;
@@ -41,10 +41,10 @@ const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
             return meetingTime <= now && (b.status === 'confirmed' || b.status === 'pending' || !b.status || b.status === 'reschedule_proposed');
         }).length;
 
-        return { name: format(day, 'EEE'), active, completed, cancelled };
+        const engName = format(day, 'EEE');
+        return { name: lang === 'hi' ? (hiDay[engName] || engName) : engName, active, completed, cancelled };
     });
 
-    // Count bookings falling in the displayed week
     const weekBookings = bookings.filter(b => {
         const d = b.date ? new Date(b.date + 'T00:00:00') : (b.start_time ? new Date(b.start_time) : null);
         return d && d >= start && d <= end;
@@ -60,22 +60,27 @@ const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
         >
             <div className="flex items-center justify-between mb-6">
                 <div>
-                    <h3 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>Weekly Appointments</h3>
+                    <h3 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+                        {lang === 'hi' ? 'साप्ताहिक अपॉइंटमेंट' : 'Weekly Appointments'}
+                    </h3>
                     <div className="flex items-center gap-3 mt-1 flex-wrap">
                         <span className="flex items-center gap-1.5">
                             <span className={`text-2xl font-bold ${darkMode ? 'text-blue-500' : 'text-blue-600'}`}>{totalBookings}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'text-blue-400 bg-blue-500/10' : 'text-blue-500 bg-blue-50'}`}>Total</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${darkMode ? 'text-blue-400 bg-blue-500/10' : 'text-blue-500 bg-blue-50'}`}>
+                                {lang === 'hi' ? 'कुल' : 'Total'}
+                            </span>
                         </span>
                         {cancelledCount > 0 && (
                             <span className="flex items-center gap-1.5">
-                                <span className={`text-lg font-bold text-red-500`}>{cancelledCount}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full text-red-400 ${darkMode ? 'bg-red-500/10' : 'bg-red-50'}`}>Cancelled</span>
+                                <span className="text-lg font-bold text-red-500">{cancelledCount}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full text-red-400 ${darkMode ? 'bg-red-500/10' : 'bg-red-50'}`}>
+                                    {lang === 'hi' ? 'रद्द' : 'Cancelled'}
+                                </span>
                             </span>
                         )}
                     </div>
                 </div>
 
-                {/* Week toggle */}
                 <div className={`flex items-center gap-1 rounded-xl p-1 ${darkMode ? 'bg-white/5' : 'bg-gray-100'}`}>
                     <button
                         onClick={() => setWeekOffset(0)}
@@ -85,7 +90,7 @@ const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
                             }`}
                     >
                         <Calendar className="w-3.5 h-3.5" />
-                        This Week
+                        {lang === 'hi' ? 'इस सप्ताह' : 'This Week'}
                     </button>
                     <button
                         onClick={() => setWeekOffset(1)}
@@ -95,7 +100,7 @@ const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
                             }`}
                     >
                         <ChevronRight className="w-3.5 h-3.5" />
-                        Next Week
+                        {lang === 'hi' ? 'अगला सप्ताह' : 'Next Week'}
                     </button>
                 </div>
             </div>
@@ -106,11 +111,19 @@ const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
                 </p>
             )}
 
-            {/* Legend */}
             <div className="flex items-center gap-4 mb-3">
-                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-400"><span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" /> Scheduled</span>
-                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-400"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> Completed</span>
-                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-400"><span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" /> Cancelled</span>
+                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 inline-block" />
+                    {lang === 'hi' ? 'निर्धारित' : 'Scheduled'}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />
+                    {lang === 'hi' ? 'पूर्ण' : 'Completed'}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs font-medium text-gray-400">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-red-500 inline-block" />
+                    {lang === 'hi' ? 'रद्द' : 'Cancelled'}
+                </span>
             </div>
 
             <div className="flex-1 w-full min-h-[200px]">
@@ -135,9 +148,9 @@ const AnalyticsChart = ({ bookings = [], darkMode = true }) => {
                             itemStyle={{ color: darkMode ? '#E5E7EB' : '#374151' }}
                             labelStyle={{ color: darkMode ? '#9CA3AF' : '#6B7280' }}
                         />
-                        <Bar dataKey="active" stackId="a" fill={darkMode ? '#3B82F6' : '#2563EB'} radius={[0, 0, 4, 4]} name="Scheduled" />
-                        <Bar dataKey="completed" stackId="a" fill={darkMode ? '#10B981' : '#059669'} radius={[0, 0, 0, 0]} name="Completed" />
-                        <Bar dataKey="cancelled" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} name="Cancelled" />
+                        <Bar dataKey="active" stackId="a" fill={darkMode ? '#3B82F6' : '#2563EB'} radius={[0, 0, 4, 4]} name={lang === 'hi' ? 'निर्धारित' : 'Scheduled'} />
+                        <Bar dataKey="completed" stackId="a" fill={darkMode ? '#10B981' : '#059669'} radius={[0, 0, 0, 0]} name={lang === 'hi' ? 'पूर्ण' : 'Completed'} />
+                        <Bar dataKey="cancelled" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} name={lang === 'hi' ? 'रद्द' : 'Cancelled'} />
                     </BarChart>
                 </ResponsiveContainer>
             </div>

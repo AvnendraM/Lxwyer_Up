@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// Force monitor to fetch strictly from production
-const API = "https://lxwyerup.vercel.app/api";
+// Use dynamic API endpoint to allow local testing
+import { API } from '../App';
 
 const TK = 'monitor_token';
 const fmt = (d) => d ? new Date(d).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
@@ -15,10 +15,10 @@ const STATUS_COLOR = { pending:'#f59e0b', approved:'#10b981', rejected:'#ef4444'
 const TYPE_COLOR = { BOOKING:'#3b82f6', MESSAGE:'#8b5cf6', SOS:'#ef4444', CLIENT_APP:'#06b6d4', LAWYER_APP:'#f59e0b', LAWYER_APPLICATION:'#10b981', CASE_UPDATE:'#a78bfa' };
 
 const s = {
-  app: { minHeight:'100vh', background:'#030712', color:'#e2e8f0', fontFamily:"'JetBrains Mono','Courier New',monospace" },
+  app: { height:'100vh', overflow:'hidden', background:'#030712', color:'#e2e8f0', fontFamily:"'JetBrains Mono','Courier New',monospace" },
   grid: { position:'fixed', inset:0, backgroundImage:'linear-gradient(rgba(0,255,200,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,200,0.018) 1px,transparent 1px)', backgroundSize:'40px 40px', pointerEvents:'none' },
   sidebar: { width:230, background:'rgba(0,8,18,0.97)', borderRight:'1px solid rgba(0,255,180,0.1)', display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, bottom:0, zIndex:100, overflowY:'auto' },
-  content: { marginLeft:230, minHeight:'100vh', padding:'24px 28px', overflowX:'hidden' },
+  content: { marginLeft:230, height:'100vh', overflowY:'auto', padding:'24px 28px', overflowX:'hidden' },
   card: { background:'rgba(0,18,38,0.7)', border:'1px solid rgba(0,255,180,0.1)', borderRadius:6, padding:'20px', marginBottom:16 },
   statCard: { background:'rgba(0,18,38,0.8)', border:'1px solid rgba(0,255,180,0.13)', borderRadius:6, padding:'16px 18px', flex:1, minWidth:130 },
   table: { width:'100%', borderCollapse:'collapse', fontSize:11 },

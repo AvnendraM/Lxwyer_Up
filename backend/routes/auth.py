@@ -7,10 +7,12 @@ from services.database import db
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+from typing import Optional
+
 # --------------------------------------------------------------------------- #
 #  Shared helper: check whether an email is taken across ALL collections
 # --------------------------------------------------------------------------- #
-async def _email_taken_globally(email: str) -> str | None:
+async def _email_taken_globally(email: str) -> Optional[str]:
     """
     Returns a human-readable message if the email already exists in ANY
     collection, otherwise returns None.

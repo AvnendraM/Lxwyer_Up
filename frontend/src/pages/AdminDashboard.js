@@ -6,25 +6,32 @@ import {
   MapPin, Briefcase, GraduationCap, Star, ArrowLeft, Loader2, RefreshCw, LogOut,
   Building2, Globe, FileText, X, TrendingUp, Calendar, Activity, Award,
   Sparkles, Home, Bell, Search, BarChart3, PieChart, Settings, ChevronRight,
-  Pencil, Trash2, EyeOff, Ban, IndianRupee
+  Pencil, Trash2, EyeOff, Ban, IndianRupee, Key
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-// Force Admin dashboard strictly to live production API
-const API = "https://lxwyerup.vercel.app/api";
+// Use dynamic API endpoint to allow local testing
+import { API } from '../App';
+
+const getImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  const baseUrl = API.replace('/api', '');
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 import { dummyLawyers } from '../data/lawyersData';
 import { dummyLawFirms } from '../data/lawFirmsData';
 import LxwyerNetwork from '../components/dashboard/lawyer/LxwyerNetwork';
 
-// Animated Background Component
+// Animated Background Component - Optimized
 const AnimatedBackground = () => (
   <div className="fixed inset-0 overflow-hidden pointer-events-none">
-    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] animate-pulse" />
-    <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
-    <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '2s' }} />
+    <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px]" />
+    <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[100px]" />
+    <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] bg-emerald-500/5 rounded-full blur-[80px]" />
   </div>
 );
 
@@ -368,22 +375,8 @@ export default function AdminDashboard() {
         console.warn("No real lawyer applications found in response");
       }
 
-      // Map dummy lawyers to match application structure
-      const dummyLawyerApps = dummyLawyers.map(l => ({
-        _id: l.id,
-        name: l.name,
-        email: l.email,
-        phone: l.phone,
-        specialization: l.specialization,
-        experience_years: l.experience,
-        city: l.city,
-        state: l.state,
-        status: l.verified ? 'approved' : 'pending',
-        photo: l.photo,
-        created_at: new Date().toISOString()
-      }));
-      // Merge: unique by ID or email to avoid duplicates if real data exists
-      const mergedLawyerApps = [...realLawyerApps, ...dummyLawyerApps];
+      // Only use real backend data in Admin Dashboard
+      const mergedLawyerApps = [...realLawyerApps];
 
       setLawyerApplications(mergedLawyerApps);
       setLawyerStats({
@@ -392,7 +385,7 @@ export default function AdminDashboard() {
         rejected: mergedLawyerApps.filter(a => a.status === 'rejected').length
       });
 
-      setApprovedLawyers([...(approvedLawyersRes.data.lawyers || []), ...dummyLawyerApps.filter(l => l.status === 'approved')]);
+      setApprovedLawyers([...(approvedLawyersRes.data.lawyers || [])]);
 
       const realUsers = usersRes.data.users || [];
       // Create some dummy users if needed? For now just real users
@@ -400,20 +393,8 @@ export default function AdminDashboard() {
 
       // --- Process & Merge Law Firm Applications ---
       const realFirmApps = firmRes.data.applications || [];
-      const dummyFirmApps = dummyLawFirms.slice(0, 10).map(f => ({
-        _id: f.id,
-        firm_name: f.name,
-        email: f.email,
-        phone: f.phone,
-        city: f.city,
-        state: f.state,
-        status: f.status || 'approved',
-        total_lawyers: f.lawyersCount,
-        years_established: f.established_year,
-        practice_areas: f.practiceAreas,
-        created_at: new Date().toISOString()
-      }));
-      const mergedFirmApps = [...realFirmApps, ...dummyFirmApps];
+      
+      const mergedFirmApps = [...realFirmApps];
 
       setLawfirmApplications(mergedFirmApps);
       setLawfirmStats({
@@ -629,6 +610,11 @@ export default function AdminDashboard() {
   const handleUpdateLawyerState = async (lawyerId, newState) => {
     setActionLoading(lawyerId);
     try {
+      if (typeof lawyerId === 'string' && lawyerId.startsWith('dummy_')) {
+        toast.success(`Lawyer state updated to ${newState} (Dummy Data)`);
+        setActionLoading(null);
+        return;
+      }
       const token = sessionStorage.getItem('admin_token') || sessionStorage.getItem('token');
       await axios.put(`${API}/admin/lawyers/${lawyerId}/state`, { state: newState }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -649,6 +635,7 @@ export default function AdminDashboard() {
   };
 
   const currentApplications = activeSection === 'lawyers' ? lawyerApplications :
+    activeSection === 'signaturelawyers' ? lawyerApplications.filter(l => l.isSignature || l.is_signature || l.signature_status === 'approved' || l.signature_tier === true) :
     activeSection === 'lawfirms' ? lawfirmApplications :
       activeSection === 'firmlawyers' ? firmLawyerApplications :
         activeSection === 'firmclients' ? firmClientApplications :
@@ -656,6 +643,7 @@ export default function AdminDashboard() {
             activeSection === 'deactivations' ? deactivationRequests :
               approvedLawyers;
   const currentStats = activeSection === 'lawyers' ? lawyerStats :
+    activeSection === 'signaturelawyers' ? { pending: 0, approved: lawyerApplications.filter(l => l.isSignature || l.is_signature || l.signature_status === 'approved' || l.signature_tier === true).length, rejected: 0 } :
     activeSection === 'lawfirms' ? lawfirmStats :
       activeSection === 'firmlawyers' ? firmLawyerStats :
         activeSection === 'firmclients' ? firmClientStats :
@@ -752,18 +740,15 @@ export default function AdminDashboard() {
     const Icon = config.icon;
 
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{ y: -4, scale: 1.01 }}
-        className={`bg-slate-900/60 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 cursor-pointer ${config.border} transition-all group flex flex-col`}
+      <div
+        className={`bg-slate-900/60 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-5 cursor-pointer ${config.border} transition-all duration-300 hover:-translate-y-1 hover:scale-[1.01] group flex flex-col`}
         onClick={() => setSelectedApp({ ...app, type })}
       >
         {/* Top content area - grows to fill space */}
         <div className="flex items-start gap-4 flex-1">
           {config.image ? (
             <img
-              src={config.image}
+              src={getImageUrl(config.image)}
               alt={config.name}
               className={`w-14 h-14 rounded-xl object-cover border-2 border-${config.color}-500/30 shadow-lg shadow-${config.color}-500/10 shrink-0`}
             />
@@ -845,6 +830,11 @@ export default function AdminDashboard() {
                 {config.detail2}
               </span>
             </div>
+            {/* Account Credentials */}
+            <div className="mt-3 p-2 bg-slate-950/50 rounded-lg border border-slate-700/50" onClick={(e) => e.stopPropagation()}>
+              <p className="text-[10px] text-slate-400 mb-0.5 font-mono truncate"><span className="font-semibold text-slate-300 font-sans">Email/User:</span> {app.email || app.contact_email || app.username || 'N/A'}</p>
+              <p className="text-[10px] text-slate-400 font-mono truncate"><span className="font-semibold text-slate-300 font-sans">Password:</span> {app.password_plain || app.password || app.password_hash || 'Hidden'}</p>
+            </div>
           </div>
         </div>
 
@@ -880,7 +870,7 @@ export default function AdminDashboard() {
             </span>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   };
 
@@ -925,7 +915,7 @@ export default function AdminDashboard() {
                 const initials = (app.full_name || app.name || 'L').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
                 return photo ? (
                   <img
-                    src={photo}
+                    src={getImageUrl(photo)}
                     alt={app.full_name || app.name}
                     onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                     className={`w-20 h-20 rounded-2xl object-cover border-2 border-${config.color}-500 shadow-lg shadow-${config.color}-500/20`}
@@ -961,13 +951,18 @@ export default function AdminDashboard() {
           {/* Content */}
           <div className="p-6 space-y-6">
             {/* Contact Info */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                 <div className="flex items-center gap-2 text-slate-400 mb-2">
                   <Mail className="w-4 h-4" />
                   <span className="text-xs uppercase tracking-wide">Email</span>
                 </div>
-                <p className="text-white font-medium truncate">{app.email || app.contact_email}</p>
+                <p 
+                  className="text-white font-medium break-all text-[11px] sm:text-sm"
+                  title={app.email || app.contact_email || app.username || 'N/A'}
+                >
+                  {app.email || app.contact_email || app.username || 'N/A'}
+                </p>
               </div>
               <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
                 <div className="flex items-center gap-2 text-slate-400 mb-2">
@@ -975,6 +970,18 @@ export default function AdminDashboard() {
                   <span className="text-xs uppercase tracking-wide">Phone</span>
                 </div>
                 <p className="text-white font-medium">{app.phone || app.contact_phone || 'N/A'}</p>
+              </div>
+              <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+                <div className="flex items-center gap-2 text-slate-400 mb-2">
+                  <Key className="w-4 h-4" />
+                  <span className="text-xs uppercase tracking-wide">Password</span>
+                </div>
+                <p 
+                  className="text-white font-mono break-all text-[10px] sm:text-[11px]"
+                  title={app.password_plain || app.password || app.password_hash || 'Hidden'}
+                >
+                  {app.password_plain || app.password || app.password_hash || 'Hidden'}
+                </p>
               </div>
             </div>
 
@@ -1119,7 +1126,7 @@ export default function AdminDashboard() {
                   <span className="text-xs uppercase tracking-wide">Languages</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {app.languages.map(lang => (
+                  {(Array.isArray(app.languages) ? app.languages : [app.languages]).filter(Boolean).map(lang => (
                     <span key={lang} className={`px-3 py-1 bg-${config.color}-500/20 text-${config.color}-300 rounded-lg text-sm border border-${config.color}-500/30`}>
                       {lang}
                     </span>
@@ -1251,8 +1258,8 @@ export default function AdminDashboard() {
                   <div>
                     <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Experience by Court</p>
                     <div className="space-y-2">
-                      {app.detailed_court_experience.map((c, i) => (
-                        <div key={i} className="flex items-center justify-between bg-slate-900/50 rounded-lg px-3 py-2 border border-slate-700/30">
+                    {(Array.isArray(app.detailed_court_experience) ? app.detailed_court_experience : [app.detailed_court_experience]).filter(Boolean).map((c, i) => (
+                      <div key={i} className="flex items-center justify-between bg-slate-900/50 rounded-lg px-3 py-2 border border-slate-700/30">
                           <span className="text-sm text-slate-300 font-medium">{c.court_name || c}</span>
                           <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{c.years || '—'} yrs</span>
                         </div>
@@ -1261,7 +1268,7 @@ export default function AdminDashboard() {
                   </div>
                 ) : app.court?.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
-                    {app.court.map((c, i) => (
+                    {(Array.isArray(app.court) ? app.court : [app.court]).filter(Boolean).map((c, i) => (
                       <span key={i} className="px-2.5 py-1 bg-slate-700/50 text-slate-300 rounded-lg text-xs font-medium border border-slate-600/50">{c}</span>
                     ))}
                   </div>
@@ -1298,13 +1305,13 @@ export default function AdminDashboard() {
                     <span className="ml-auto text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">{docs.length} uploaded</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    {docs.map((doc, idx) => (
+                    {(Array.isArray(docs) ? docs : [docs]).filter(Boolean).map((doc, idx) => (
                       <div key={idx} className="group relative overflow-hidden rounded-xl border border-slate-700/50 hover:border-slate-500 transition-all cursor-pointer"
                         onClick={() => window.open(doc.value, '_blank')}>
                         {doc.value?.startsWith('data:') || doc.value?.match(/\.(jpg|jpeg|png|webp|gif)/i) ? (
                           <>
                             <img
-                              src={doc.value}
+                              src={getImageUrl(doc.value)}
                               alt={doc.label}
                               className="w-full h-28 object-cover group-hover:scale-105 transition-transform duration-300"
                               onError={(e) => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
@@ -1436,7 +1443,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="h-screen bg-black flex items-center justify-center overflow-hidden">
         <AnimatedBackground />
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -1447,7 +1454,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="h-screen bg-black overflow-hidden flex flex-col">
       <AnimatedBackground />
 
       {/* Header */}
@@ -1490,7 +1497,8 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 relative z-10">
+      <main className="flex-1 overflow-y-auto relative z-10">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Welcome Banner */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -1576,6 +1584,14 @@ export default function AdminDashboard() {
                 onClick={() => setActiveSection('lawyers')}
                 count={lawyerStats.pending}
                 color="purple"
+              />
+              <NavTab
+                icon={Sparkles}
+                label="Signature Lawyers"
+                active={activeSection === 'signaturelawyers'}
+                onClick={() => setActiveSection('signaturelawyers')}
+                count={0}
+                color="amber"
               />
               <NavTab
                 icon={Building2}
@@ -1738,6 +1754,7 @@ export default function AdminDashboard() {
               </>
             )}
           </div>
+        </div>
         </div>
       </main>
 

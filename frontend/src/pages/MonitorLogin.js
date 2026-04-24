@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-// Force monitor login strictly to live production API 
-const API = "https://lxwyerup.vercel.app/api";
+// Use dynamic API endpoint to allow local testing
+import { API } from '../App';
 
 const MONITOR_TOKEN_KEY = 'monitor_token';
 

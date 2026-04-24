@@ -118,3 +118,49 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
 }
+
+/* Custom scrollbar class for dashboard panels */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 99px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.35);
+  border-radius: 99px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+/* Thin scrollbar for dark dashboard areas */
+.dashboard-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.3) transparent;
+}
+
+.dashboard-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dashboard-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-scroll::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 99px;
+}
+
+/* Ensure dashboard pages don't conflict with Lenis */
+.dashboard-root {
+  height: 100dvh;
+  overflow: hidden;
+}

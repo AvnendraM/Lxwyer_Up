@@ -577,6 +577,29 @@ const translations = {
     ai_matches: 'Matches',
     ai_searching: 'Searching lawyers...',
     ai_matching_firms: 'Matching firms...',
+
+    // ── Lawyer Dashboard Nav Items ─────────────────────────────
+    'Dashboard': 'Dashboard',
+    'Appointments': 'Appointments',
+    'Signature Tier': 'Signature Tier',
+    'Cases': 'Cases',
+    'Calendar': 'Calendar',
+    'Messages': 'Messages',
+    'Lxwyer Network': 'Lxwyer Network',
+    'Achievements': 'Achievements',
+    'Lxwyer Paralegal AI': 'Lxwyer Paralegal AI',
+    'Earnings': 'Earnings',
+    'SOS Performance': 'SOS Performance',
+    'sidebar_my_profile': 'My Profile',
+
+    // ── Lawyer Onboarding Banner ────────────────────────────
+    'Welcome to your Apex Dashboard!': 'Welcome to your Apex Dashboard!',
+    'Your account was successfully provisioned. We recommend clicking the "?" icon above to read the Quick Start Guide. Our smart matching system is now actively looking for clients that fit your expertise.': 'Your account was successfully provisioned. We recommend clicking the "?" icon above to read the Quick Start Guide. Our smart matching system is now actively looking for clients that fit your expertise.',
+    'Read Quick Start Guide': 'Read Quick Start Guide',
+    'Welcome to LxwyerUp!': 'Welcome to LxwyerUp!',
+    'Click the ? icon in the top right to learn how to use your new dashboard.': 'Click the ❓ icon in the top right to learn how to use your new dashboard.',
+    'Complete Your Profile': 'Complete Your Profile',
+    'Make sure your profile is complete so clients can find you easily.': 'Make sure your profile is complete so clients can find you easily.',
   },
 
   hi: {
@@ -1157,6 +1180,29 @@ const translations = {
     ai_matches: 'मैचेस',
     ai_searching: 'वकील खोज रहे हैं...',
     ai_matching_firms: 'फर्म खोज रहे हैं...',
+
+    // ── Lawyer Dashboard Nav Items (Hindi) ─────────────────────
+    'Dashboard': 'डैशबोर्ड',
+    'Appointments': 'अपॉइंटमेंट',
+    'Signature Tier': 'सिग्नेचर त्पर',
+    'Cases': 'मामले',
+    'Calendar': 'कैलेंडर',
+    'Messages': 'संदेश',
+    'Lxwyer Network': 'लxwyer नेटवर्क',
+    'Achievements': 'उपलब्धियाँ',
+    'Lxwyer Paralegal AI': 'लxwyer पैरालीगल AI',
+    'Earnings': 'आमदनी',
+    'SOS Performance': 'SOS प्रदर्शन',
+    'sidebar_my_profile': 'मेरी प्रोफाइल',
+
+    // ── Lawyer Onboarding Banner (Hindi) ─────────────────────
+    'Welcome to your Apex Dashboard!': 'आपके Apex डैशबोर्ड में स्वागत है!',
+    'Your account was successfully provisioned. We recommend clicking the "?" icon above to read the Quick Start Guide. Our smart matching system is now actively looking for clients that fit your expertise.': 'आपका खाता सफलतापूर्वक बनाया गया है। हम अनुशंसा करते हैं कि ऊपर "?" आइकन पर क्लिक करके क्विक स्टार्ट गाइड पढ़ें। हमारा स्मार्ट मातचिंग सिस्टम अभी आपके अनुकूल क्लाइंट ढूंढ रहा है।',
+    'Read Quick Start Guide': 'क्विक स्टार्ट गाइड पढ़ें',
+    'Welcome to LxwyerUp!': 'LxwyerUp में आपका स्वागत है!',
+    'Click the ? icon in the top right to learn how to use your new dashboard.': 'अपने नए डैशबोर्ड का उपयोग जानने के लिए ओपर दाएं ❓ आइकन दबाएं।',
+    'Complete Your Profile': 'अपनी प्रोफाइल पूरी करें',
+    'Make sure your profile is complete so clients can find you easily.': 'सुनिश्चित करें कि आपकी प्रोफाइल पूरी हो ताकि क्लाइंट आपको आसानी से ढूंढ सकें।',
   },
 };
 

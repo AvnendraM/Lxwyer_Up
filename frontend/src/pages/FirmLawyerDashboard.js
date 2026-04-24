@@ -148,7 +148,7 @@ export default function FirmLawyerDashboard() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-black text-white flex overflow-x-hidden" style={{ height: '100dvh' }}>
+    <div className="h-screen bg-black text-white flex overflow-hidden" style={{ height: '100dvh' }}>
       {sidebarOpen && <div className="fixed inset-0 bg-black/70 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
@@ -199,7 +199,7 @@ export default function FirmLawyerDashboard() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <main className="flex-1 overflow-y-auto dashboard-scroll custom-scrollbar p-4 sm:p-6">
           <AnimatePresence mode="wait">
 
             {/* OVERVIEW */}

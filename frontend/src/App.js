@@ -114,11 +114,16 @@ const SmoothScrolling = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Disable completely on AI routes because they use full-screen flex/absolute layouts
-    // with internal overflow scrolling. Lenis hijacks all scroll events and breaks this.
+    // Disable on AI routes (full-screen flex layouts with internal overflow)
+    // AND on all dashboard routes (they use internal overflow-y-auto scroll containers)
     const isAiRoute = ['/lxwyerai', '/find-lawyer/ai', '/ai-firm-finder', '/find-lawfirm/ai'].includes(location.pathname);
+    const isDashboardRoute = [
+      '/user-dashboard', '/lawyer-dashboard', '/lawfirm-dashboard',
+      '/firm-lawyer-dashboard', '/firm-client-dashboard', '/firm-client-dashboard-demo',
+      '/admin-dashboard', '/monitor-dashboard'
+    ].includes(location.pathname);
     
-    if (isAiRoute || window.innerWidth <= 768) return;
+    if (isAiRoute || isDashboardRoute || window.innerWidth <= 768) return;
 
     const lenis = new Lenis({
       duration: 1.2,

@@ -4,8 +4,8 @@ import { Scale, Mail, Lock, ArrowRight, Shield, ArrowLeft, Home, Eye, EyeOff } f
 import { toast } from 'sonner';
 import axios from 'axios';
 
-// Force Admin login strictly to live production API
-const API = "https://lxwyerup.vercel.app/api";
+// Use dynamic API endpoint to allow local testing
+import { API } from '../App';
 
 import { motion } from 'framer-motion';
 import { CorporateInput, CorporateButton } from '../components/CorporateComponents';

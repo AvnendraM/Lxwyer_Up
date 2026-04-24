@@ -253,7 +253,7 @@ async def reject_lawfirm_application(app_id: str, admin: dict = Depends(get_admi
 @router.get("/firm-lawyer-applications")
 async def get_firm_lawyer_applications_admin(admin: dict = Depends(get_admin)):
     """Get all firm lawyer applications — visible in admin dashboard and monitor"""
-    applications = await db.firm_lawyer_applications.find({}, {'_id': 0, 'password_hash': 0}).sort('created_at', -1).to_list(1000)
+    applications = await db.firm_lawyer_applications.find({}, {'_id': 0}).sort('created_at', -1).to_list(1000)
     stats = {
         'pending': len([a for a in applications if a.get('status') == 'pending']),
         'approved': len([a for a in applications if a.get('status') == 'approved']),
@@ -296,8 +296,8 @@ async def get_all_lawyers(admin: dict = Depends(get_admin)):
     for lawyer in lawyers:
         if '_id' in lawyer:
             lawyer['_id'] = str(lawyer['_id'])
-        if 'password' in lawyer:
-            del lawyer['password']
+        # if 'password' in lawyer:
+        #     del lawyer['password']
             
     return {'lawyers': lawyers}
 
@@ -343,8 +343,8 @@ async def get_users(admin: dict = Depends(get_admin)):
     for user in users:
         if '_id' in user:
             user['_id'] = str(user['_id'])
-        if 'password' in user:
-            del user['password']
+        # if 'password' in user:
+        #     del user['password']
             
     return {'users': users}
 
